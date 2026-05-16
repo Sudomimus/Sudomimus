@@ -1,0 +1,178 @@
+openapi: 3.1.0
+info:
+  title: Sudomimus Connect
+  version: 0.0.1
+  summary: Token exchange API for the Sudomimus authentication platform.
+  description: |
+    The Connect API exchanges short-lived authentication artifacts for
+    long-lived application tokens. Integrating applications use it to
+    establish a session, redeem an authentication code, and refresh tokens.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://connect.sudomimus.com
+    description: Production
+paths:
+  /establish:
+    post:
+      operationId: establish
+      summary: Establish a connect session for an application.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstablishRequest"
+      responses:
+        "200":
+          description: Session established.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstablishResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /redeem:
+    post:
+      operationId: redeem
+      summary: Redeem an authentication code for an application token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemRequest"
+      responses:
+        "200":
+          description: Token issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /refresh:
+    post:
+      operationId: refresh
+      summary: Refresh an application token using a refresh token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Token refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    EstablishRequest:
+      type: object
+      required:
+        - applicationKey
+        - redirectUri
+      properties:
+        applicationKey:
+          type: string
+          description: Public key identifying the integrating application.
+        redirectUri:
+          type: string
+          format: uri
+          description: URI the platform will redirect to after authentication.
+        state:
+          type: string
+          description: Opaque value echoed back in the redirect for CSRF protection.
+    EstablishResponse:
+      type: object
+      required:
+        - sessionId
+        - authorizeUrl
+      properties:
+        sessionId:
+          type: string
+          description: Identifier for the established connect session.
+        authorizeUrl:
+          type: string
+          format: uri
+          description: URL the end user should visit to complete authentication.
+        expiresAt:
+          type: string
+          format: date-time
+          description: When this session will expire if unused.
+    RedeemRequest:
+      type: object
+      required:
+        - sessionId
+        - code
+      properties:
+        sessionId:
+          type: string
+          description: Session identifier returned from /establish.
+        code:
+          type: string
+          description: Authentication code obtained after the end user signs in.
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh token previously issued by /redeem or /refresh.
+    TokenPair:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived application access token (JWT).
+        refreshToken:
+          type: string
+          description: Long-lived refresh token.
+        expiresIn:
+          type: integer
+          format: int32
+          description: Lifetime of the access token in seconds.
+        tokenType:
+          type: string
+          description: Token type; currently always "Bearer".
+          enum:
+            - Bearer
+          default: Bearer
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error message.
+        requestId:
+          type: string
+          description: Identifier for correlating with platform logs.

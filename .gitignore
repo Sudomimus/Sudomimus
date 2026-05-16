@@ -1,14 +1,42 @@
-# submodules
-module
+# Node / pnpm
+node_modules/
+.pnpm-store/
+.pnp.*
+*.tgz
+
+# Build output
+dist/
+build/
+.turbo/
+*.tsbuildinfo
 
 # Python
-__pycache__
-*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.uv/
 
-# Temp
-temp.txt
+# Test / coverage
+coverage/
+.nyc_output/
+.pytest_cache/
+.coverage
+htmlcov/
 
-docs/_site/
-docs/.sass-cache/
-docs/.jekyll-cache/
-docs/.jekyll-metadata
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
