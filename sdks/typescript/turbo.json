@@ -1,0 +1,23 @@
+{
+    "$schema": "https://turborepo.com/schema.json",
+    "ui": "tui",
+    "tasks": {
+        "generate": {
+            "inputs": ["../../specs/*.yaml"],
+            "outputs": ["src/_generated/**"]
+        },
+        "compile": {
+            "dependsOn": ["generate", "^compile"],
+            "outputs": ["dist/**"]
+        },
+        "lint": {
+            "dependsOn": ["generate", "^lint"]
+        },
+        "test": {
+            "dependsOn": ["generate", "^test"]
+        },
+        "coverage": {
+            "dependsOn": ["generate", "^coverage"]
+        }
+    }
+}

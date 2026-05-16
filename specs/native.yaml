@@ -1,0 +1,83 @@
+openapi: 3.1.0
+info:
+  title: Sudomimus Native
+  version: 0.0.1
+  summary: Native client entry point for the Sudomimus authentication platform.
+  description: |
+    The Native API is the public gateway used by native clients
+    (desktop applications, games) to initiate and poll authentication
+    flows that complete in an external browser.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://native.sudomimus.com
+    description: Production
+paths:
+  /status-poll:
+    post:
+      operationId: statusPoll
+      summary: Poll the status of an ongoing native authentication flow.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusPollRequest"
+      responses:
+        "200":
+          description: Current status of the authentication flow.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusPollResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    StatusPollRequest:
+      type: object
+      required:
+        - pollToken
+      properties:
+        pollToken:
+          type: string
+          description: Opaque token issued when the flow was initiated.
+    StatusPollResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: Current status of the authentication flow.
+          enum:
+            - PENDING
+            - APPROVED
+            - DENIED
+            - EXPIRED
+        accessToken:
+          type: string
+          description: Application access token; present only when status is APPROVED.
+        refreshToken:
+          type: string
+          description: Application refresh token; present only when status is APPROVED.
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error message.
+        requestId:
+          type: string
+          description: Identifier for correlating with platform logs.

@@ -1,0 +1,34 @@
+[project]
+name = "sudomimus-sdks-python"
+version = "0.0.0"
+description = "Sudomimus Python SDK workspace (private root)."
+requires-python = ">=3.11"
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+sudomimus-connect = { workspace = true }
+sudomimus-native = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator>=0.26",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "ruff>=0.8",
+    "sudomimus-connect",
+    "sudomimus-native",
+]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["**/_generated/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]
+python_files = ["test_*.py"]
+addopts = ["--import-mode=importlib"]
