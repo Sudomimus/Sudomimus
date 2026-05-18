@@ -8,7 +8,7 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 
 | Language | Package | Purpose | Status |
 | --- | --- | --- | --- |
-| TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Token exchange (Establish / Redeem / Refresh) | scaffolded |
+| TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info) | alpha |
 | TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Native client entry point | scaffolded |
 | Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Token exchange (Establish / Redeem / Refresh) | scaffolded |
 | Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Native client entry point | scaffolded |

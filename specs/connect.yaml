@@ -1,12 +1,13 @@
 openapi: 3.1.0
 info:
   title: Sudomimus Connect
-  version: 0.0.1
+  version: 0.1.0
   summary: Token exchange API for the Sudomimus authentication platform.
   description: |
-    The Connect API exchanges short-lived authentication artifacts for
-    long-lived application tokens. Integrating applications use it to
-    establish a session, redeem an authentication code, and refresh tokens.
+    The Connect API is the public entry point for integrating applications.
+    Clients use it to establish an authentication inquiry, poll its status,
+    redeem the realized inquiry for application tokens, refresh access
+    tokens, and fetch localized application metadata.
   license:
     name: MIT
     identifier: MIT
@@ -14,10 +15,21 @@ servers:
   - url: https://connect.sudomimus.com
     description: Production
 paths:
+  /health:
+    get:
+      operationId: health
+      summary: Liveness probe for the Connect service.
+      responses:
+        "200":
+          description: Service is ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
   /establish:
     post:
       operationId: establish
-      summary: Establish a connect session for an application.
+      summary: Establish a new authentication inquiry for an application.
       requestBody:
         required: true
         content:
@@ -26,7 +38,7 @@ paths:
               $ref: "#/components/schemas/EstablishRequest"
       responses:
         "200":
-          description: Session established.
+          description: Inquiry established.
           content:
             application/json:
               schema:
@@ -37,10 +49,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /status-poll:
+    post:
+      operationId: statusPoll
+      summary: Poll the realization status of an authentication inquiry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusPollRequest"
+      responses:
+        "200":
+          description: Current status of the inquiry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusPollResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /redeem:
     post:
       operationId: redeem
-      summary: Redeem an authentication code for an application token.
+      summary: Redeem a realized inquiry for an application token pair.
       requestBody:
         required: true
         content:
@@ -49,11 +84,11 @@ paths:
               $ref: "#/components/schemas/RedeemRequest"
       responses:
         "200":
-          description: Token issued.
+          description: Tokens issued.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TokenPair"
+                $ref: "#/components/schemas/RedeemResponse"
         default:
           description: Error response.
           content:
@@ -63,7 +98,7 @@ paths:
   /refresh:
     post:
       operationId: refresh
-      summary: Refresh an application token using a refresh token.
+      summary: Issue a new access token from a refresh token.
       requestBody:
         required: true
         content:
@@ -72,11 +107,34 @@ paths:
               $ref: "#/components/schemas/RefreshRequest"
       responses:
         "200":
-          description: Token refreshed.
+          description: Access token issued.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TokenPair"
+                $ref: "#/components/schemas/RefreshResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /info:
+    post:
+      operationId: info
+      summary: Fetch localized public metadata about an application.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InfoRequest"
+      responses:
+        "200":
+          description: Application metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InfoResponse"
         default:
           description: Error response.
           content:
@@ -85,51 +143,117 @@ paths:
                 $ref: "#/components/schemas/Error"
 components:
   schemas:
+    HealthResponse:
+      type: object
+      required:
+        - ready
+        - service
+        - version
+      properties:
+        ready:
+          type: boolean
+        service:
+          type: string
+        version:
+          type: string
     EstablishRequest:
       type: object
       required:
-        - applicationKey
-        - redirectUri
+        - applicationAnchor
+        - actions
       properties:
-        applicationKey:
+        applicationAnchor:
           type: string
-          description: Public key identifying the integrating application.
-        redirectUri:
-          type: string
-          format: uri
-          description: URI the platform will redirect to after authentication.
-        state:
-          type: string
-          description: Opaque value echoed back in the redirect for CSRF protection.
+          description: Public anchor identifying the integrating application.
+        actions:
+          type: array
+          description: Post-authentication actions the inquiry will satisfy.
+          items:
+            $ref: "#/components/schemas/AuthAction"
     EstablishResponse:
       type: object
       required:
-        - sessionId
-        - authorizeUrl
+        - applicationAnchor
+        - exposureKey
+        - hiddenKey
       properties:
-        sessionId:
+        applicationAnchor:
           type: string
-          description: Identifier for the established connect session.
-        authorizeUrl:
+        exposureKey:
           type: string
-          format: uri
-          description: URL the end user should visit to complete authentication.
-        expiresAt:
+          description: Public half of the inquiry key pair; safe to share with the user agent.
+        hiddenKey:
           type: string
-          format: date-time
-          description: When this session will expire if unused.
+          description: Private half of the inquiry key pair; must stay on the originating client.
+    StatusPollRequest:
+      type: object
+      required:
+        - exposureKey
+        - hiddenKey
+      properties:
+        exposureKey:
+          type: string
+        hiddenKey:
+          type: string
+    StatusPollResponse:
+      oneOf:
+        - $ref: "#/components/schemas/StatusPollPendingResponse"
+        - $ref: "#/components/schemas/StatusPollRealizedResponse"
+      discriminator:
+        propertyName: status
+        mapping:
+          PENDING: "#/components/schemas/StatusPollPendingResponse"
+          REALIZED: "#/components/schemas/StatusPollRealizedResponse"
+    StatusPollPendingResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - PENDING
+    StatusPollRealizedResponse:
+      type: object
+      required:
+        - status
+        - confirmationKey
+      properties:
+        status:
+          type: string
+          enum:
+            - REALIZED
+        confirmationKey:
+          type: string
+          description: One-time key proving the inquiry has been realized; pass to /redeem.
     RedeemRequest:
       type: object
       required:
-        - sessionId
-        - code
+        - exposureKey
+        - hiddenKey
+        - confirmationKey
       properties:
-        sessionId:
+        exposureKey:
           type: string
-          description: Session identifier returned from /establish.
-        code:
+        hiddenKey:
           type: string
-          description: Authentication code obtained after the end user signs in.
+        confirmationKey:
+          type: string
+    RedeemResponse:
+      type: object
+      required:
+        - applicationAnchor
+        - refreshToken
+        - accessToken
+      properties:
+        applicationAnchor:
+          type: string
+        refreshToken:
+          type: string
+          description: Long-lived refresh token (JWT).
+        accessToken:
+          type: string
+          description: Short-lived access token (JWT).
     RefreshRequest:
       type: object
       required:
@@ -137,42 +261,100 @@ components:
       properties:
         refreshToken:
           type: string
-          description: Refresh token previously issued by /redeem or /refresh.
-    TokenPair:
+    RefreshResponse:
       type: object
       required:
         - accessToken
-        - refreshToken
-        - expiresIn
       properties:
         accessToken:
           type: string
-          description: Short-lived application access token (JWT).
-        refreshToken:
-          type: string
-          description: Long-lived refresh token.
-        expiresIn:
-          type: integer
-          format: int32
-          description: Lifetime of the access token in seconds.
-        tokenType:
-          type: string
-          description: Token type; currently always "Bearer".
-          enum:
-            - Bearer
-          default: Bearer
-    Error:
+          description: Short-lived access token (JWT). No new refresh token is issued.
+    InfoRequest:
       type: object
       required:
-        - code
-        - message
+        - applicationAnchor
+        - locale
       properties:
-        code:
+        applicationAnchor:
           type: string
-          description: Stable machine-readable error code.
-        message:
+        locale:
           type: string
-          description: Human-readable error message.
-        requestId:
+          description: IETF BCP 47 locale tag (e.g. "en-US"). Falls back to the application's default locale if not available.
+    InfoResponse:
+      type: object
+      required:
+        - applicationAnchor
+        - applicationName
+        - applicationPublicKey
+      properties:
+        applicationAnchor:
           type: string
-          description: Identifier for correlating with platform logs.
+        applicationName:
+          type: string
+          description: Localized application display name.
+        applicationPublicKey:
+          type: string
+          description: PEM-encoded application public key used to verify issued JWTs.
+    AuthAction:
+      oneOf:
+        - $ref: "#/components/schemas/AuthActionCallback"
+        - $ref: "#/components/schemas/AuthActionStatusPoll"
+        - $ref: "#/components/schemas/AuthActionSteam"
+      discriminator:
+        propertyName: type
+        mapping:
+          CALLBACK: "#/components/schemas/AuthActionCallback"
+          STATUS_POLL: "#/components/schemas/AuthActionStatusPoll"
+          STEAM: "#/components/schemas/AuthActionSteam"
+    AuthActionCallback:
+      type: object
+      required:
+        - type
+        - payload
+      properties:
+        type:
+          type: string
+          enum:
+            - CALLBACK
+        payload:
+          type: object
+          required:
+            - callbackUrl
+          properties:
+            callbackUrl:
+              type: string
+    AuthActionStatusPoll:
+      type: object
+      required:
+        - type
+        - payload
+      properties:
+        type:
+          type: string
+          enum:
+            - STATUS_POLL
+        payload:
+          type: object
+    AuthActionSteam:
+      type: object
+      required:
+        - type
+        - payload
+      properties:
+        type:
+          type: string
+          enum:
+            - STEAM
+        payload:
+          type: object
+    Error:
+      type: object
+      description: |
+        Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
+        for known failure modes. When the reason symbol's description begins with
+        `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+        signal — both `reason` and the body itself are absent in that case.
+      properties:
+        reason:
+          type: string
+          description: Stable machine-readable reason code.

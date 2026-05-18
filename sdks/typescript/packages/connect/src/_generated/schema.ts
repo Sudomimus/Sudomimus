@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liveness probe for the Connect service. */
+        get: operations["health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/establish": {
         parameters: {
             query?: never;
@@ -13,8 +30,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Establish a connect session for an application. */
+        /** Establish a new authentication inquiry for an application. */
         post: operations["establish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/status-poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Poll the realization status of an authentication inquiry. */
+        post: operations["statusPoll"];
         delete?: never;
         options?: never;
         head?: never;
@@ -30,7 +64,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Redeem an authentication code for an application token. */
+        /** Redeem a realized inquiry for an application token pair. */
         post: operations["redeem"];
         delete?: never;
         options?: never;
@@ -47,8 +81,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Refresh an application token using a refresh token. */
+        /** Issue a new access token from a refresh token. */
         post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fetch localized public metadata about an application. */
+        post: operations["info"];
         delete?: never;
         options?: never;
         head?: never;
@@ -59,65 +110,111 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        HealthResponse: {
+            ready: boolean;
+            service: string;
+            version: string;
+        };
         EstablishRequest: {
-            /** @description Public key identifying the integrating application. */
-            applicationKey: string;
-            /**
-             * Format: uri
-             * @description URI the platform will redirect to after authentication.
-             */
-            redirectUri: string;
-            /** @description Opaque value echoed back in the redirect for CSRF protection. */
-            state?: string;
+            /** @description Public anchor identifying the integrating application. */
+            applicationAnchor: string;
+            /** @description Post-authentication actions the inquiry will satisfy. */
+            actions: components["schemas"]["AuthAction"][];
         };
         EstablishResponse: {
-            /** @description Identifier for the established connect session. */
-            sessionId: string;
-            /**
-             * Format: uri
-             * @description URL the end user should visit to complete authentication.
-             */
-            authorizeUrl: string;
-            /**
-             * Format: date-time
-             * @description When this session will expire if unused.
-             */
-            expiresAt?: string;
+            applicationAnchor: string;
+            /** @description Public half of the inquiry key pair; safe to share with the user agent. */
+            exposureKey: string;
+            /** @description Private half of the inquiry key pair; must stay on the originating client. */
+            hiddenKey: string;
         };
-        RedeemRequest: {
-            /** @description Session identifier returned from /establish. */
-            sessionId: string;
-            /** @description Authentication code obtained after the end user signs in. */
-            code: string;
+        StatusPollRequest: {
+            exposureKey: string;
+            hiddenKey: string;
         };
-        RefreshRequest: {
-            /** @description Refresh token previously issued by /redeem or /refresh. */
-            refreshToken: string;
-        };
-        TokenPair: {
-            /** @description Short-lived application access token (JWT). */
-            accessToken: string;
-            /** @description Long-lived refresh token. */
-            refreshToken: string;
+        StatusPollResponse: components["schemas"]["StatusPollPendingResponse"] | components["schemas"]["StatusPollRealizedResponse"];
+        StatusPollPendingResponse: {
             /**
-             * Format: int32
-             * @description Lifetime of the access token in seconds.
-             */
-            expiresIn: number;
-            /**
-             * @description Token type; currently always "Bearer".
-             * @default Bearer
+             * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            tokenType: "Bearer";
+            status: "PENDING";
         };
+        StatusPollRealizedResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "REALIZED";
+            /** @description One-time key proving the inquiry has been realized; pass to /redeem. */
+            confirmationKey: string;
+        };
+        RedeemRequest: {
+            exposureKey: string;
+            hiddenKey: string;
+            confirmationKey: string;
+        };
+        RedeemResponse: {
+            applicationAnchor: string;
+            /** @description Long-lived refresh token (JWT). */
+            refreshToken: string;
+            /** @description Short-lived access token (JWT). */
+            accessToken: string;
+        };
+        RefreshRequest: {
+            refreshToken: string;
+        };
+        RefreshResponse: {
+            /** @description Short-lived access token (JWT). No new refresh token is issued. */
+            accessToken: string;
+        };
+        InfoRequest: {
+            applicationAnchor: string;
+            /** @description IETF BCP 47 locale tag (e.g. "en-US"). Falls back to the application's default locale if not available. */
+            locale: string;
+        };
+        InfoResponse: {
+            applicationAnchor: string;
+            /** @description Localized application display name. */
+            applicationName: string;
+            /** @description PEM-encoded application public key used to verify issued JWTs. */
+            applicationPublicKey: string;
+        };
+        AuthAction: components["schemas"]["AuthActionCallback"] | components["schemas"]["AuthActionStatusPoll"] | components["schemas"]["AuthActionSteam"];
+        AuthActionCallback: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "CALLBACK";
+            payload: {
+                callbackUrl: string;
+            };
+        };
+        AuthActionStatusPoll: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "STATUS_POLL";
+            payload: Record<string, never>;
+        };
+        AuthActionSteam: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "STEAM";
+            payload: Record<string, never>;
+        };
+        /** @description Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
+         *     for known failure modes. When the reason symbol's description begins with
+         *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+         *     signal — both `reason` and the body itself are absent in that case.
+         *      */
         Error: {
-            /** @description Stable machine-readable error code. */
-            code: string;
-            /** @description Human-readable error message. */
-            message: string;
-            /** @description Identifier for correlating with platform logs. */
-            requestId?: string;
+            /** @description Stable machine-readable reason code. */
+            reason?: string;
         };
     };
     responses: never;
@@ -128,6 +225,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service is ready. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
     establish: {
         parameters: {
             query?: never;
@@ -141,13 +258,46 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Session established. */
+            /** @description Inquiry established. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["EstablishResponse"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    statusPoll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusPollRequest"];
+            };
+        };
+        responses: {
+            /** @description Current status of the inquiry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusPollResponse"];
                 };
             };
             /** @description Error response. */
@@ -174,13 +324,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Token issued. */
+            /** @description Tokens issued. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenPair"];
+                    "application/json": components["schemas"]["RedeemResponse"];
                 };
             };
             /** @description Error response. */
@@ -207,13 +357,46 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Token refreshed. */
+            /** @description Access token issued. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenPair"];
+                    "application/json": components["schemas"]["RefreshResponse"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InfoRequest"];
+            };
+        };
+        responses: {
+            /** @description Application metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InfoResponse"];
                 };
             };
             /** @description Error response. */
