@@ -6,6 +6,15 @@
  */
 
 import type { components, paths } from "./_generated/schema";
+import {
+    ACCESS_TOKEN_KEY_TYPE,
+    ConnectTokenError,
+    REFRESH_TOKEN_KEY_TYPE,
+    parseAccessToken,
+    parseRefreshToken,
+    type AccessToken,
+    type RefreshToken,
+} from "./token";
 
 export type ConnectSchemas = components["schemas"];
 export type ConnectPaths = paths;
@@ -29,9 +38,29 @@ export type AuthActionStatusPoll = components["schemas"]["AuthActionStatusPoll"]
 export type AuthActionSteam = components["schemas"]["AuthActionSteam"];
 export type ConnectErrorBody = components["schemas"]["Error"];
 
+export {
+    ACCESS_TOKEN_KEY_TYPE,
+    ConnectTokenError,
+    REFRESH_TOKEN_KEY_TYPE,
+    parseAccessToken,
+    parseRefreshToken,
+} from "./token";
+export type {
+    AccessToken,
+    AccessTokenBody,
+    AccessTokenHeader,
+    ConnectTokenErrorCode,
+    RefreshToken,
+    RefreshTokenBody,
+    RefreshTokenHeader,
+} from "./token";
+
+export const DEFAULT_PUBLIC_KEY_LOCALE = "en-US";
+
 export interface ConnectClientOptions {
     baseUrl: string;
     fetch?: typeof globalThis.fetch;
+    publicKeyFetchLocale?: string;
 }
 
 export class ConnectApiError extends Error {
@@ -58,15 +87,23 @@ export class ConnectApiError extends Error {
     }
 }
 
+export interface GetApplicationPublicKeyOptions {
+    force?: boolean;
+}
+
 export class ConnectClient {
 
     private readonly _baseUrl: string;
     private readonly _fetch: typeof globalThis.fetch;
+    private readonly _publicKeyLocale: string;
+    private readonly _publicKeyCache: Map<string, string>;
 
     public constructor(options: ConnectClientOptions) {
 
         this._baseUrl = options.baseUrl.replace(/\/+$/, "");
         this._fetch = options.fetch ?? globalThis.fetch;
+        this._publicKeyLocale = options.publicKeyFetchLocale ?? DEFAULT_PUBLIC_KEY_LOCALE;
+        this._publicKeyCache = new Map();
     }
 
     public get baseUrl(): string {
@@ -107,6 +144,99 @@ export class ConnectClient {
     public async info(request: InfoRequest): Promise<InfoResponse> {
 
         return this._post<InfoRequest, InfoResponse>("/info", request);
+    }
+
+    public async getApplicationPublicKey(
+        applicationAnchor: string,
+        options: GetApplicationPublicKeyOptions = {},
+    ): Promise<string> {
+
+        if (!options.force) {
+
+            const cached: string | undefined = this._publicKeyCache.get(applicationAnchor);
+
+            if (typeof cached === "string") {
+
+                return cached;
+            }
+        }
+
+        const response: InfoResponse = await this.info({
+            applicationAnchor,
+            locale: this._publicKeyLocale,
+        });
+        this._publicKeyCache.set(applicationAnchor, response.applicationPublicKey);
+        return response.applicationPublicKey;
+    }
+
+    public clearPublicKeyCache(applicationAnchor?: string): void {
+
+        if (typeof applicationAnchor === "string") {
+
+            this._publicKeyCache.delete(applicationAnchor);
+            return;
+        }
+
+        this._publicKeyCache.clear();
+    }
+
+    public async verifyAccessToken(jwt: string): Promise<AccessToken> {
+
+        return this._verify(jwt, ACCESS_TOKEN_KEY_TYPE, parseAccessToken) as Promise<AccessToken>;
+    }
+
+    public async verifyRefreshToken(jwt: string): Promise<RefreshToken> {
+
+        return this._verify(jwt, REFRESH_TOKEN_KEY_TYPE, parseRefreshToken) as Promise<RefreshToken>;
+    }
+
+    private async _verify(
+        jwt: string,
+        expectedKeyType: string,
+        parser: (jwt: string) => AccessToken | RefreshToken | null,
+    ): Promise<AccessToken | RefreshToken> {
+
+        const parsed: AccessToken | RefreshToken | null = parser(jwt);
+
+        if (parsed === null) {
+
+            throw new ConnectTokenError("INVALID_JWT", "Token is not a parseable JWT.");
+        }
+
+        if (parsed.header.kty !== expectedKeyType) {
+
+            throw new ConnectTokenError(
+                "WRONG_KEY_TYPE",
+                `Expected key type "${expectedKeyType}", got "${parsed.header.kty ?? ""}".`,
+            );
+        }
+
+        const audience: string | undefined = parsed.header.aud;
+
+        if (typeof audience !== "string" || audience.length === 0) {
+
+            throw new ConnectTokenError(
+                "MISSING_AUDIENCE",
+                "Token is missing the `aud` (applicationAnchor) header.",
+            );
+        }
+
+        if (!parsed.verifyExpiration(new Date())) {
+
+            throw new ConnectTokenError("EXPIRED", "Token has expired.");
+        }
+
+        const publicKey: string = await this.getApplicationPublicKey(audience);
+
+        if (!parsed.verifySignature(publicKey)) {
+
+            throw new ConnectTokenError(
+                "INVALID_SIGNATURE",
+                "Token signature does not match the application public key.",
+            );
+        }
+
+        return parsed;
     }
 
     private async _get<TRes>(path: string): Promise<TRes> {

@@ -44,9 +44,35 @@ if (poll.status === "REALIZED") {
 }
 ```
 
+### Verifying issued tokens
+
+Both `redeem` and `refresh` return signed JWTs (RS256). The SDK can parse them, verify their signatures against the application public key (fetched from `/info` and cached), and check expiration.
+
+```typescript
+import { ConnectClient, ConnectTokenError } from "@sudomimus/connect";
+
+const client = new ConnectClient({ baseUrl: "https://connect.sudomimus.com" });
+
+try {
+    const token = await client.verifyAccessToken(accessJwt);
+    console.log(token.body.accountIdentifier, token.body.firstName);
+} catch (err) {
+    if (err instanceof ConnectTokenError) {
+        // err.code: "INVALID_JWT" | "WRONG_KEY_TYPE" | "MISSING_AUDIENCE" | "EXPIRED" | "INVALID_SIGNATURE"
+    }
+}
+
+const refresh = await client.verifyRefreshToken(refreshJwt);
+console.log(refresh.body.accountIdentifier);
+```
+
+The public key cache is per-`ConnectClient` instance and keyed by `applicationAnchor` (the JWT's `aud` header). Override the locale used for the cache-populating `/info` call with `new ConnectClient({ baseUrl, publicKeyFetchLocale: "zh-CN" })`. Force a refresh with `client.getApplicationPublicKey(anchor, { force: true })`, or evict entries with `client.clearPublicKeyCache(anchor?)`.
+
+For lower-level access, `parseAccessToken(jwt)` and `parseRefreshToken(jwt)` decode without verifying — they return a `JWTToken` instance (or `null`) so you can inspect headers/body before deciding to verify.
+
 ### Error handling
 
-All non-2xx responses surface as `ConnectApiError`:
+All non-2xx HTTP responses surface as `ConnectApiError`:
 
 ```typescript
 try {
@@ -62,7 +88,7 @@ The Connect service returns `{ "reason": "<code>" }` for known failures. For `PR
 
 ## Types
 
-Request, response, and error types are generated from [`specs/connect.yaml`](../../../../specs/connect.yaml) and re-exported by name:
+HTTP request, response, and error types are generated from [`specs/connect.yaml`](../../../../specs/connect.yaml) and re-exported by name:
 
 ```typescript
 import type {
@@ -84,6 +110,20 @@ import type {
     AuthActionStatusPoll,
     AuthActionSteam,
     ConnectErrorBody,
+} from "@sudomimus/connect";
+```
+
+Token types (the JWT body and header shapes mirror the server-side definitions):
+
+```typescript
+import type {
+    AccessToken,
+    AccessTokenBody,
+    AccessTokenHeader,
+    RefreshToken,
+    RefreshTokenBody,
+    RefreshTokenHeader,
+    ConnectTokenErrorCode,
 } from "@sudomimus/connect";
 ```
 

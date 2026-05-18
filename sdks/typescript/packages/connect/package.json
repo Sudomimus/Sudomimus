@@ -31,6 +31,10 @@
         "lint": "eslint src",
         "test": "jest"
     },
+    "dependencies": {
+        "@sudoo/jwt": "catalog:",
+        "@sudoo/token": "catalog:"
+    },
     "devDependencies": {
         "@types/jest": "catalog:",
         "@types/node": "catalog:",

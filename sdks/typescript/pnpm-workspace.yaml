@@ -2,6 +2,8 @@ packages:
   - packages/*
 
 catalog:
+  "@sudoo/jwt": 3.5.0
+  "@sudoo/token": 1.6.1
   "@types/jest": 29.5.14
   "@types/node": 22.10.5
   "@typescript-eslint/eslint-plugin": 8.59.1
