@@ -5,16 +5,8 @@
  * @description Index
  */
 
+import { TokenVerifier, type AccessToken, type RefreshToken } from "@sudomimus/token";
 import type { components, paths } from "./_generated/schema";
-import {
-    ACCESS_TOKEN_KEY_TYPE,
-    ConnectTokenError,
-    REFRESH_TOKEN_KEY_TYPE,
-    parseAccessToken,
-    parseRefreshToken,
-    type AccessToken,
-    type RefreshToken,
-} from "./token";
 
 export type ConnectSchemas = components["schemas"];
 export type ConnectPaths = paths;
@@ -37,23 +29,6 @@ export type AuthActionCallback = components["schemas"]["AuthActionCallback"];
 export type AuthActionStatusPoll = components["schemas"]["AuthActionStatusPoll"];
 export type AuthActionSteam = components["schemas"]["AuthActionSteam"];
 export type ConnectErrorBody = components["schemas"]["Error"];
-
-export {
-    ACCESS_TOKEN_KEY_TYPE,
-    ConnectTokenError,
-    REFRESH_TOKEN_KEY_TYPE,
-    parseAccessToken,
-    parseRefreshToken,
-} from "./token";
-export type {
-    AccessToken,
-    AccessTokenBody,
-    AccessTokenHeader,
-    ConnectTokenErrorCode,
-    RefreshToken,
-    RefreshTokenBody,
-    RefreshTokenHeader,
-} from "./token";
 
 export const DEFAULT_PUBLIC_KEY_LOCALE = "en-US";
 
@@ -97,6 +72,7 @@ export class ConnectClient {
     private readonly _fetch: typeof globalThis.fetch;
     private readonly _publicKeyLocale: string;
     private readonly _publicKeyCache: Map<string, string>;
+    private readonly _tokenVerifier: TokenVerifier;
 
     public constructor(options: ConnectClientOptions) {
 
@@ -104,6 +80,9 @@ export class ConnectClient {
         this._fetch = options.fetch ?? globalThis.fetch;
         this._publicKeyLocale = options.publicKeyFetchLocale ?? DEFAULT_PUBLIC_KEY_LOCALE;
         this._publicKeyCache = new Map();
+        this._tokenVerifier = new TokenVerifier({
+            resolver: (anchor) => this.getApplicationPublicKey(anchor),
+        });
     }
 
     public get baseUrl(): string {
@@ -182,61 +161,12 @@ export class ConnectClient {
 
     public async verifyAccessToken(jwt: string): Promise<AccessToken> {
 
-        return this._verify(jwt, ACCESS_TOKEN_KEY_TYPE, parseAccessToken) as Promise<AccessToken>;
+        return this._tokenVerifier.verifyAccessToken(jwt);
     }
 
     public async verifyRefreshToken(jwt: string): Promise<RefreshToken> {
 
-        return this._verify(jwt, REFRESH_TOKEN_KEY_TYPE, parseRefreshToken) as Promise<RefreshToken>;
-    }
-
-    private async _verify(
-        jwt: string,
-        expectedKeyType: string,
-        parser: (jwt: string) => AccessToken | RefreshToken | null,
-    ): Promise<AccessToken | RefreshToken> {
-
-        const parsed: AccessToken | RefreshToken | null = parser(jwt);
-
-        if (parsed === null) {
-
-            throw new ConnectTokenError("INVALID_JWT", "Token is not a parseable JWT.");
-        }
-
-        if (parsed.header.kty !== expectedKeyType) {
-
-            throw new ConnectTokenError(
-                "WRONG_KEY_TYPE",
-                `Expected key type "${expectedKeyType}", got "${parsed.header.kty ?? ""}".`,
-            );
-        }
-
-        const audience: string | undefined = parsed.header.aud;
-
-        if (typeof audience !== "string" || audience.length === 0) {
-
-            throw new ConnectTokenError(
-                "MISSING_AUDIENCE",
-                "Token is missing the `aud` (applicationAnchor) header.",
-            );
-        }
-
-        if (!parsed.verifyExpiration(new Date())) {
-
-            throw new ConnectTokenError("EXPIRED", "Token has expired.");
-        }
-
-        const publicKey: string = await this.getApplicationPublicKey(audience);
-
-        if (!parsed.verifySignature(publicKey)) {
-
-            throw new ConnectTokenError(
-                "INVALID_SIGNATURE",
-                "Token signature does not match the application public key.",
-            );
-        }
-
-        return parsed;
+        return this._tokenVerifier.verifyRefreshToken(jwt);
     }
 
     private async _get<TRes>(path: string): Promise<TRes> {

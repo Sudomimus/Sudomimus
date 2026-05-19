@@ -46,10 +46,11 @@ if (poll.status === "REALIZED") {
 
 ### Verifying issued tokens
 
-Both `redeem` and `refresh` return signed JWTs (RS256). The SDK can parse them, verify their signatures against the application public key (fetched from `/info` and cached), and check expiration.
+Both `redeem` and `refresh` return signed JWTs (RS256). `ConnectClient` exposes convenience verifiers that parse the token, look up the application's public key via `/info` (cached), and verify the signature and expiration.
 
 ```typescript
-import { ConnectClient, ConnectTokenError } from "@sudomimus/connect";
+import { ConnectClient } from "@sudomimus/connect";
+import { TokenError } from "@sudomimus/token";
 
 const client = new ConnectClient({ baseUrl: "https://connect.sudomimus.com" });
 
@@ -57,7 +58,7 @@ try {
     const token = await client.verifyAccessToken(accessJwt);
     console.log(token.body.accountIdentifier, token.body.firstName);
 } catch (err) {
-    if (err instanceof ConnectTokenError) {
+    if (err instanceof TokenError) {
         // err.code: "INVALID_JWT" | "WRONG_KEY_TYPE" | "MISSING_AUDIENCE" | "EXPIRED" | "INVALID_SIGNATURE"
     }
 }
@@ -68,7 +69,7 @@ console.log(refresh.body.accountIdentifier);
 
 The public key cache is per-`ConnectClient` instance and keyed by `applicationAnchor` (the JWT's `aud` header). Override the locale used for the cache-populating `/info` call with `new ConnectClient({ baseUrl, publicKeyFetchLocale: "zh-CN" })`. Force a refresh with `client.getApplicationPublicKey(anchor, { force: true })`, or evict entries with `client.clearPublicKeyCache(anchor?)`.
 
-For lower-level access, `parseAccessToken(jwt)` and `parseRefreshToken(jwt)` decode without verifying — they return a `JWTToken` instance (or `null`) so you can inspect headers/body before deciding to verify.
+If you only need to verify tokens (you are an application backend and do not drive the auth flow), depend on [`@sudomimus/token`](../token) directly and provide your own `PublicKeyResolver`.
 
 ### Error handling
 
@@ -113,7 +114,7 @@ import type {
 } from "@sudomimus/connect";
 ```
 
-Token types (the JWT body and header shapes mirror the server-side definitions):
+Token types (the JWT body and header shapes mirror the server-side definitions) live in [`@sudomimus/token`](../token):
 
 ```typescript
 import type {
@@ -123,8 +124,8 @@ import type {
     RefreshToken,
     RefreshTokenBody,
     RefreshTokenHeader,
-    ConnectTokenErrorCode,
-} from "@sudomimus/connect";
+    TokenErrorCode,
+} from "@sudomimus/token";
 ```
 
 ## License

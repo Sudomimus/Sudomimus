@@ -3,12 +3,8 @@ module.exports = {
     preset: "ts-jest",
     testEnvironment: "node",
     verbose: true,
-    moduleNameMapper: {
-        "^@sudomimus/token$": "<rootDir>/../token/src/index.ts",
-    },
     collectCoverageFrom: [
         "src/**/*.ts",
-        "!src/_generated/**",
     ],
     coverageReporters: [
         "json",

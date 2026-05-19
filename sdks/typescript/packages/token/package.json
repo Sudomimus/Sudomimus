@@ -1,12 +1,12 @@
 {
-    "name": "@sudomimus/connect",
+    "name": "@sudomimus/token",
     "version": "0.0.1",
-    "description": "Sudomimus Connect SDK — token exchange (Establish, Redeem, Refresh).",
+    "description": "Sudomimus Token SDK — parse and verify Sudomimus access and refresh JWTs.",
     "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/sudomimus/sudomimus.git",
-        "directory": "sdks/typescript/packages/connect"
+        "directory": "sdks/typescript/packages/token"
     },
     "type": "module",
     "main": "dist/index.js",
@@ -26,23 +26,21 @@
         "access": "public"
     },
     "scripts": {
-        "generate": "openapi-typescript ../../../../specs/connect.yaml -o src/_generated/schema.ts",
         "compile": "tsc --project tsconfig.compile.json",
         "lint": "eslint src",
         "test": "jest",
-        "release": "pnpm generate && pnpm lint && pnpm test && pnpm compile",
+        "release": "pnpm lint && pnpm test && pnpm compile",
         "release:dry-run": "pnpm release && pnpm pack --pack-destination /tmp && pnpm publish --dry-run --no-git-checks --access=public",
         "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
     },
     "dependencies": {
-        "@sudomimus/token": "workspace:*"
+        "@sudoo/jwt": "catalog:",
+        "@sudoo/token": "catalog:"
     },
     "devDependencies": {
-        "@sudoo/jwt": "catalog:",
         "@types/jest": "catalog:",
         "@types/node": "catalog:",
         "jest": "catalog:",
-        "openapi-typescript": "catalog:",
         "ts-jest": "catalog:",
         "typescript": "catalog:"
     }

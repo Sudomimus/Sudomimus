@@ -6,17 +6,16 @@
  */
 
 import { JWTCreator } from "@sudoo/jwt";
+import {
+    type AccessTokenBody,
+    type AccessTokenHeader,
+    type RefreshTokenBody,
+    type RefreshTokenHeader,
+} from "@sudomimus/token";
 import { generateKeyPairSync } from "node:crypto";
 import {
     ConnectClient,
-    ConnectTokenError,
-    parseAccessToken,
-    parseRefreshToken,
-    type AccessTokenBody,
-    type AccessTokenHeader,
     type InfoResponse,
-    type RefreshTokenBody,
-    type RefreshTokenHeader,
 } from "../src";
 
 type FakeResponseSpec = {
@@ -60,24 +59,20 @@ const generateRsaKeyPair = (): { privateKey: string; publicKey: string } => {
 
 const APPLICATION_ANCHOR = "anchor-1";
 
-const mintAccessToken = (
-    privateKey: string,
-    overrides: { expirationAt?: Date; keyType?: string; audience?: string } = {},
-): string => {
+const mintAccessToken = (privateKey: string): string => {
 
     const creator: JWTCreator<AccessTokenHeader, AccessTokenBody> =
         JWTCreator.instantiate(privateKey);
     const issuedAt = new Date();
-    const expirationAt = overrides.expirationAt
-        ?? new Date(issuedAt.getTime() + 3 * 60 * 60 * 1000);
+    const expirationAt = new Date(issuedAt.getTime() + 3 * 60 * 60 * 1000);
 
     return creator.create({
         issuedAt,
         expirationAt,
         identifier: "access-1",
-        keyType: overrides.keyType ?? "Access",
+        keyType: "Access",
         issuer: "sudomimus.com",
-        audience: overrides.audience ?? APPLICATION_ANCHOR,
+        audience: APPLICATION_ANCHOR,
         subject: "refresh-1",
         header: {},
         body: {
@@ -88,10 +83,7 @@ const mintAccessToken = (
     });
 };
 
-const mintRefreshToken = (
-    privateKey: string,
-    overrides: { keyType?: string; audience?: string } = {},
-): string => {
+const mintRefreshToken = (privateKey: string): string => {
 
     const creator: JWTCreator<RefreshTokenHeader, RefreshTokenBody> =
         JWTCreator.instantiate(privateKey);
@@ -102,9 +94,9 @@ const mintRefreshToken = (
         issuedAt,
         expirationAt,
         identifier: "refresh-1",
-        keyType: overrides.keyType ?? "Refresh",
+        keyType: "Refresh",
         issuer: "sudomimus.com",
-        audience: overrides.audience ?? APPLICATION_ANCHOR,
+        audience: APPLICATION_ANCHOR,
         header: {},
         body: { accountIdentifier: "acct-1" },
     });
@@ -119,37 +111,7 @@ const buildInfoResponse = (publicKey: string): InfoResponse => {
     };
 };
 
-describe("token parsing", () => {
-
-    it("parseAccessToken returns null for garbage input", () => {
-
-        expect(parseAccessToken("not-a-jwt")).toBeNull();
-    });
-
-    it("parseRefreshToken returns null for garbage input", () => {
-
-        expect(parseRefreshToken("not-a-jwt")).toBeNull();
-    });
-
-    it("parseAccessToken exposes the typed body", () => {
-
-        const { privateKey } = generateRsaKeyPair();
-        const jwt: string = mintAccessToken(privateKey);
-        const parsed = parseAccessToken(jwt);
-
-        if (parsed === null) {
-
-            throw new Error("expected a parsed token");
-        }
-
-        expect(parsed.body.accountIdentifier).toBe("acct-1");
-        expect(parsed.body.firstName).toBe("Ada");
-        expect(parsed.header.kty).toBe("Access");
-        expect(parsed.header.aud).toBe(APPLICATION_ANCHOR);
-    });
-});
-
-describe("verifyAccessToken / verifyRefreshToken", () => {
+describe("ConnectClient.verifyAccessToken / verifyRefreshToken", () => {
 
     it("verifies a valid access token and caches the public key", async () => {
 
@@ -193,7 +155,7 @@ describe("verifyAccessToken / verifyRefreshToken", () => {
         expect(result.header.kty).toBe("Refresh");
     });
 
-    it("throws INVALID_JWT on unparseable input", async () => {
+    it("surfaces TokenError from the underlying verifier", async () => {
 
         const client = new ConnectClient({
             baseUrl: "https://connect.example.com",
@@ -201,76 +163,8 @@ describe("verifyAccessToken / verifyRefreshToken", () => {
         });
 
         await expect(client.verifyAccessToken("garbage")).rejects.toMatchObject({
-            name: "ConnectTokenError",
+            name: "TokenError",
             code: "INVALID_JWT",
-        });
-    });
-
-    it("throws WRONG_KEY_TYPE when an access token is verified as a refresh token", async () => {
-
-        const { privateKey } = generateRsaKeyPair();
-        const accessJwt: string = mintAccessToken(privateKey);
-        const client = new ConnectClient({
-            baseUrl: "https://connect.example.com",
-            fetch: makeFetch([]) as unknown as typeof globalThis.fetch,
-        });
-
-        await expect(client.verifyRefreshToken(accessJwt)).rejects.toMatchObject({
-            name: "ConnectTokenError",
-            code: "WRONG_KEY_TYPE",
-        });
-    });
-
-    it("throws MISSING_AUDIENCE when aud is absent", async () => {
-
-        const { privateKey } = generateRsaKeyPair();
-        const jwt: string = mintAccessToken(privateKey, { audience: "" });
-        const client = new ConnectClient({
-            baseUrl: "https://connect.example.com",
-            fetch: makeFetch([]) as unknown as typeof globalThis.fetch,
-        });
-
-        await expect(client.verifyAccessToken(jwt)).rejects.toMatchObject({
-            name: "ConnectTokenError",
-            code: "MISSING_AUDIENCE",
-        });
-    });
-
-    it("throws EXPIRED when expiration is in the past", async () => {
-
-        const { privateKey } = generateRsaKeyPair();
-        const jwt: string = mintAccessToken(privateKey, {
-            expirationAt: new Date(Date.now() - 60_000),
-        });
-        const client = new ConnectClient({
-            baseUrl: "https://connect.example.com",
-            fetch: makeFetch([]) as unknown as typeof globalThis.fetch,
-        });
-
-        await expect(client.verifyAccessToken(jwt)).rejects.toMatchObject({
-            name: "ConnectTokenError",
-            code: "EXPIRED",
-        });
-    });
-
-    it("throws INVALID_SIGNATURE when the cached public key does not match", async () => {
-
-        const minted = generateRsaKeyPair();
-        const other = generateRsaKeyPair();
-        const jwt: string = mintAccessToken(minted.privateKey);
-        const fetchMock = makeFetch([{
-            ok: true,
-            status: 200,
-            body: buildInfoResponse(other.publicKey),
-        }]);
-        const client = new ConnectClient({
-            baseUrl: "https://connect.example.com",
-            fetch: fetchMock as unknown as typeof globalThis.fetch,
-        });
-
-        await expect(client.verifyAccessToken(jwt)).rejects.toMatchObject({
-            name: "ConnectTokenError",
-            code: "INVALID_SIGNATURE",
         });
     });
 });
@@ -353,16 +247,5 @@ describe("public key cache", () => {
             applicationAnchor: APPLICATION_ANCHOR,
             locale: "zh-CN",
         });
-    });
-});
-
-describe("ConnectTokenError", () => {
-
-    it("carries a stable code", () => {
-
-        const err = new ConnectTokenError("EXPIRED", "x");
-        expect(err.code).toBe("EXPIRED");
-        expect(err.name).toBe("ConnectTokenError");
-        expect(err).toBeInstanceOf(Error);
     });
 });

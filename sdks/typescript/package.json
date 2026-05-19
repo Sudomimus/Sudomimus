@@ -1,13 +1,17 @@
 {
     "name": "@sudomimus/sdks-typescript",
     "private": true,
-    "packageManager": "pnpm@11.1.0",
+    "packageManager": "pnpm@11.1.3",
     "scripts": {
         "generate": "turbo run generate",
         "compile": "turbo run compile",
         "lint": "turbo run lint",
         "test": "turbo run test",
-        "coverage": "turbo run coverage"
+        "coverage": "turbo run coverage",
+        "publish:token": "pnpm --filter @sudomimus/token run release:publish",
+        "publish:connect": "pnpm --filter @sudomimus/connect run release:publish",
+        "publish-dry-run:token": "pnpm --filter @sudomimus/token run release:dry-run",
+        "publish-dry-run:connect": "pnpm --filter @sudomimus/connect run release:dry-run"
     },
     "devDependencies": {
         "@types/jest": "catalog:",

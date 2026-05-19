@@ -7,6 +7,7 @@ This workspace hosts the TypeScript / JavaScript SDKs published to npm under the
 | Package | Spec | Purpose |
 | --- | --- | --- |
 | [`@sudomimus/connect`](packages/connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / Redeem / Refresh) |
+| [`@sudomimus/token`](packages/token) | — | Parse and verify Sudomimus access / refresh JWTs |
 | [`@sudomimus/native`](packages/native) | [`specs/native.yaml`](../../specs/native.yaml) | Native client entry point |
 
 ## Tooling
