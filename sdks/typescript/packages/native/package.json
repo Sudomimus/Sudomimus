@@ -27,7 +27,7 @@
     },
     "scripts": {
         "generate": "openapi-typescript ../../../../specs/native.yaml -o src/_generated/schema.ts",
-        "compile": "tsc --project tsconfig.compile.json",
+        "compile": "tsc --project typescript/tsconfig.compile.json",
         "lint": "eslint src",
         "test": "jest"
     },

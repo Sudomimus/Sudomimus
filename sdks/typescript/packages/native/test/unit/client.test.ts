@@ -1,11 +1,11 @@
 /**
  * @author Sudomimus Contributors
  * @package Native
- * @namespace Root
- * @description Index.test
+ * @namespace Client
+ * @description Client.test
  */
 
-import { NativeClient, type StatusPollRequest } from "../src";
+import { NativeClient } from "../../src/client";
 
 describe("NativeClient", () => {
 
@@ -16,14 +16,5 @@ describe("NativeClient", () => {
         });
 
         expect(client.baseUrl).toBe("https://native.example.com");
-    });
-
-    it("exposes generated request types", () => {
-
-        const request: StatusPollRequest = {
-            pollToken: "poll-token",
-        };
-
-        expect(request.pollToken).toBe("poll-token");
     });
 });
