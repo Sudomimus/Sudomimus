@@ -26,7 +26,7 @@
         "access": "public"
     },
     "scripts": {
-        "compile": "tsc --project tsconfig.compile.json",
+        "compile": "tsc --project typescript/tsconfig.compile.json",
         "lint": "eslint src",
         "test": "jest",
         "release": "pnpm lint && pnpm test && pnpm compile",

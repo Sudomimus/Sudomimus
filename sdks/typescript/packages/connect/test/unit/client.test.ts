@@ -1,56 +1,26 @@
 /**
  * @author Sudomimus Contributors
  * @package Connect
- * @namespace Root
- * @description Index.test
+ * @namespace Client
+ * @description Client.test
  */
 
+import { ConnectClient, ConnectApiError } from "../../src";
+import type {
+    EstablishResponse,
+    HealthResponse,
+    InfoResponse,
+    RedeemResponse,
+    RefreshResponse,
+    StatusPollResponse,
+} from "../../src";
+import { buildInfoResponse, makeFetch } from "../helpers/fetch";
 import {
-    ConnectApiError,
-    ConnectClient,
-    type EstablishRequest,
-    type EstablishResponse,
-    type HealthResponse,
-    type InfoResponse,
-    type RedeemResponse,
-    type RefreshResponse,
-    type StatusPollResponse,
-} from "../src";
-
-type FakeResponseSpec = {
-    ok: boolean;
-    status: number;
-    body?: unknown;
-    rawBody?: string;
-};
-
-const makeFetch = (specs: FakeResponseSpec[]): jest.Mock => {
-
-    const calls: FakeResponseSpec[] = [...specs];
-
-    return jest.fn(async (): Promise<Response> => {
-
-        const next: FakeResponseSpec | undefined = calls.shift();
-
-        if (typeof next === "undefined") {
-
-            throw new Error("makeFetch: no more responses queued");
-        }
-
-        const text: string = typeof next.rawBody === "string"
-            ? next.rawBody
-            : typeof next.body === "undefined"
-                ? ""
-                : JSON.stringify(next.body);
-
-        return {
-            ok: next.ok,
-            status: next.status,
-            json: async () => JSON.parse(text),
-            text: async () => text,
-        } as unknown as Response;
-    });
-};
+    APPLICATION_ANCHOR,
+    generateRsaKeyPair,
+    mintAccessToken,
+    mintRefreshToken,
+} from "../helpers/jwt";
 
 describe("ConnectClient", () => {
 
@@ -61,22 +31,6 @@ describe("ConnectClient", () => {
         });
 
         expect(client.baseUrl).toBe("https://connect.example.com");
-    });
-
-    it("exposes generated request types", () => {
-
-        const request: EstablishRequest = {
-            applicationAnchor: "anchor-1",
-            actions: [
-                {
-                    type: "CALLBACK",
-                    payload: { callbackUrl: "https://example.com/cb" },
-                },
-            ],
-        };
-
-        expect(request.applicationAnchor).toBe("anchor-1");
-        expect(request.actions[0].type).toBe("CALLBACK");
     });
 
     describe("health", () => {
@@ -316,6 +270,145 @@ describe("ConnectClient", () => {
                 name: "ConnectApiError",
                 status: 500,
                 reason: undefined,
+            });
+        });
+    });
+
+    describe("verifyAccessToken / verifyRefreshToken", () => {
+
+        it("verifies a valid access token and caches the public key", async () => {
+
+            const { privateKey, publicKey } = generateRsaKeyPair();
+            const jwt: string = mintAccessToken(privateKey);
+            const fetchMock = makeFetch([{
+                ok: true,
+                status: 200,
+                body: buildInfoResponse(publicKey),
+            }]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const first = await client.verifyAccessToken(jwt);
+            expect(first.body.accountIdentifier).toBe("acct-1");
+
+            const second = await client.verifyAccessToken(mintAccessToken(privateKey));
+            expect(second.body.accountIdentifier).toBe("acct-1");
+
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+
+        it("verifies a valid refresh token", async () => {
+
+            const { privateKey, publicKey } = generateRsaKeyPair();
+            const jwt: string = mintRefreshToken(privateKey);
+            const fetchMock = makeFetch([{
+                ok: true,
+                status: 200,
+                body: buildInfoResponse(publicKey),
+            }]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const result = await client.verifyRefreshToken(jwt);
+            expect(result.body.accountIdentifier).toBe("acct-1");
+            expect(result.header.kty).toBe("Refresh");
+        });
+
+        it("surfaces TokenError from the underlying verifier", async () => {
+
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: makeFetch([]) as unknown as typeof globalThis.fetch,
+            });
+
+            await expect(client.verifyAccessToken("garbage")).rejects.toMatchObject({
+                name: "TokenError",
+                code: "INVALID_JWT",
+            });
+        });
+    });
+
+    describe("public key cache", () => {
+
+        it("fetches once and caches by applicationAnchor", async () => {
+
+            const { publicKey } = generateRsaKeyPair();
+            const fetchMock = makeFetch([
+                { ok: true, status: 200, body: buildInfoResponse(publicKey) },
+            ]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const first = await client.getApplicationPublicKey(APPLICATION_ANCHOR);
+            const second = await client.getApplicationPublicKey(APPLICATION_ANCHOR);
+            expect(first).toBe(publicKey);
+            expect(second).toBe(publicKey);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+
+        it("force refetches when options.force is true", async () => {
+
+            const a = generateRsaKeyPair().publicKey;
+            const b = generateRsaKeyPair().publicKey;
+            const fetchMock = makeFetch([
+                { ok: true, status: 200, body: buildInfoResponse(a) },
+                { ok: true, status: 200, body: buildInfoResponse(b) },
+            ]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            expect(await client.getApplicationPublicKey(APPLICATION_ANCHOR)).toBe(a);
+            expect(await client.getApplicationPublicKey(APPLICATION_ANCHOR, { force: true })).toBe(b);
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+        });
+
+        it("clearPublicKeyCache(anchor) evicts only that entry", async () => {
+
+            const a = generateRsaKeyPair().publicKey;
+            const aRefetched = generateRsaKeyPair().publicKey;
+            const fetchMock = makeFetch([
+                { ok: true, status: 200, body: buildInfoResponse(a) },
+                { ok: true, status: 200, body: buildInfoResponse(aRefetched) },
+            ]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            await client.getApplicationPublicKey(APPLICATION_ANCHOR);
+            client.clearPublicKeyCache(APPLICATION_ANCHOR);
+            const after = await client.getApplicationPublicKey(APPLICATION_ANCHOR);
+            expect(after).toBe(aRefetched);
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+        });
+
+        it("uses the configured publicKeyFetchLocale when fetching /info", async () => {
+
+            const { publicKey } = generateRsaKeyPair();
+            const fetchMock = makeFetch([{
+                ok: true,
+                status: 200,
+                body: buildInfoResponse(publicKey),
+            }]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+                publicKeyFetchLocale: "zh-CN",
+            });
+
+            await client.getApplicationPublicKey(APPLICATION_ANCHOR);
+            const [, init] = fetchMock.mock.calls[0];
+            expect(JSON.parse(init.body as string)).toEqual({
+                applicationAnchor: APPLICATION_ANCHOR,
+                locale: "zh-CN",
             });
         });
     });
