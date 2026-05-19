@@ -16,7 +16,7 @@ pnpm add @sudomimus/connect
 import { ConnectClient, ConnectApiError } from "@sudomimus/connect";
 
 const client = new ConnectClient({
-    baseUrl: "https://connect.sudomimus.com",
+    baseUrl: "https://connect-api.sudomimus.com",
 });
 
 const inquiry = await client.establish({
@@ -52,7 +52,7 @@ Both `redeem` and `refresh` return signed JWTs (RS256). `ConnectClient` exposes 
 import { ConnectClient } from "@sudomimus/connect";
 import { TokenError } from "@sudomimus/token";
 
-const client = new ConnectClient({ baseUrl: "https://connect.sudomimus.com" });
+const client = new ConnectClient({ baseUrl: "https://connect-api.sudomimus.com" });
 
 try {
     const token = await client.verifyAccessToken(accessJwt);

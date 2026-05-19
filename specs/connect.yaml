@@ -12,7 +12,7 @@ info:
     name: MIT
     identifier: MIT
 servers:
-  - url: https://connect.sudomimus.com
+  - url: https://connect-api.sudomimus.com
     description: Production
 paths:
   /health:

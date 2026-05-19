@@ -13,7 +13,7 @@ pip install sudomimus-connect
 ```python
 from sudomimus_connect import ConnectClient
 
-client = ConnectClient(base_url="https://connect.sudomimus.com")
+client = ConnectClient(base_url="https://connect-api.sudomimus.com")
 ```
 
 ## Models
