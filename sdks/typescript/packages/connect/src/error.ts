@@ -30,3 +30,12 @@ export class ConnectApiError extends Error {
         this.body = body;
     }
 }
+
+export class ConnectConfigError extends Error {
+
+    public constructor(message: string) {
+
+        super(message);
+        this.name = "ConnectConfigError";
+    }
+}

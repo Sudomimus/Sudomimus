@@ -6,8 +6,10 @@
  */
 
 import { TokenVerifier, type AccessToken, type RefreshToken } from "@sudomimus/token";
-import { DEFAULT_PUBLIC_KEY_LOCALE } from "./constants";
+import { signEstablishClientJwt } from "./client-auth";
+import { CLIENT_JWT_AUTH_SCHEME, DEFAULT_PUBLIC_KEY_LOCALE } from "./constants";
 import type {
+    ConnectClientAuthConfig,
     ConnectClientOptions,
     ConnectErrorBody,
     EstablishRequest,
@@ -23,7 +25,7 @@ import type {
     StatusPollRequest,
     StatusPollResponse,
 } from "./declare";
-import { ConnectApiError } from "./error";
+import { ConnectApiError, ConnectConfigError } from "./error";
 
 export class ConnectClient {
 
@@ -32,6 +34,7 @@ export class ConnectClient {
     private readonly _publicKeyLocale: string;
     private readonly _publicKeyCache: Map<string, string>;
     private readonly _tokenVerifier: TokenVerifier;
+    private readonly _clientAuth: ConnectClientAuthConfig | undefined;
 
     public constructor(options: ConnectClientOptions) {
 
@@ -42,6 +45,7 @@ export class ConnectClient {
         this._tokenVerifier = new TokenVerifier({
             resolver: (anchor) => this.getApplicationPublicKey(anchor),
         });
+        this._clientAuth = options.clientAuth;
     }
 
     public get baseUrl(): string {
@@ -61,7 +65,32 @@ export class ConnectClient {
 
     public async establish(request: EstablishRequest): Promise<EstablishResponse> {
 
-        return this._post<EstablishRequest, EstablishResponse>("/establish", request);
+        if (this._clientAuth === undefined) {
+
+            throw new ConnectConfigError(
+                "ConnectClient.establish() requires a clientAuth config. Pass clientAuth in the ConnectClientOptions.",
+            );
+        }
+
+        // Serialize once. The exact bytes here are what the server hashes
+        // against the JWT's body_sha256 claim — letting fetch re-serialize
+        // (or going through _post) risks drift on key ordering or whitespace.
+        const rawBody: string = JSON.stringify(request);
+
+        const jwt: string = "signer" in this._clientAuth
+            ? await this._clientAuth.signer(rawBody)
+            : signEstablishClientJwt(this._clientAuth, rawBody);
+
+        const response: Response = await this._fetch(`${this._baseUrl}/establish`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `${CLIENT_JWT_AUTH_SCHEME} ${jwt}`,
+            },
+            body: rawBody,
+        });
+        return this._handle<EstablishResponse>(response);
     }
 
     public async statusPoll(request: StatusPollRequest): Promise<StatusPollResponse> {

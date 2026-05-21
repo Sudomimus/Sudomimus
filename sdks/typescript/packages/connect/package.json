@@ -35,10 +35,10 @@
         "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
     },
     "dependencies": {
-        "@sudomimus/token": "workspace:*"
+        "@sudomimus/token": "workspace:*",
+        "@sudoo/jwt": "catalog:"
     },
     "devDependencies": {
-        "@sudoo/jwt": "catalog:",
         "@types/jest": "catalog:",
         "@types/node": "catalog:",
         "jest": "catalog:",

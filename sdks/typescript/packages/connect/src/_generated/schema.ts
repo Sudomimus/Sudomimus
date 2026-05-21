@@ -30,7 +30,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Establish a new authentication inquiry for an application. */
+        /**
+         * Establish a new authentication inquiry for an application.
+         * @description Creates a new authentication inquiry under the calling application.
+         *
+         *     The request MUST carry a client-auth JWT in the `Authorization` header
+         *     using the `SudomimusClientJWT` scheme. The JWT binds the request body
+         *     bytes via a `body_sha256` claim and carries a single-use `jti` to
+         *     prevent replay. See the `SudomimusClientJWT` security scheme below
+         *     for the full claim contract.
+         *
+         *     All three narrowing fields (`authenticationConstraints`,
+         *     `realizeConstraints`, `returnMethods`) are optional. When absent the
+         *     inquiry imposes no per-inquiry narrowing on that layer. When present
+         *     the array MUST be non-empty — an empty array is explicitly rejected
+         *     with HTTP 400.
+         *
+         */
         post: operations["establish"];
         delete?: never;
         options?: never;
@@ -118,8 +134,23 @@ export interface components {
         EstablishRequest: {
             /** @description Public anchor identifying the integrating application. */
             applicationAnchor: string;
-            /** @description Post-authentication actions the inquiry will satisfy. */
-            actions: components["schemas"]["AuthAction"][];
+            /** @description Optional per-inquiry narrowing of the application's
+             *     authentication-rule layer. Absent means no narrowing. If present,
+             *     the array MUST be non-empty; empty arrays are rejected with 400.
+             *      */
+            authenticationConstraints?: components["schemas"]["AuthenticationRuleConstraint"][];
+            /** @description Optional per-inquiry narrowing of the application's realize-rule
+             *     layer. Absent means no narrowing. If present, the array MUST be
+             *     non-empty; empty arrays are rejected with 400.
+             *      */
+            realizeConstraints?: components["schemas"]["RealizeRuleConstraint"][];
+            /** @description Optional per-inquiry return-method declaration. Doubles as the
+             *     concrete delivery info for CALLBACK (carries the callback URL).
+             *     Absent means no per-inquiry narrowing (CALLBACK is unreachable
+             *     for this inquiry because no URL is anchored). If present, the
+             *     array MUST be non-empty; empty arrays are rejected with 400.
+             *      */
+            returnMethods?: components["schemas"]["ReturnMethodDeclaration"][];
         };
         EstablishResponse: {
             applicationAnchor: string;
@@ -180,31 +211,71 @@ export interface components {
             /** @description PEM-encoded application public key used to verify issued JWTs. */
             applicationPublicKey: string;
         };
-        AuthAction: components["schemas"]["AuthActionCallback"] | components["schemas"]["AuthActionStatusPoll"] | components["schemas"]["AuthActionSteam"];
-        AuthActionCallback: {
+        AuthenticationRuleConstraint: {
+            /**
+             * @description Which authentication method this constraint narrows to.
+             * @enum {string}
+             */
+            method: "PASSKEY" | "EMAIL_VERIFICATION";
+            payload: components["schemas"]["AuthenticationRulePasskeyPayload"] | components["schemas"]["AuthenticationRuleEmailVerificationPayload"];
+            /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
+            accessTokenTtlSeconds?: number;
+            /** @description Per-constraint override for refresh token lifetime. Resolved at realize time. */
+            refreshTokenTtlSeconds?: number;
+        };
+        /** @description Empty payload — passkey constraints carry no further parameters. */
+        AuthenticationRulePasskeyPayload: Record<string, never>;
+        /** @description Empty payload — email-verification constraints carry no further parameters. */
+        AuthenticationRuleEmailVerificationPayload: Record<string, never>;
+        RealizeRuleConstraint: {
+            /**
+             * @description Which realize-rule kind this constraint narrows to.
+             * @enum {string}
+             */
+            constraintType: "EMAIL";
+            payload: components["schemas"]["RealizeRuleEmailPayload"];
+            /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
+            accessTokenTtlSeconds?: number;
+            /** @description Per-constraint override for refresh token lifetime. Resolved at realize time. */
+            refreshTokenTtlSeconds?: number;
+        };
+        RealizeRuleEmailPayload: {
+            /** @description List of email addresses or glob patterns the realized identity
+             *     must match. Glob patterns are bounded by server-side limits to
+             *     prevent regex backtracking attacks.
+             *      */
+            allowedEmails: string[];
+        };
+        ReturnMethodDeclaration: components["schemas"]["ReturnMethodCallback"] | components["schemas"]["ReturnMethodStatusPoll"] | components["schemas"]["ReturnMethodReveal"];
+        ReturnMethodCallback: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
             type: "CALLBACK";
             payload: {
+                /** @description Concrete callback URL for this inquiry. The host MUST match
+                 *     one of the application's allowed callback domains.
+                 *      */
                 callbackUrl: string;
             };
         };
-        AuthActionStatusPoll: {
+        ReturnMethodStatusPoll: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
             type: "STATUS_POLL";
+            /** @description Empty payload — STATUS_POLL carries no per-inquiry parameters. */
             payload: Record<string, never>;
         };
-        AuthActionSteam: {
+        ReturnMethodReveal: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "STEAM";
+            type: "REVEAL";
+            /** @description Empty payload — REVEAL surfaces tokens directly in the UI. */
             payload: Record<string, never>;
         };
         /** @description Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
@@ -265,6 +336,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EstablishResponse"];
+                };
+            };
+            /** @description Client-auth JWT missing, malformed, expired, or invalid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Error response. */

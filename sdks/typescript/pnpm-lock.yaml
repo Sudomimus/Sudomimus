@@ -83,10 +83,10 @@ importers:
       '@sudomimus/token':
         specifier: workspace:*
         version: link:../token
-    devDependencies:
       '@sudoo/jwt':
         specifier: 'catalog:'
         version: 3.5.0(@sudoo/token@1.6.1)
+    devDependencies:
       '@types/jest':
         specifier: 'catalog:'
         version: 29.5.14

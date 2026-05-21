@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/status-poll": {
+    "/direct-issue/steam-ticket": {
         parameters: {
             query?: never;
             header?: never;
@@ -13,8 +13,33 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Poll the status of an ongoing native authentication flow. */
-        post: operations["statusPoll"];
+        /**
+         * Exchange a Steam Web API auth ticket for application tokens.
+         * @description The client SDK calls `ISteamUser::GetAuthTicketForWebApi("sudomimus")`
+         *     (the identity string MUST be exactly `"sudomimus"`), waits for the
+         *     `GetTicketForWebApiResponse_t` callback, hex-encodes the ticket
+         *     bytes, and POSTs them here together with the application anchor and
+         *     the Steam App ID. The server:
+         *
+         *       1. Validates the application's authentication-rule layer admits
+         *          `STEAM_TICKET` for this `steamAppId`.
+         *       2. Atomically records `sha256(steamTicketHex.toLowerCase())` for
+         *          replay protection (24-hour window); a duplicate is rejected
+         *          with `409`.
+         *       3. Verifies the ticket with Steam's
+         *          `ISteamUserAuth/AuthenticateUserTicket` endpoint, identity
+         *          `"sudomimus"`.
+         *       4. Validates the application's realize-rule layer (`STEAM_ID` /
+         *          `EMAIL`) and ensures a `DIRECT_ISSUE` return rule exists.
+         *       5. Issues access + refresh JWTs signed with the application's
+         *          private key.
+         *
+         *     Tokens follow the same shape as those issued through Connect's
+         *     `/redeem`. Verification is the responsibility of the relying party
+         *     (see the `Sudomimus.Token` SDK).
+         *
+         */
+        post: operations["directIssueSteamTicket"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25,28 +50,40 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        StatusPollRequest: {
-            /** @description Opaque token issued when the flow was initiated. */
-            pollToken: string;
-        };
-        StatusPollResponse: {
+        DirectIssueSteamTicketRequest: {
+            /** @description Public anchor identifying the integrating application. */
+            applicationAnchor: string;
+            /** @description Hex-encoded Steam Web API auth ticket bytes returned from
+             *     `ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case
+             *     insensitive — the server lowercases before hashing for replay
+             *     protection, but forwards the original bytes to Steam.
+             *      */
+            steamTicketHex: string;
             /**
-             * @description Current status of the authentication flow.
-             * @enum {string}
+             * Format: int64
+             * @description Steam App ID under which the ticket was generated. Must be
+             *     allow-listed by the application's `STEAM_TICKET` authentication
+             *     rule. Tickets are bound to their issuing App ID server-side;
+             *     passing a different value will fail Steam verification.
+             *
              */
-            status: "PENDING" | "APPROVED" | "DENIED" | "EXPIRED";
-            /** @description Application access token; present only when status is APPROVED. */
-            accessToken?: string;
-            /** @description Application refresh token; present only when status is APPROVED. */
-            refreshToken?: string;
+            steamAppId: number;
         };
+        DirectIssueSteamTicketResponse: {
+            applicationAnchor: string;
+            /** @description Short-lived access token (JWT). Body shape matches the Connect SDK's access token. */
+            accessToken: string;
+            /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket. */
+            refreshToken: string;
+        };
+        /** @description Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
+         *     for known failure modes. When the reason symbol's description begins with
+         *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+         *     signal — both `reason` and the body itself are absent in that case.
+         *      */
         Error: {
-            /** @description Stable machine-readable error code. */
-            code: string;
-            /** @description Human-readable error message. */
-            message: string;
-            /** @description Identifier for correlating with platform logs. */
-            requestId?: string;
+            /** @description Stable machine-readable reason code. */
+            reason?: string;
         };
     };
     responses: never;
@@ -57,7 +94,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    statusPoll: {
+    directIssueSteamTicket: {
         parameters: {
             query?: never;
             header?: never;
@@ -66,17 +103,77 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["StatusPollRequest"];
+                "application/json": components["schemas"]["DirectIssueSteamTicketRequest"];
             };
         };
         responses: {
-            /** @description Current status of the authentication flow. */
+            /** @description Tokens issued. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StatusPollResponse"];
+                    "application/json": components["schemas"]["DirectIssueSteamTicketResponse"];
+                };
+            };
+            /** @description Malformed request (e.g. invalid `steamAppId`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Steam rejected the ticket as invalid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The application's three-layer rules denied the attempt. The
+             *     response `reason` distinguishes which layer rejected:
+             *     `Layer1Denied`, `Layer2Denied`, or `Layer3Denied`.
+             *      */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Application anchor not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Replay protection conflict — this Steam ticket has already been
+             *     redeemed within the replay window. Acquire a fresh ticket via
+             *     `GetAuthTicketForWebApi` and retry.
+             *      */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Steam's verification endpoint was unreachable or returned an unparseable response. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Error response. */
