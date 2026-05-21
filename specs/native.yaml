@@ -1,36 +1,107 @@
 openapi: 3.1.0
 info:
   title: Sudomimus Native
-  version: 0.0.1
+  version: 0.1.0
   summary: Native client entry point for the Sudomimus authentication platform.
   description: |
     The Native API is the public gateway used by native clients
-    (desktop applications, games) to initiate and poll authentication
-    flows that complete in an external browser.
+    (desktop applications, games) that authenticate users directly through
+    a platform identity provider — currently Steam via the Steamworks SDK.
+
+    The native flow is "direct-issue": the client passes a platform-issued
+    proof (e.g. a Steam Web API auth ticket) to the Native API, which
+    verifies the proof with the platform and issues application access and
+    refresh tokens in a single round trip. No browser handoff, no inquiry
+    establishment, no polling.
   license:
     name: MIT
     identifier: MIT
 servers:
-  - url: https://native.sudomimus.com
+  - url: https://native-api.sudomimus.com
     description: Production
 paths:
-  /status-poll:
+  /direct-issue/steam-ticket:
     post:
-      operationId: statusPoll
-      summary: Poll the status of an ongoing native authentication flow.
+      operationId: directIssueSteamTicket
+      summary: Exchange a Steam Web API auth ticket for application tokens.
+      description: |
+        The client SDK calls `ISteamUser::GetAuthTicketForWebApi("sudomimus")`
+        (the identity string MUST be exactly `"sudomimus"`), waits for the
+        `GetTicketForWebApiResponse_t` callback, hex-encodes the ticket
+        bytes, and POSTs them here together with the application anchor and
+        the Steam App ID. The server:
+
+          1. Validates the application's authentication-rule layer admits
+             `STEAM_TICKET` for this `steamAppId`.
+          2. Atomically records `sha256(steamTicketHex.toLowerCase())` for
+             replay protection (24-hour window); a duplicate is rejected
+             with `409`.
+          3. Verifies the ticket with Steam's
+             `ISteamUserAuth/AuthenticateUserTicket` endpoint, identity
+             `"sudomimus"`.
+          4. Validates the application's realize-rule layer (`STEAM_ID` /
+             `EMAIL`) and ensures a `DIRECT_ISSUE` return rule exists.
+          5. Issues access + refresh JWTs signed with the application's
+             private key.
+
+        Tokens follow the same shape as those issued through Connect's
+        `/redeem`. Verification is the responsibility of the relying party
+        (see the `Sudomimus.Token` SDK).
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/StatusPollRequest"
+              $ref: "#/components/schemas/DirectIssueSteamTicketRequest"
       responses:
         "200":
-          description: Current status of the authentication flow.
+          description: Tokens issued.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StatusPollResponse"
+                $ref: "#/components/schemas/DirectIssueSteamTicketResponse"
+        "400":
+          description: Malformed request (e.g. invalid `steamAppId`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Steam rejected the ticket as invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: |
+            The application's three-layer rules denied the attempt. The
+            response `reason` distinguishes which layer rejected:
+            `Layer1Denied`, `Layer2Denied`, or `Layer3Denied`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Application anchor not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            Replay protection conflict — this Steam ticket has already been
+            redeemed within the replay window. Acquire a fresh ticket via
+            `GetAuthTicketForWebApi` and retry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Steam's verification endpoint was unreachable or returned an unparseable response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           description: Error response.
           content:
@@ -39,45 +110,55 @@ paths:
                 $ref: "#/components/schemas/Error"
 components:
   schemas:
-    StatusPollRequest:
+    DirectIssueSteamTicketRequest:
       type: object
       required:
-        - pollToken
+        - applicationAnchor
+        - steamTicketHex
+        - steamAppId
       properties:
-        pollToken:
+        applicationAnchor:
           type: string
-          description: Opaque token issued when the flow was initiated.
-    StatusPollResponse:
+          description: Public anchor identifying the integrating application.
+        steamTicketHex:
+          type: string
+          description: |
+            Hex-encoded Steam Web API auth ticket bytes returned from
+            `ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case
+            insensitive — the server lowercases before hashing for replay
+            protection, but forwards the original bytes to Steam.
+        steamAppId:
+          type: integer
+          format: int64
+          minimum: 1
+          description: |
+            Steam App ID under which the ticket was generated. Must be
+            allow-listed by the application's `STEAM_TICKET` authentication
+            rule. Tickets are bound to their issuing App ID server-side;
+            passing a different value will fail Steam verification.
+    DirectIssueSteamTicketResponse:
       type: object
       required:
-        - status
+        - applicationAnchor
+        - accessToken
+        - refreshToken
       properties:
-        status:
+        applicationAnchor:
           type: string
-          description: Current status of the authentication flow.
-          enum:
-            - PENDING
-            - APPROVED
-            - DENIED
-            - EXPIRED
         accessToken:
           type: string
-          description: Application access token; present only when status is APPROVED.
+          description: Short-lived access token (JWT). Body shape matches the Connect SDK's access token.
         refreshToken:
           type: string
-          description: Application refresh token; present only when status is APPROVED.
+          description: Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket.
     Error:
       type: object
-      required:
-        - code
-        - message
+      description: |
+        Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
+        for known failure modes. When the reason symbol's description begins with
+        `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+        signal — both `reason` and the body itself are absent in that case.
       properties:
-        code:
+        reason:
           type: string
-          description: Stable machine-readable error code.
-        message:
-          type: string
-          description: Human-readable error message.
-        requestId:
-          type: string
-          description: Identifier for correlating with platform logs.
+          description: Stable machine-readable reason code.

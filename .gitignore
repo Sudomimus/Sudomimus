@@ -40,3 +40,9 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# CSharp
+bin/
+obj/
+*.dll
+*.pdb

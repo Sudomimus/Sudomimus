@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Sudomimus.Native</PackageId>
+    <Version>0.0.1</Version>
+    <Description>HTTP client for the Sudomimus Native API — exchanges Steam Web API auth tickets for application access and refresh tokens. Generic .NET package usable from any C# runtime (consoles, Godot, Unity, ASP.NET).</Description>
+    <PackageTags>sudomimus;steam;auth;godot</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <RootNamespace>Sudomimus.Native</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

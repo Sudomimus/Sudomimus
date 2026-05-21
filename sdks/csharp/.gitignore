@@ -1,0 +1,22 @@
+## .NET build / restore output
+bin/
+obj/
+
+## NuGet packaging output
+artifacts/
+*.nupkg
+*.snupkg
+
+## IDE caches
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+## Test results
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml

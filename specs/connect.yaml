@@ -30,6 +30,22 @@ paths:
     post:
       operationId: establish
       summary: Establish a new authentication inquiry for an application.
+      description: |
+        Creates a new authentication inquiry under the calling application.
+
+        The request MUST carry a client-auth JWT in the `Authorization` header
+        using the `SudomimusClientJWT` scheme. The JWT binds the request body
+        bytes via a `body_sha256` claim and carries a single-use `jti` to
+        prevent replay. See the `SudomimusClientJWT` security scheme below
+        for the full claim contract.
+
+        All three narrowing fields (`authenticationConstraints`,
+        `realizeConstraints`, `returnMethods`) are optional. When absent the
+        inquiry imposes no per-inquiry narrowing on that layer. When present
+        the array MUST be non-empty — an empty array is explicitly rejected
+        with HTTP 400.
+      security:
+        - SudomimusClientJWT: []
       requestBody:
         required: true
         content:
@@ -43,6 +59,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EstablishResponse"
+        "401":
+          description: Client-auth JWT missing, malformed, expired, or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           description: Error response.
           content:
@@ -142,6 +164,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 components:
+  securitySchemes:
+    SudomimusClientJWT:
+      type: http
+      scheme: SudomimusClientJWT
+      description: |
+        Client-auth JWT carried via `Authorization: SudomimusClientJWT <jwt>`.
+
+        The JWT MUST be signed (RS256) with the application's client-auth
+        private key (paired public key registered server-side at application
+        creation). Required body claims:
+
+        - `iss`: the application anchor (must match `applicationAnchor` in
+          the request body).
+        - `aud`: literal string `"sudomimus-connect"`.
+        - `iat`: UNIX seconds. Future-dated claims are tolerated up to a
+          30-second clock skew.
+        - `exp`: UNIX seconds. Lifetime (`exp - iat`) MUST be at most 60.
+        - `jti`: per-request unique identifier (UUID v4 recommended). Replay
+          is detected atomically server-side; the same `jti` is honored
+          exactly once.
+        - `body_sha256`: standard base64 of `SHA-256(rawHttpBody)` where the
+          input is the UTF-8 bytes of the exact JSON body sent on the wire.
   schemas:
     HealthResponse:
       type: object
@@ -160,16 +204,36 @@ components:
       type: object
       required:
         - applicationAnchor
-        - actions
       properties:
         applicationAnchor:
           type: string
           description: Public anchor identifying the integrating application.
-        actions:
+        authenticationConstraints:
           type: array
-          description: Post-authentication actions the inquiry will satisfy.
+          description: |
+            Optional per-inquiry narrowing of the application's
+            authentication-rule layer. Absent means no narrowing. If present,
+            the array MUST be non-empty; empty arrays are rejected with 400.
           items:
-            $ref: "#/components/schemas/AuthAction"
+            $ref: "#/components/schemas/AuthenticationRuleConstraint"
+        realizeConstraints:
+          type: array
+          description: |
+            Optional per-inquiry narrowing of the application's realize-rule
+            layer. Absent means no narrowing. If present, the array MUST be
+            non-empty; empty arrays are rejected with 400.
+          items:
+            $ref: "#/components/schemas/RealizeRuleConstraint"
+        returnMethods:
+          type: array
+          description: |
+            Optional per-inquiry return-method declaration. Doubles as the
+            concrete delivery info for CALLBACK (carries the callback URL).
+            Absent means no per-inquiry narrowing (CALLBACK is unreachable
+            for this inquiry because no URL is anchored). If present, the
+            array MUST be non-empty; empty arrays are rejected with 400.
+          items:
+            $ref: "#/components/schemas/ReturnMethodDeclaration"
     EstablishResponse:
       type: object
       required:
@@ -295,18 +359,80 @@ components:
         applicationPublicKey:
           type: string
           description: PEM-encoded application public key used to verify issued JWTs.
-    AuthAction:
+    AuthenticationRuleConstraint:
+      type: object
+      required:
+        - method
+        - payload
+      properties:
+        method:
+          type: string
+          description: Which authentication method this constraint narrows to.
+          enum:
+            - PASSKEY
+            - EMAIL_VERIFICATION
+        payload:
+          oneOf:
+            - $ref: "#/components/schemas/AuthenticationRulePasskeyPayload"
+            - $ref: "#/components/schemas/AuthenticationRuleEmailVerificationPayload"
+        accessTokenTtlSeconds:
+          type: integer
+          description: Per-constraint override for access token lifetime. Resolved at realize time.
+        refreshTokenTtlSeconds:
+          type: integer
+          description: Per-constraint override for refresh token lifetime. Resolved at realize time.
+    AuthenticationRulePasskeyPayload:
+      type: object
+      description: Empty payload — passkey constraints carry no further parameters.
+      additionalProperties: false
+    AuthenticationRuleEmailVerificationPayload:
+      type: object
+      description: Empty payload — email-verification constraints carry no further parameters.
+      additionalProperties: false
+    RealizeRuleConstraint:
+      type: object
+      required:
+        - constraintType
+        - payload
+      properties:
+        constraintType:
+          type: string
+          description: Which realize-rule kind this constraint narrows to.
+          enum:
+            - EMAIL
+        payload:
+          $ref: "#/components/schemas/RealizeRuleEmailPayload"
+        accessTokenTtlSeconds:
+          type: integer
+          description: Per-constraint override for access token lifetime. Resolved at realize time.
+        refreshTokenTtlSeconds:
+          type: integer
+          description: Per-constraint override for refresh token lifetime. Resolved at realize time.
+    RealizeRuleEmailPayload:
+      type: object
+      required:
+        - allowedEmails
+      properties:
+        allowedEmails:
+          type: array
+          description: |
+            List of email addresses or glob patterns the realized identity
+            must match. Glob patterns are bounded by server-side limits to
+            prevent regex backtracking attacks.
+          items:
+            type: string
+    ReturnMethodDeclaration:
       oneOf:
-        - $ref: "#/components/schemas/AuthActionCallback"
-        - $ref: "#/components/schemas/AuthActionStatusPoll"
-        - $ref: "#/components/schemas/AuthActionSteam"
+        - $ref: "#/components/schemas/ReturnMethodCallback"
+        - $ref: "#/components/schemas/ReturnMethodStatusPoll"
+        - $ref: "#/components/schemas/ReturnMethodReveal"
       discriminator:
         propertyName: type
         mapping:
-          CALLBACK: "#/components/schemas/AuthActionCallback"
-          STATUS_POLL: "#/components/schemas/AuthActionStatusPoll"
-          STEAM: "#/components/schemas/AuthActionSteam"
-    AuthActionCallback:
+          CALLBACK: "#/components/schemas/ReturnMethodCallback"
+          STATUS_POLL: "#/components/schemas/ReturnMethodStatusPoll"
+          REVEAL: "#/components/schemas/ReturnMethodReveal"
+    ReturnMethodCallback:
       type: object
       required:
         - type
@@ -323,7 +449,10 @@ components:
           properties:
             callbackUrl:
               type: string
-    AuthActionStatusPoll:
+              description: |
+                Concrete callback URL for this inquiry. The host MUST match
+                one of the application's allowed callback domains.
+    ReturnMethodStatusPoll:
       type: object
       required:
         - type
@@ -335,7 +464,9 @@ components:
             - STATUS_POLL
         payload:
           type: object
-    AuthActionSteam:
+          description: Empty payload — STATUS_POLL carries no per-inquiry parameters.
+          additionalProperties: false
+    ReturnMethodReveal:
       type: object
       required:
         - type
@@ -344,9 +475,11 @@ components:
         type:
           type: string
           enum:
-            - STEAM
+            - REVEAL
         payload:
           type: object
+          description: Empty payload — REVEAL surfaces tokens directly in the UI.
+          additionalProperties: false
     Error:
       type: object
       description: |
