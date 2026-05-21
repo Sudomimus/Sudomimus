@@ -12,6 +12,8 @@ export type NativePaths = paths;
 
 export type DirectIssueSteamTicketRequest = components["schemas"]["DirectIssueSteamTicketRequest"];
 export type DirectIssueSteamTicketResponse = components["schemas"]["DirectIssueSteamTicketResponse"];
+export type DirectIssueAccessKeyRequest = components["schemas"]["DirectIssueAccessKeyRequest"];
+export type DirectIssueAccessKeyResponse = components["schemas"]["DirectIssueAccessKeyResponse"];
 export type NativeErrorBody = components["schemas"]["Error"];
 
 export interface NativeClientOptions {

@@ -48,7 +48,7 @@ public static class TokenParser
         byte[] headerBytes;
         try
         {
-            headerBytes = JwtCodec.DecodeStandardBase64Segment(parts[0]);
+            headerBytes = JwtCodec.DecodeBase64UrlSegment(parts[0]);
         }
         catch (FormatException ex)
         {
@@ -96,8 +96,8 @@ public static class TokenParser
 
         try
         {
-            headerBytes = JwtCodec.DecodeStandardBase64Segment(headerSegment);
-            bodyBytes = JwtCodec.DecodeStandardBase64Segment(bodySegment);
+            headerBytes = JwtCodec.DecodeBase64UrlSegment(headerSegment);
+            bodyBytes = JwtCodec.DecodeBase64UrlSegment(bodySegment);
             signatureBytes = JwtCodec.DecodeBase64UrlSegment(signatureSegment);
         }
         catch (FormatException ex)

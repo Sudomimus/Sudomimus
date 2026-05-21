@@ -4,6 +4,50 @@
  */
 
 export interface paths {
+    "/direct-issue/access-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange an access-key credential for application tokens.
+         * @description Trade a long-lived access-key credential (identifier + secret) for
+         *     application access and refresh tokens. Access keys are issued in
+         *     the admin console against a specific account; the credential
+         *     carries optional TTL bounds and an opt-in expiry timestamp.
+         *
+         *     The server:
+         *
+         *       1. Validates the application's authentication-rule layer admits
+         *          `ACCESS_KEY_DIRECT`.
+         *       2. Looks up the credential by `accessKeyIdentifier`.
+         *       3. Cross-checks that the credential belongs to the application
+         *          named in `applicationAnchor`, is not revoked, and has not
+         *          expired.
+         *       4. Timing-safe-verifies `accessKeySecret`.
+         *       5. Validates the realize-rule layer (`STEAM_ID` / `EMAIL` /
+         *          `ACCOUNT_IDENTIFIER`) and ensures a `DIRECT_ISSUE` return
+         *          rule exists.
+         *       6. Issues access + refresh JWTs and best-effort touches the
+         *          credential's `lastUsedAt` timestamp.
+         *
+         *     All credential-level failures (unknown identifier, app mismatch,
+         *     revoked, expired, wrong secret) collapse into a single opaque
+         *     `AccessKeyDirectDenied` 401 reason to avoid leaking identifier
+         *     existence.
+         *
+         */
+        post: operations["directIssueAccessKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/direct-issue/steam-ticket": {
         parameters: {
             query?: never;
@@ -50,6 +94,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        DirectIssueAccessKeyRequest: {
+            /** @description Public anchor identifying the integrating application. */
+            applicationAnchor: string;
+            /** @description UUID v4 string identifying the access-key credential.
+             *     Format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+             *      */
+            accessKeyIdentifier: string;
+            /** @description 64-char lowercase hex string (32 random bytes) returned exactly
+             *     once when the access key was issued. Never logged or persisted
+             *     in plaintext server-side after creation.
+             *      */
+            accessKeySecret: string;
+        };
+        DirectIssueAccessKeyResponse: {
+            applicationAnchor: string;
+            /** @description Short-lived access token (JWT). Body shape matches the Connect SDK's access token. */
+            accessToken: string;
+            /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key. */
+            refreshToken: string;
+        };
         DirectIssueSteamTicketRequest: {
             /** @description Public anchor identifying the integrating application. */
             applicationAnchor: string;
@@ -94,6 +158,95 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    directIssueAccessKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectIssueAccessKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Tokens issued. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectIssueAccessKeyResponse"];
+                };
+            };
+            /** @description Malformed request body. The `reason` distinguishes
+             *     `Invalid accessKeyIdentifier` (must be a UUID v4) and
+             *     `Invalid accessKeySecret` (must be 64 lowercase hex chars).
+             *      */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The access-key credential was rejected. The `reason` is
+             *     uniformly `AccessKeyDirectDenied` regardless of root cause
+             *     (not found, app mismatch, revoked, expired, wrong secret).
+             *      */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The application's three-layer rules denied the attempt. The
+             *     response `reason` distinguishes which layer rejected:
+             *     `Layer1Denied`, `Layer2Denied`, or `Layer3Denied`.
+             *      */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Application anchor not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The access key's account record is missing — an internal
+             *     state inconsistency. Reason `AccessKeyCredentialAccountMissing`.
+             *      */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     directIssueSteamTicket: {
         parameters: {
             query?: never;

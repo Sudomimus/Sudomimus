@@ -6,6 +6,8 @@
  */
 
 import type {
+    DirectIssueAccessKeyRequest,
+    DirectIssueAccessKeyResponse,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
     NativeClientOptions,
@@ -47,6 +49,23 @@ export class NativeClient {
 
         return this._post<DirectIssueSteamTicketRequest, DirectIssueSteamTicketResponse>(
             "/direct-issue/steam-ticket",
+            request,
+        );
+    }
+
+    /**
+     * Exchange an access-key credential (identifier + secret) for
+     * application access + refresh tokens. Access keys are issued in the
+     * admin console against a specific account and are intended for
+     * long-lived headless callers (CI runners, server-to-server scripts,
+     * automation).
+     */
+    public async directIssueAccessKey(
+        request: DirectIssueAccessKeyRequest,
+    ): Promise<DirectIssueAccessKeyResponse> {
+
+        return this._post<DirectIssueAccessKeyRequest, DirectIssueAccessKeyResponse>(
+            "/direct-issue/access-key",
             request,
         );
     }

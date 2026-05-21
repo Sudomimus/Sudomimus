@@ -18,10 +18,10 @@ public sealed class JwtToken<TBody>
 
     /// <summary>
     /// The exact bytes that the signature signs:
-    /// <c>headerSegment + "." + bodySegment</c>, UTF-8 encoded. Required
-    /// for signature verification because <c>@sudoo/jwt</c> uses a
-    /// non-standard mix of base64 (header/body) and base64url (signature)
-    /// — re-encoding from the decoded header/body would not match.
+    /// <c>headerSegment + "." + bodySegment</c>, UTF-8 encoded. We keep
+    /// these around verbatim so signature verification operates on the
+    /// literal on-wire segments rather than re-encoding the deserialized
+    /// header/body (which could introduce key-ordering or whitespace drift).
     /// </summary>
     public byte[] SigningInput { get; }
 
@@ -71,11 +71,12 @@ public sealed class JwtToken<TBody>
 }
 
 /// <summary>
-/// Implements the on-wire JWT layout used by <c>@sudoo/jwt</c>:
+/// Implements the on-wire JWT layout used by <c>@sudoo/jwt</c> 3.6+ —
+/// uniform base64url for all three segments, no padding:
 /// <list type="bullet">
-///   <item><description>Header segment: standard base64 of JSON, <c>=</c> padding stripped.</description></item>
-///   <item><description>Body segment: standard base64 of JSON, <c>=</c> padding stripped.</description></item>
-///   <item><description>Signature segment: base64url of RSA-SHA256 bytes, <c>=</c> padding stripped.</description></item>
+///   <item><description>Header segment: base64url of JSON.</description></item>
+///   <item><description>Body segment: base64url of JSON.</description></item>
+///   <item><description>Signature segment: base64url of RSA-SHA256 bytes.</description></item>
 ///   <item><description>Signing input: literal <c>headerSegment.bodySegment</c> string, UTF-8.</description></item>
 /// </list>
 /// </summary>
@@ -85,24 +86,19 @@ internal static class JwtCodec
     {
         var json = JsonSerializer.Serialize(value, options);
         var bytes = Encoding.UTF8.GetBytes(json);
-        return StripPadding(Convert.ToBase64String(bytes));
-    }
-
-    public static byte[] DecodeStandardBase64Segment(string segment)
-    {
-        var padded = PadBase64(segment);
-        return Convert.FromBase64String(padded);
+        return EncodeBase64UrlBytes(bytes);
     }
 
     public static byte[] DecodeBase64UrlSegment(string segment)
     {
         var translated = segment.Replace('-', '+').Replace('_', '/');
-        return DecodeStandardBase64Segment(translated);
+        var padded = PadBase64(translated);
+        return Convert.FromBase64String(padded);
     }
 
-    public static string EncodeBase64UrlSignature(byte[] signature)
+    public static string EncodeBase64UrlBytes(byte[] bytes)
     {
-        var b64 = StripPadding(Convert.ToBase64String(signature));
+        var b64 = StripPadding(Convert.ToBase64String(bytes));
         return b64.Replace('+', '-').Replace('/', '_');
     }
 

@@ -6,7 +6,10 @@
  */
 
 import { NativeApiError, NativeClient } from "../../src";
-import type { DirectIssueSteamTicketResponse } from "../../src";
+import type { DirectIssueAccessKeyResponse, DirectIssueSteamTicketResponse } from "../../src";
+
+const VALID_ACCESS_KEY_IDENTIFIER = "01890c5e-1234-4abc-9def-0123456789ab";
+const VALID_ACCESS_KEY_SECRET = "a".repeat(64);
 
 type FakeResponseSpec = {
     ok: boolean;
@@ -87,6 +90,89 @@ describe("NativeClient", () => {
                 applicationAnchor: "anchor-1",
                 steamTicketHex: "deadbeef",
                 steamAppId: 480,
+            });
+        });
+    });
+
+    describe("directIssueAccessKey", () => {
+
+        it("POSTs /direct-issue/access-key with the JSON body and returns the response", async () => {
+
+            const expected: DirectIssueAccessKeyResponse = {
+                applicationAnchor: "anchor-1",
+                accessToken: "a-jwt",
+                refreshToken: "r-jwt",
+            };
+            const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+            const client = new NativeClient({
+                baseUrl: "https://native.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const result = await client.directIssueAccessKey({
+                applicationAnchor: "anchor-1",
+                accessKeyIdentifier: VALID_ACCESS_KEY_IDENTIFIER,
+                accessKeySecret: VALID_ACCESS_KEY_SECRET,
+            });
+
+            expect(result).toEqual(expected);
+            const [url, init] = fetchMock.mock.calls[0];
+            expect(url).toBe("https://native.example.com/direct-issue/access-key");
+            expect(init.method).toBe("POST");
+            expect(init.headers).toEqual({
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            });
+            expect(JSON.parse(init.body as string)).toEqual({
+                applicationAnchor: "anchor-1",
+                accessKeyIdentifier: VALID_ACCESS_KEY_IDENTIFIER,
+                accessKeySecret: VALID_ACCESS_KEY_SECRET,
+            });
+        });
+
+        it("surfaces opaque 401 AccessKeyDirectDenied on any credential failure", async () => {
+
+            const fetchMock = makeFetch([{
+                ok: false,
+                status: 401,
+                body: { reason: "AccessKeyDirectDenied" },
+            }]);
+            const client = new NativeClient({
+                baseUrl: "https://native.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            await expect(client.directIssueAccessKey({
+                applicationAnchor: "anchor-1",
+                accessKeyIdentifier: VALID_ACCESS_KEY_IDENTIFIER,
+                accessKeySecret: VALID_ACCESS_KEY_SECRET,
+            })).rejects.toMatchObject({
+                name: "NativeApiError",
+                status: 401,
+                reason: "AccessKeyDirectDenied",
+            });
+        });
+
+        it("surfaces 403 layer rejections", async () => {
+
+            const fetchMock = makeFetch([{
+                ok: false,
+                status: 403,
+                body: { reason: "Layer1Denied" },
+            }]);
+            const client = new NativeClient({
+                baseUrl: "https://native.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            await expect(client.directIssueAccessKey({
+                applicationAnchor: "anchor-1",
+                accessKeyIdentifier: VALID_ACCESS_KEY_IDENTIFIER,
+                accessKeySecret: VALID_ACCESS_KEY_SECRET,
+            })).rejects.toMatchObject({
+                name: "NativeApiError",
+                status: 403,
+                reason: "Layer1Denied",
             });
         });
     });

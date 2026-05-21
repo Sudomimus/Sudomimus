@@ -75,15 +75,55 @@ public sealed class NativeClient
     /// <see cref="NativeApiException.Reason"/> to distinguish failure modes
     /// (Steam ticket invalid, Layer 1/2/3 denied, replay conflict, etc.).
     /// </exception>
-    public async Task<DirectIssueSteamTicketResponse> DirectIssueSteamTicketAsync(
+    public Task<DirectIssueSteamTicketResponse> DirectIssueSteamTicketAsync(
         DirectIssueSteamTicketRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        return PostJsonAsync<DirectIssueSteamTicketRequest, DirectIssueSteamTicketResponse>(
+            "/direct-issue/steam-ticket",
+            request,
+            cancellationToken);
+    }
 
+    /// <summary>
+    /// Exchange an access-key credential (identifier + secret) for
+    /// application access and refresh tokens. Access keys are issued in the
+    /// admin console against a specific account and are intended for
+    /// long-lived headless callers (CI runners, server-to-server scripts,
+    /// automation). The secret is a 64-char hex string returned exactly
+    /// once at creation time — treat it as a password.
+    /// </summary>
+    /// <exception cref="NativeApiException">
+    /// Thrown for any non-2xx response. All credential-level failures
+    /// (unknown identifier, app mismatch, revoked, expired, wrong secret)
+    /// collapse into a single opaque <c>AccessKeyDirectDenied</c> 401
+    /// reason — distinguish by HTTP status:
+    /// <c>400</c>=malformed input, <c>401</c>=credential rejected,
+    /// <c>403</c>=Layer 1/2/3 denial, <c>404</c>=unknown application,
+    /// <c>500</c>=internal state inconsistency.
+    /// </exception>
+    public Task<DirectIssueAccessKeyResponse> DirectIssueAccessKeyAsync(
+        DirectIssueAccessKeyRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return PostJsonAsync<DirectIssueAccessKeyRequest, DirectIssueAccessKeyResponse>(
+            "/direct-issue/access-key",
+            request,
+            cancellationToken);
+    }
+
+    private async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
+        string path,
+        TRequest request,
+        CancellationToken cancellationToken)
+        where TRequest : class
+        where TResponse : class
+    {
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            new Uri(_baseUrl, "/direct-issue/steam-ticket"))
+            new Uri(_baseUrl, path))
         {
             Content = JsonContent.Create(request, options: s_jsonOptions),
         };
@@ -98,7 +138,7 @@ public sealed class NativeClient
         }
 
         var parsed = await response.Content
-            .ReadFromJsonAsync<DirectIssueSteamTicketResponse>(s_jsonOptions, cancellationToken)
+            .ReadFromJsonAsync<TResponse>(s_jsonOptions, cancellationToken)
             .ConfigureAwait(false);
 
         if (parsed is null)

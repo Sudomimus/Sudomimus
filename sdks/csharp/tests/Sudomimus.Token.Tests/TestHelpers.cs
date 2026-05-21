@@ -24,16 +24,22 @@ internal static class TestHelpers
 
     public static string MintToken<THeader, TBody>(THeader header, TBody body, string privateKeyPem)
     {
-        var headerSeg = StripPadding(Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(header)));
-        var bodySeg = StripPadding(Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(body)));
+        // @sudoo/jwt 3.6+ emits all three JWT segments as base64url, no padding.
+        var headerSeg = ToBase64Url(JsonSerializer.SerializeToUtf8Bytes(header));
+        var bodySeg = ToBase64Url(JsonSerializer.SerializeToUtf8Bytes(body));
 
         using var rsa = RSA.Create();
         rsa.ImportFromPem(privateKeyPem);
         var signingInput = Encoding.UTF8.GetBytes($"{headerSeg}.{bodySeg}");
         var signature = rsa.SignData(signingInput, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        var sigSeg = StripPadding(Convert.ToBase64String(signature)).Replace('+', '-').Replace('/', '_');
+        var sigSeg = ToBase64Url(signature);
 
         return $"{headerSeg}.{bodySeg}.{sigSeg}";
+    }
+
+    private static string ToBase64Url(byte[] bytes)
+    {
+        return StripPadding(Convert.ToBase64String(bytes)).Replace('+', '-').Replace('/', '_');
     }
 
     public static string MintAccessToken(string privateKeyPem, string applicationAnchor = "anchor-1")
