@@ -1,0 +1,20 @@
+<Project Sdk="Godot.NET.Sdk/4.3.0">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Sudomimus.Examples.Godot</RootNamespace>
+    <AssemblyName>SudomimusGodotExample</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Local source references for the in-repo demo. Real consumers
+         would replace these with NuGet PackageReferences:
+           <PackageReference Include="Sudomimus.Native" Version="0.0.1" />
+           <PackageReference Include="Sudomimus.Token"  Version="0.0.1" /> -->
+    <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Native\Sudomimus.Native.csproj" />
+    <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Token\Sudomimus.Token.csproj" />
+  </ItemGroup>
+
+</Project>

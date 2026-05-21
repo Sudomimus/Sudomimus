@@ -1,0 +1,70 @@
+# Sudomimus Connect — Godot 4 C# example
+
+Minimal Godot 4.3+ project that drives a full Steam login through the
+Sudomimus Native API. Uses [GodotSteam](https://godotsteam.com) for the
+Steam ticket acquisition and the generic [`Sudomimus.Native`](../../../sdks/csharp/src/Sudomimus.Native)
+and [`Sudomimus.Token`](../../../sdks/csharp/src/Sudomimus.Token) packages
+for the rest.
+
+The SDKs are **not** Godot-specific — see [`examples/csharp/console`](../console)
+for a plain .NET example with the same logical flow.
+
+## Prerequisites
+
+1. **Godot 4.3+ with C# / .NET support.** Download the ".NET" build from
+   <https://godotengine.org/download>.
+2. **GodotSteam** GDExtension. Install into `addons/godotsteam/` following
+   the [official guide](https://godotsteam.com/getting_started/installation/).
+   Confirm the `Steam` autoload is registered (Project → Project Settings →
+   Autoload).
+3. **Steam client running** in the background (Steam SDK requires it).
+4. **A Sudomimus application:**
+   - `applicationAnchor`
+   - `STEAM_TICKET` authentication rule allowing **Steam App ID 480**
+     (Spacewar — the public Steam test app this example uses by default)
+   - `DIRECT_ISSUE` return rule
+5. **.NET 8 SDK** (or .NET 10 — `RollForward=LatestMajor` is on by default).
+
+## Configuration to change in your own app
+
+| Where | What |
+|---|---|
+| `LoginNode.cs` | Replace `SteamAppId = 480` with your real App ID. |
+| `steam_appid.txt` | Same App ID. Godot's editor / standalone builds need this file to be present at runtime when Steam is initialized outside of a Steam launch. |
+| Your Sudomimus app config | Allow the same App ID in the `STEAM_TICKET` rule and ensure a `DIRECT_ISSUE` return rule exists. |
+
+## Run
+
+1. Open the project in Godot 4 (.NET build).
+2. Build the C# assembly (Editor → "Build" or just press F5).
+3. Run the project. The scene shows:
+   - An input field for `applicationAnchor`
+   - A "Login with Steam" button
+   - Status / result labels
+4. Type the anchor → click Login. The flow:
+   - GodotSteam calls `GetAuthTicketForWebApi("sudomimus")` and emits
+     `get_ticket_for_web_api_response`.
+   - The example POSTs the hex ticket + App ID to
+     `https://native-api.sudomimus.com/direct-issue/steam-ticket`.
+   - On success the result label shows
+     `accountIdentifier` and `firstName`.
+   - The Steam ticket is canceled (`CancelAuthTicket`).
+
+## Notes
+
+- The `Steam` autoload's `getAuthTicketForWebApi` and the
+  `get_ticket_for_web_api_response` signal are exactly the GodotSteam
+  names — they pass through to the underlying Steamworks SDK.
+- The example **does not** verify the access-token signature for brevity.
+  A production game backend that consumes these tokens should — use
+  `Sudomimus.Token.TokenVerifier` with the application's public PEM key
+  (fetch once, cache, share across requests).
+- The Steam `identity` string `"sudomimus"` is fixed server-side and is
+  re-exported by `Sudomimus.Native.NativeConstants.SteamTicketIdentity`.
+  Do not change it.
+
+## Acquiring a key pair for verification
+
+The application's public PEM key is returned by Sudomimus Connect's
+`/info` endpoint. For a Godot game's purposes you can hardcode it as a
+constant — public keys are safe to embed.

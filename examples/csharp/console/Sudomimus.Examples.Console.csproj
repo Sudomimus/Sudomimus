@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RollForward>LatestMajor</RollForward>
+    <RootNamespace>Sudomimus.Examples.Console</RootNamespace>
+    <AssemblyName>sudomimus-console-example</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Project references against the local SDK source. In a real
+         consumer project these would be NuGet PackageReferences:
+           <PackageReference Include="Sudomimus.Native" Version="0.0.1" />
+           <PackageReference Include="Sudomimus.Token"  Version="0.0.1" /> -->
+    <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Native\Sudomimus.Native.csproj" />
+    <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Token\Sudomimus.Token.csproj" />
+  </ItemGroup>
+
+</Project>

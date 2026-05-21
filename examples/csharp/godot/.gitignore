@@ -1,0 +1,18 @@
+# Godot 4.x build / cache output
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+
+# Mono / .NET build output
+bin/
+obj/
+*.user
+
+# Local dev artifacts
+.idea/
+.vscode/
+*.swp
+
+# GodotSteam binaries are installed locally per-platform; not tracked here.
+addons/godotsteam/

@@ -1,0 +1,46 @@
+[gd_scene load_steps=2 format=3 uid="uid://b0sudomimusgodot1"]
+
+[ext_resource type="Script" path="res://LoginNode.cs" id="1_login"]
+
+[node name="LoginScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_login")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -120.0
+offset_right = 240.0
+offset_bottom = 120.0
+
+[node name="AnchorLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Application anchor:"
+
+[node name="AnchorInput" type="LineEdit" parent="VBox"]
+layout_mode = 2
+placeholder_text = "anchor-..."
+
+[node name="LoginButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Login with Steam"
+
+[node name="StatusLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Idle."
+autowrap_mode = 2
+
+[node name="ResultLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = ""
+autowrap_mode = 2

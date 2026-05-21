@@ -1,0 +1,28 @@
+; Sudomimus Connect — Godot 4 C# example.
+;
+; This is a minimal Godot 4 project. The .NET assembly is named
+; SudomimusGodotExample (see Game.csproj). GodotSteam must be installed
+; manually into addons/godotsteam/ — see README.md for instructions.
+
+config_version=5
+
+[application]
+
+config/name="Sudomimus Godot Example"
+run/main_scene="res://LoginScene.tscn"
+config/features=PackedStringArray("4.3", "C#", "Forward Plus")
+config/icon="res://icon.svg"
+
+[dotnet]
+
+project/assembly_name="SudomimusGodotExample"
+
+[autoload]
+
+; GodotSteam exposes itself as the `Steam` autoload when installed via
+; addons/godotsteam/plugin.cfg. The Login scene calls into it via
+; GetNode("/root/Steam").
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
