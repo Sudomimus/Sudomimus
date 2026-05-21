@@ -1,27 +1,39 @@
 # Sudomimus Connect — C# console example
 
-Plain .NET 8 console app that drives the full Sudomimus Native login flow
-using the [`Sudomimus.Native`](../../../sdks/csharp/src/Sudomimus.Native)
-and [`Sudomimus.Token`](../../../sdks/csharp/src/Sudomimus.Token) SDKs.
+Plain .NET 8 console app that drives the Sudomimus Native login flow using
+the [`Sudomimus.Native`](../../../sdks/csharp/src/Sudomimus.Native) and
+[`Sudomimus.Token`](../../../sdks/csharp/src/Sudomimus.Token) SDKs.
 
-**No Steam SDK is required to run this example.** The Steam Web API ticket
-is supplied as a string on stdin; the example focuses on demonstrating the
-SDK call surface, not on integrating Steamworks. See
-[`examples/csharp/godot/`](../godot) for a real Steamworks integration via
-GodotSteam.
+The example supports **both Native API direct-issue paths**:
+
+- **`steam-ticket`** — exchange a Steam Web API auth ticket. Used by real
+  game clients (see [`examples/csharp/godot/`](../godot) for a Steamworks
+  integration via GodotSteam).
+- **`access-key`** — exchange a long-lived access-key credential
+  (identifier + secret) issued in the admin console. Used by CI, scripts,
+  and server-to-server automation.
+
+**No Steam SDK is required to run this example.** Credentials are supplied
+as strings on stdin; the example focuses on demonstrating the SDK call
+surface, not on integrating Steamworks.
 
 ## Prerequisites
 
 1. .NET 8 SDK (or .NET 10 — `RollForward=LatestMajor` is set on the
    example project).
-2. A Sudomimus application:
-   - `applicationAnchor`
-   - `STEAM_TICKET` authentication rule allowing the `steamAppId` you'll
-     use
-   - `DIRECT_ISSUE` return rule
-3. A real Steam Web API auth ticket hex, obtained externally (e.g. from
-   the Godot example or any Steamworks-capable program that called
-   `ISteamUser::GetAuthTicketForWebApi("sudomimus")`).
+2. A Sudomimus application configured for the method you want to test:
+   - **steam-ticket**: `STEAM_TICKET` authentication rule allowing your
+     `steamAppId`, plus a `DIRECT_ISSUE` return rule.
+   - **access-key**: `ACCESS_KEY_DIRECT` authentication rule, plus a
+     `DIRECT_ISSUE` return rule, plus a credential created against the
+     account you want to log in as (admin console → application →
+     access keys).
+3. The credential material:
+   - **steam-ticket**: a real Steam ticket hex obtained externally (e.g.
+     from the Godot example or any Steamworks-capable program that called
+     `ISteamUser::GetAuthTicketForWebApi("sudomimus")`).
+   - **access-key**: `accessKeyIdentifier` (UUID v4) and `accessKeySecret`
+     (64 hex chars), captured at creation time.
 4. (Optional) The application's public PEM key, if you want the example
    to verify the access token signature.
 
@@ -31,11 +43,12 @@ GodotSteam.
 dotnet run --project examples/csharp/console
 ```
 
-You'll be prompted for:
+You'll be prompted in order:
 
-1. `applicationAnchor:` — the anchor string.
-2. `steamAppId:` — the App ID under which the ticket was generated.
-3. `steamTicketHex:` — hex-encoded ticket bytes on a single line.
+1. `Auth method:` — type `steam-ticket` or `access-key`.
+2. `applicationAnchor:` — the anchor string.
+3. (steam-ticket) `steamAppId:` + `steamTicketHex:`.
+   (access-key) `accessKeyIdentifier:` + `accessKeySecret:`.
 4. (Optional) the application's public PEM key, ended by
    `-----END PUBLIC KEY-----`. Press Enter on the first line to skip.
 
@@ -44,18 +57,18 @@ On success the example prints the decoded access-token claims:
 ```
 ✓ Login successful.
   accountIdentifier: acct-...
-  firstName:         <SteamID64 or display name>
+  firstName:         <name or SteamID64>
 ```
 
 ## Failure modes
 
-The example surfaces these explicitly:
-
 | Symptom | Cause |
 |---|---|
-| `403 Layer1Denied` | The `STEAM_TICKET` rule rejects this `steamAppId`. |
-| `403 Layer2Denied` | The realize rule rejected the resolved Steam identity. |
+| `403 Layer1Denied` | The authentication rule rejects this method/appId. |
+| `403 Layer2Denied` | The realize rule rejected the resolved identity. |
 | `403 Layer3Denied` | No `DIRECT_ISSUE` return rule is configured. |
-| `401 SteamTicketInvalid` | Steam rejected the ticket — wrong identity, expired, App ID mismatch, etc. |
-| `409 ReplayProtectionAlreadySeen` | This ticket was redeemed inside the 24-hour replay window. Acquire a fresh ticket. |
+| `401 SteamTicketInvalid` | Steam rejected the ticket. |
+| `401 AccessKeyDirectDenied` | Access key unknown / wrong secret / revoked / expired / wrong application (server deliberately collapses these into one opaque code). |
+| `404 ApplicationNotFound` | `applicationAnchor` doesn't match a registered app. |
+| `409 ReplayProtectionAlreadySeen` | (steam-ticket only) The ticket was redeemed inside the 24-hour replay window. Acquire a fresh ticket. |
 | `502 SteamTicketVerificationFailed` | Steam's verification endpoint was unreachable. |

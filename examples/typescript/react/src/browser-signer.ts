@@ -6,10 +6,10 @@
  * Crypto API (SubtleCrypto) so the React example can run entirely in a
  * browser without polyfilling Node's `crypto` module.
  *
- * JWT layout (matches @sudoo/jwt server-side):
- *   - header segment:    base64(JSON(header))                — padding stripped
- *   - body segment:      base64(JSON(claims))                — padding stripped
- *   - signature segment: base64url(RSA-SHA256(header.body))  — padding stripped
+ * JWT layout (matches @sudoo/jwt 3.6+ server-side — uniform base64url):
+ *   - header segment:    base64url(JSON(header))               — padding stripped
+ *   - body segment:      base64url(JSON(claims))               — padding stripped
+ *   - signature segment: base64url(RSA-SHA256(header.body))    — padding stripped
  *
  * Claims carried in the BODY (server reads from `parsed.body`):
  *   - iss: applicationAnchor
@@ -17,6 +17,8 @@
  *   - iat, exp: UNIX seconds (lifetime ≤ 60s)
  *   - jti: per-request UUID v4 (server enforces single-use replay)
  *   - body_sha256: standard base64 of SHA-256(rawHttpBody) over UTF-8 bytes
+ *     (the claim string itself is standard base64 — only the JWT *segment*
+ *     wrapper is base64url)
  */
 
 import type { ConnectClientAuthSigner } from "@sudomimus/connect";
@@ -25,17 +27,24 @@ const CLIENT_JWT_AUDIENCE = "sudomimus-connect";
 const DEFAULT_LIFETIME_SECONDS = 30;
 
 const stripPadding = (b64: string): string => b64.replace(/=+$/, "");
+
 const toBase64Url = (b64: string): string =>
     stripPadding(b64).replace(/\+/g, "-").replace(/\//g, "_");
 
-const base64Encode = (bytes: Uint8Array): string => {
+const fromBase64Url = (b64url: string): string => {
+    const standard = b64url.replace(/-/g, "+").replace(/_/g, "/");
+    const padLength = (4 - (standard.length % 4)) % 4;
+    return standard + "=".repeat(padLength);
+};
+
+const base64EncodeBytes = (bytes: Uint8Array): string => {
     let binary = "";
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary);
 };
 
 const encodeJsonSegment = (value: unknown): string =>
-    stripPadding(btoa(JSON.stringify(value)));
+    toBase64Url(btoa(JSON.stringify(value)));
 
 // Returns an ArrayBuffer (not Uint8Array) to keep SubtleCrypto's BufferSource
 // typing happy across @types/node / lib.dom interactions.
@@ -60,10 +69,15 @@ const utf8ToArrayBuffer = (input: string): ArrayBuffer => {
     return buffer;
 };
 
+/**
+ * Standard base64 of SHA-256(input) over UTF-8 bytes. Matches the server's
+ * `crypto.createHash("sha256").update(input, "utf8").digest("base64")` —
+ * this is the claim VALUE format, distinct from the JWT segment encoding.
+ */
 const sha256Base64 = async (input: string): Promise<string> => {
 
     const hashBuf = await crypto.subtle.digest("SHA-256", utf8ToArrayBuffer(input));
-    return base64Encode(new Uint8Array(hashBuf));
+    return base64EncodeBytes(new Uint8Array(hashBuf));
 };
 
 export type BrowserSignerOptions = {
@@ -111,7 +125,7 @@ export const createBrowserSigner = async (
             key,
             utf8ToArrayBuffer(`${headerSeg}.${bodySeg}`),
         );
-        const sigSeg = toBase64Url(base64Encode(new Uint8Array(sigBuf)));
+        const sigSeg = toBase64Url(base64EncodeBytes(new Uint8Array(sigBuf)));
 
         return `${headerSeg}.${bodySeg}.${sigSeg}`;
     };
@@ -122,8 +136,8 @@ export const createBrowserSigner = async (
  * signature. The React example uses this purely to read the user fields
  * already returned from /redeem — no token-trust decision is made here.
  *
- * @sudoo/jwt encodes the body segment as standard base64 with `=` padding
- * stripped (NOT base64url), so we re-pad before decoding.
+ * @sudoo/jwt 3.6+ encodes all three JWT segments as base64url (padding
+ * stripped). We translate to standard base64 first, re-pad, then atob.
  */
 export const decodeAccessTokenBody = <T>(jwt: string): T => {
 
@@ -131,7 +145,5 @@ export const decodeAccessTokenBody = <T>(jwt: string): T => {
     if (parts.length !== 3) {
         throw new Error("Malformed JWT: expected three dot-separated segments.");
     }
-    let bodyB64 = parts[1];
-    while (bodyB64.length % 4 !== 0) bodyB64 += "=";
-    return JSON.parse(atob(bodyB64)) as T;
+    return JSON.parse(atob(fromBase64Url(parts[1]))) as T;
 };

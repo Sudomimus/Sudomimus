@@ -1,13 +1,16 @@
 // Sudomimus Connect — Godot example.
 //
-// Drives a full direct-issue Steam login:
-//   1. Click "Login with Steam" → request a Steam Web API ticket from
-//      the GodotSteam autoload (identity = "sudomimus").
-//   2. When Steam fires get_ticket_for_web_api_response, hand the hex
-//      ticket to Sudomimus.Native.
-//   3. Parse the returned access token with Sudomimus.Token (signature
-//      verification optional — see README).
-//   4. Show the logged-in user in the scene.
+// Drives the two Sudomimus Native direct-issue flows from a Godot 4 scene:
+//
+//   * Steam tab        — get a ticket from GodotSteam (identity =
+//                        "sudomimus"), POST it to /direct-issue/steam-ticket.
+//   * Access Key tab   — exchange a credential (identifier + secret) for
+//                        tokens via /direct-issue/access-key. Included so
+//                        SDK consumers can exercise the path; production
+//                        games should not embed long-lived secrets.
+//
+// Both paths parse the returned access token with Sudomimus.Token (without
+// signature verification — see README) and show the resulting user.
 
 using Godot;
 using Sudomimus.Native;
@@ -22,43 +25,51 @@ public partial class LoginNode : Control
     private const long SteamAppId = 480;
 
     private LineEdit _anchorInput = null!;
-    private Button _loginButton = null!;
+    private Button _steamLoginButton = null!;
+    private LineEdit _accessKeyIdInput = null!;
+    private LineEdit _accessKeySecretInput = null!;
+    private Button _accessKeyLoginButton = null!;
     private Label _statusLabel = null!;
     private Label _resultLabel = null!;
     private Node _steam = null!;
 
-    private string _applicationAnchor = string.Empty;
     private uint _pendingTicketHandle;
 
     public override void _Ready()
     {
         _anchorInput = GetNode<LineEdit>("VBox/AnchorInput");
-        _loginButton = GetNode<Button>("VBox/LoginButton");
+        _steamLoginButton = GetNode<Button>("VBox/Tabs/Steam/SteamLoginButton");
+        _accessKeyIdInput = GetNode<LineEdit>("VBox/Tabs/AccessKey/AccessKeyIdInput");
+        _accessKeySecretInput = GetNode<LineEdit>("VBox/Tabs/AccessKey/AccessKeySecretInput");
+        _accessKeyLoginButton = GetNode<Button>("VBox/Tabs/AccessKey/AccessKeyLoginButton");
         _statusLabel = GetNode<Label>("VBox/StatusLabel");
         _resultLabel = GetNode<Label>("VBox/ResultLabel");
 
         _steam = GetNode("/root/Steam");
 
-        _loginButton.Pressed += OnLoginPressed;
+        _steamLoginButton.Pressed += OnSteamLoginPressed;
+        _accessKeyLoginButton.Pressed += OnAccessKeyLoginPressed;
         _steam.Connect("get_ticket_for_web_api_response", new Callable(this, nameof(OnTicketReady)));
 
         // Initialize Steamworks. GodotSteam's `steamInit()` returns a
         // dictionary; for an MVP we trust it and rely on Steam-side
         // failures to surface later.
         _steam.Call("steamInit");
-        _statusLabel.Text = "Idle. Enter applicationAnchor and click Login.";
+        _statusLabel.Text = "Idle. Pick a tab and log in.";
     }
 
-    private void OnLoginPressed()
+    // -------- Steam login path -----------------------------------------
+
+    private void OnSteamLoginPressed()
     {
-        _applicationAnchor = _anchorInput.Text.Trim();
-        if (string.IsNullOrEmpty(_applicationAnchor))
+        var anchor = _anchorInput.Text.Trim();
+        if (string.IsNullOrEmpty(anchor))
         {
             _statusLabel.Text = "applicationAnchor is required.";
             return;
         }
 
-        _loginButton.Disabled = true;
+        _steamLoginButton.Disabled = true;
         _statusLabel.Text = "Requesting Steam ticket...";
 
         // Identity string MUST equal NativeConstants.SteamTicketIdentity
@@ -82,7 +93,7 @@ public partial class LoginNode : Control
         if (result != 1) // 1 == k_EResultOK
         {
             _statusLabel.Text = $"Steam refused to issue a ticket (result={result}).";
-            _loginButton.Disabled = false;
+            _steamLoginButton.Disabled = false;
             return;
         }
 
@@ -94,34 +105,79 @@ public partial class LoginNode : Control
             var client = new NativeClient();
             var tokens = await client.DirectIssueSteamTicketAsync(new DirectIssueSteamTicketRequest
             {
-                ApplicationAnchor = _applicationAnchor,
+                ApplicationAnchor = _anchorInput.Text.Trim(),
                 SteamTicketHex = ticketHex,
                 SteamAppId = SteamAppId,
             });
-
-            // Demo simplification: decode without verifying the signature.
-            // A production game should call TokenVerifier with its app
-            // public key (or pass it server-side and validate there).
-            var parsed = TokenParser.ParseAccessToken(tokens.AccessToken);
-
-            _statusLabel.Text = "✓ Login successful.";
-            _resultLabel.Text =
-                $"accountIdentifier: {parsed.Body.AccountIdentifier}\n" +
-                $"firstName:         {parsed.Body.FirstName}";
+            DisplayLoggedInUser(tokens.AccessToken);
         }
         catch (NativeApiException ex)
         {
             _statusLabel.Text = $"Native API error: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}";
         }
-        catch (TokenException ex)
+        finally
         {
-            _statusLabel.Text = $"Token parse failed: {ex.Code} — {ex.Message}";
+            _steam.Call("cancelAuthTicket", _pendingTicketHandle);
+            _steamLoginButton.Disabled = false;
+        }
+    }
+
+    // -------- Access-key login path ------------------------------------
+
+    private async void OnAccessKeyLoginPressed()
+    {
+        var anchor = _anchorInput.Text.Trim();
+        var keyId = _accessKeyIdInput.Text.Trim();
+        var keySecret = _accessKeySecretInput.Text.Trim();
+
+        if (string.IsNullOrEmpty(anchor) || string.IsNullOrEmpty(keyId) || string.IsNullOrEmpty(keySecret))
+        {
+            _statusLabel.Text = "applicationAnchor, accessKeyIdentifier, and accessKeySecret are all required.";
+            return;
+        }
+
+        _accessKeyLoginButton.Disabled = true;
+        _statusLabel.Text = "Calling /direct-issue/access-key...";
+
+        try
+        {
+            var client = new NativeClient();
+            var tokens = await client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
+            {
+                ApplicationAnchor = anchor,
+                AccessKeyIdentifier = keyId,
+                AccessKeySecret = keySecret,
+            });
+            DisplayLoggedInUser(tokens.AccessToken);
+        }
+        catch (NativeApiException ex)
+        {
+            _statusLabel.Text = $"Native API error: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}";
         }
         finally
         {
-            // Tell Steam the ticket is no longer needed.
-            _steam.Call("cancelAuthTicket", _pendingTicketHandle);
-            _loginButton.Disabled = false;
+            _accessKeyLoginButton.Disabled = false;
+        }
+    }
+
+    // -------- Shared post-login display --------------------------------
+
+    private void DisplayLoggedInUser(string accessToken)
+    {
+        try
+        {
+            // Demo simplification: decode without verifying the signature.
+            // A production game backend that consumes these tokens should
+            // verify them with Sudomimus.Token's TokenVerifier.
+            var parsed = TokenParser.ParseAccessToken(accessToken);
+            _statusLabel.Text = "✓ Login successful.";
+            _resultLabel.Text =
+                $"accountIdentifier: {parsed.Body.AccountIdentifier}\n" +
+                $"firstName:         {parsed.Body.FirstName}";
+        }
+        catch (TokenException ex)
+        {
+            _statusLabel.Text = $"Token parse failed: {ex.Code} — {ex.Message}";
         }
     }
 

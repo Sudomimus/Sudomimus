@@ -18,10 +18,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -240.0
-offset_top = -120.0
-offset_right = 240.0
-offset_bottom = 120.0
+offset_left = -260.0
+offset_top = -240.0
+offset_right = 260.0
+offset_bottom = 240.0
 
 [node name="AnchorLabel" type="Label" parent="VBox"]
 layout_mode = 2
@@ -31,9 +31,52 @@ text = "Application anchor:"
 layout_mode = 2
 placeholder_text = "anchor-..."
 
-[node name="LoginButton" type="Button" parent="VBox"]
+[node name="Tabs" type="TabContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 260)
+
+[node name="Steam" type="VBoxContainer" parent="VBox/Tabs"]
+layout_mode = 2
+
+[node name="SteamInfo" type="Label" parent="VBox/Tabs/Steam"]
+layout_mode = 2
+text = "Acquires a Steam Web API ticket via GodotSteam (identity \"sudomimus\") and exchanges it for tokens."
+autowrap_mode = 2
+
+[node name="SteamLoginButton" type="Button" parent="VBox/Tabs/Steam"]
 layout_mode = 2
 text = "Login with Steam"
+
+[node name="AccessKey" type="VBoxContainer" parent="VBox/Tabs"]
+visible = false
+layout_mode = 2
+
+[node name="AccessKeyWarning" type="Label" parent="VBox/Tabs/AccessKey"]
+layout_mode = 2
+text = "Demo only. Real Godot games should never hold a long-lived access-key secret in the client — this tab is here so SDK consumers can exercise the access-key path end-to-end."
+autowrap_mode = 2
+
+[node name="AccessKeyIdLabel" type="Label" parent="VBox/Tabs/AccessKey"]
+layout_mode = 2
+text = "accessKeyIdentifier (UUID):"
+
+[node name="AccessKeyIdInput" type="LineEdit" parent="VBox/Tabs/AccessKey"]
+layout_mode = 2
+placeholder_text = "01890c5e-1234-4abc-9def-0123456789ab"
+
+[node name="AccessKeySecretLabel" type="Label" parent="VBox/Tabs/AccessKey"]
+layout_mode = 2
+text = "accessKeySecret (64 hex chars):"
+
+[node name="AccessKeySecretInput" type="LineEdit" parent="VBox/Tabs/AccessKey"]
+layout_mode = 2
+placeholder_text = "64 lowercase hex chars"
+secret = true
+
+[node name="AccessKeyLoginButton" type="Button" parent="VBox/Tabs/AccessKey"]
+layout_mode = 2
+text = "Login with Access Key"
 
 [node name="StatusLabel" type="Label" parent="VBox"]
 layout_mode = 2
