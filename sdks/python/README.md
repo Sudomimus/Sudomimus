@@ -6,8 +6,9 @@ This workspace hosts the Python SDKs published to PyPI.
 
 | Package | Spec | Purpose |
 | --- | --- | --- |
-| [`sudomimus-connect`](packages/sudomimus-connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / Redeem / Refresh) |
-| [`sudomimus-native`](packages/sudomimus-native) | [`specs/native.yaml`](../../specs/native.yaml) | Native client entry point |
+| [`sudomimus-connect`](packages/sudomimus-connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info) |
+| [`sudomimus-token`](packages/sudomimus-token) | — (hand-written) | Parse and verify Sudomimus access / refresh JWTs |
+| [`sudomimus-native`](packages/sudomimus-native) | [`specs/native.yaml`](../../specs/native.yaml) | Direct-issue (Steam ticket / access key) |
 
 ## Tooling
 
@@ -24,7 +25,8 @@ cd sdks/python
 uv sync
 uv run python tasks.py generate    # regenerate packages/*/src/sudomimus_*/_generated/models.py
 uv run ruff check
+uv run mypy packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src
 uv run pytest
 ```
 
-Generated files live under `packages/*/src/sudomimus_*/_generated/` and are checked in. After editing a spec, run `uv run python tasks.py generate` and commit the regenerated files.
+Generated files live under `packages/*/src/sudomimus_*/_generated/` and are checked in. After editing a spec, run `uv run python tasks.py generate` and commit the regenerated files. `sudomimus-token` has no spec — its models are hand-written.

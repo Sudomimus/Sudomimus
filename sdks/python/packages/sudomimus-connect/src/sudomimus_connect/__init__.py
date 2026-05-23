@@ -1,54 +1,98 @@
 """Sudomimus Connect SDK.
 
-Token exchange client for the Sudomimus authentication platform.
+Token-exchange client for the Sudomimus authentication platform: establish an
+inquiry, poll its status, redeem it for application tokens, refresh access
+tokens, and fetch localized application metadata. Includes client-auth JWT
+signing for ``/establish`` and token verification (via ``sudomimus-token``).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-import httpx
-
 from ._generated.models import (
-    Error as ConnectError,
-)
-from ._generated.models import (
+    AuthenticationRuleConstraint,
+    AuthenticationRuleEmailVerificationPayload,
+    AuthenticationRulePasskeyPayload,
     EstablishRequest,
     EstablishResponse,
+    HealthResponse,
+    InfoRequest,
+    InfoResponse,
+    RealizeRuleConstraint,
+    RealizeRuleEmailPayload,
     RedeemRequest,
+    RedeemResponse,
     RefreshRequest,
-    TokenPair,
+    RefreshResponse,
+    ReturnMethodCallback,
+    ReturnMethodDeclaration,
+    ReturnMethodReveal,
+    ReturnMethodStatusPoll,
+    StatusPollPendingResponse,
+    StatusPollRealizedResponse,
+    StatusPollRequest,
+    StatusPollResponse,
 )
+from ._generated.models import Error as ConnectError
+from .async_client import AsyncConnectClient
+from .client import ConnectClient
+from .client_auth import (
+    ClientAuthSigner,
+    ConnectClientAuth,
+    ConnectClientAuthWithKey,
+    ConnectClientAuthWithSigner,
+    build_establish_client_jwt_claims,
+    sha256_base64,
+    sign_establish_client_jwt,
+)
+from .constants import (
+    CLIENT_JWT_AUDIENCE,
+    CLIENT_JWT_AUTH_SCHEME,
+    CLIENT_JWT_DEFAULT_LIFETIME_SECONDS,
+    CLIENT_JWT_MAX_LIFETIME_SECONDS,
+    DEFAULT_PUBLIC_KEY_LOCALE,
+    PRODUCTION_BASE_URL,
+)
+from .errors import ConnectApiError, ConnectConfigError
 
 __all__ = [
+    "CLIENT_JWT_AUDIENCE",
+    "CLIENT_JWT_AUTH_SCHEME",
+    "CLIENT_JWT_DEFAULT_LIFETIME_SECONDS",
+    "CLIENT_JWT_MAX_LIFETIME_SECONDS",
+    "DEFAULT_PUBLIC_KEY_LOCALE",
+    "PRODUCTION_BASE_URL",
+    "AsyncConnectClient",
+    "AuthenticationRuleConstraint",
+    "AuthenticationRuleEmailVerificationPayload",
+    "AuthenticationRulePasskeyPayload",
+    "ClientAuthSigner",
+    "ConnectApiError",
     "ConnectClient",
-    "ConnectClientOptions",
+    "ConnectClientAuth",
+    "ConnectClientAuthWithKey",
+    "ConnectClientAuthWithSigner",
+    "ConnectConfigError",
     "ConnectError",
     "EstablishRequest",
     "EstablishResponse",
+    "HealthResponse",
+    "InfoRequest",
+    "InfoResponse",
+    "RealizeRuleConstraint",
+    "RealizeRuleEmailPayload",
     "RedeemRequest",
+    "RedeemResponse",
     "RefreshRequest",
-    "TokenPair",
+    "RefreshResponse",
+    "ReturnMethodCallback",
+    "ReturnMethodDeclaration",
+    "ReturnMethodReveal",
+    "ReturnMethodStatusPoll",
+    "StatusPollPendingResponse",
+    "StatusPollRealizedResponse",
+    "StatusPollRequest",
+    "StatusPollResponse",
+    "build_establish_client_jwt_claims",
+    "sha256_base64",
+    "sign_establish_client_jwt",
 ]
-
-
-@dataclass(slots=True)
-class ConnectClientOptions:
-    base_url: str
-
-
-class ConnectClient:
-    """Client for the Sudomimus Connect API."""
-
-    def __init__(
-        self,
-        *,
-        base_url: str,
-        transport: httpx.Client | None = None,
-    ) -> None:
-        self._base_url = base_url.rstrip("/")
-        self._transport = transport
-
-    @property
-    def base_url(self) -> str:
-        return self._base_url

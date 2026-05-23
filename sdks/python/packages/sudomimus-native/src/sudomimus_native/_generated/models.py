@@ -3,45 +3,69 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
-
 from pydantic import BaseModel, Field
 
 
-class StatusPollRequest(BaseModel):
-    pollToken: str = Field(
-        ..., description="Opaque token issued when the flow was initiated."
+class DirectIssueAccessKeyRequest(BaseModel):
+    applicationAnchor: str = Field(
+        ..., description="Public anchor identifying the integrating application."
+    )
+    accessKeyIdentifier: str = Field(
+        ...,
+        description="UUID v4 string identifying the access-key credential.\nFormat: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.\n",
+    )
+    accessKeySecret: str = Field(
+        ...,
+        description="64-char lowercase hex string (32 random bytes) returned exactly\nonce when the access key was issued. Never logged or persisted\nin plaintext server-side after creation.\n",
     )
 
 
-class Status(StrEnum):
-    """
-    Current status of the authentication flow.
-    """
-
-    PENDING = "PENDING"
-    APPROVED = "APPROVED"
-    DENIED = "DENIED"
-    EXPIRED = "EXPIRED"
-
-
-class StatusPollResponse(BaseModel):
-    status: Status = Field(
-        ..., description="Current status of the authentication flow."
+class DirectIssueAccessKeyResponse(BaseModel):
+    applicationAnchor: str
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Body shape matches the Connect SDK's access token.",
     )
-    accessToken: str | None = Field(
-        None,
-        description="Application access token; present only when status is APPROVED.",
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key.",
     )
-    refreshToken: str | None = Field(
-        None,
-        description="Application refresh token; present only when status is APPROVED.",
+
+
+class DirectIssueSteamTicketRequest(BaseModel):
+    applicationAnchor: str = Field(
+        ..., description="Public anchor identifying the integrating application."
+    )
+    steamTicketHex: str = Field(
+        ...,
+        description='Hex-encoded Steam Web API auth ticket bytes returned from\n`ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case\ninsensitive — the server lowercases before hashing for replay\nprotection, but forwards the original bytes to Steam.\n',
+    )
+    steamAppId: int = Field(
+        ...,
+        description="Steam App ID under which the ticket was generated. Must be\nallow-listed by the application's `STEAM_TICKET` authentication\nrule. Tickets are bound to their issuing App ID server-side;\npassing a different value will fail Steam verification.\n",
+        ge=1,
+    )
+
+
+class DirectIssueSteamTicketResponse(BaseModel):
+    applicationAnchor: str
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Body shape matches the Connect SDK's access token.",
+    )
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket.",
     )
 
 
 class Error(BaseModel):
-    code: str = Field(..., description="Stable machine-readable error code.")
-    message: str = Field(..., description="Human-readable error message.")
-    requestId: str | None = Field(
-        None, description="Identifier for correlating with platform logs."
-    )
+    """
+    Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
+    for known failure modes. When the reason symbol's description begins with
+    `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+    signal — both `reason` and the body itself are absent in that case.
+
+    """
+
+    reason: str | None = Field(None, description="Stable machine-readable reason code.")

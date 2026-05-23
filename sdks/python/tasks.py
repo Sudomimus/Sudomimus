@@ -47,6 +47,7 @@ def generate() -> None:
                 "3.11",
                 "--use-schema-description",
                 "--use-double-quotes",
+                "--field-constraints",
                 "--disable-timestamp",
             ],
             check=True,
