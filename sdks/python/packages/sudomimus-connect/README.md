@@ -1,6 +1,10 @@
 # sudomimus-connect
 
-Python SDK for the Sudomimus Connect API — token exchange (Establish, Redeem, Refresh).
+Python SDK for the Sudomimus Connect API — the token-exchange entry point:
+establish an authentication inquiry, poll its status, redeem it for
+application tokens, refresh access tokens, and fetch localized application
+metadata. Includes client-auth JWT signing for `/establish` and token
+verification (via [`sudomimus-token`](../sudomimus-token)).
 
 ## Install
 
@@ -10,24 +14,64 @@ pip install sudomimus-connect
 
 ## Usage
 
-```python
-from sudomimus_connect import ConnectClient
+`/establish` requires a client-auth JWT signed with your application's
+RS256 private key. Pass it via `client_auth`:
 
-client = ConnectClient(base_url="https://connect-api.sudomimus.com")
+```python
+from sudomimus_connect import (
+    ConnectClient,
+    ConnectClientAuthWithKey,
+    EstablishRequest,
+)
+
+with ConnectClient(
+    client_auth=ConnectClientAuthWithKey(
+        application_anchor="my-app",
+        private_key_pem=open("client-auth-private.pem").read(),
+    )
+) as client:
+    inquiry = client.establish(EstablishRequest(applicationAnchor="my-app"))
+    print(inquiry.exposureKey, inquiry.hiddenKey)
 ```
+
+The other endpoints need no client auth:
+
+```python
+status = client.status_poll(StatusPollRequest(exposureKey=..., hiddenKey=...))
+tokens = client.redeem(RedeemRequest(exposureKey=..., hiddenKey=..., confirmationKey=...))
+fresh = client.refresh(RefreshRequest(refreshToken=tokens.refreshToken))
+```
+
+Verify issued tokens (resolves and caches the application public key via
+`/info`):
+
+```python
+access = client.verify_access_token(tokens.accessToken)
+print(access.body.accountIdentifier)
+```
+
+An `AsyncConnectClient` with the same methods is available for `asyncio`
+callers (its BYO signer may be sync or async). Non-2xx responses raise
+`ConnectApiError` (inspect `.status` and `.reason`).
 
 ## Models
 
-Pydantic v2 models are generated from [`specs/connect.yaml`](../../../../specs/connect.yaml) and re-exported from the package root:
+Pydantic v2 models are generated from [`specs/connect.yaml`](../../../../specs/connect.yaml)
+and re-exported from the package root:
 
 ```python
 from sudomimus_connect import (
     ConnectError,
     EstablishRequest,
     EstablishResponse,
+    InfoRequest,
+    InfoResponse,
     RedeemRequest,
+    RedeemResponse,
     RefreshRequest,
-    TokenPair,
+    RefreshResponse,
+    StatusPollRequest,
+    StatusPollResponse,
 )
 ```
 

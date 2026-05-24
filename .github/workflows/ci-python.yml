@@ -44,4 +44,5 @@ jobs:
             exit 1
           fi
       - run: uv run ruff check
+      - run: uv run mypy packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src
       - run: uv run pytest

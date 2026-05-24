@@ -1,48 +1,33 @@
 """Sudomimus Native SDK.
 
-Native client entry point for the Sudomimus authentication platform.
+Direct-issue client for native callers: exchange a Steam Web API auth ticket
+or an access-key credential for application access and refresh tokens in a
+single round trip.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-import httpx
-
 from ._generated.models import (
-    Error as NativeError,
+    DirectIssueAccessKeyRequest,
+    DirectIssueAccessKeyResponse,
+    DirectIssueSteamTicketRequest,
+    DirectIssueSteamTicketResponse,
 )
-from ._generated.models import (
-    StatusPollRequest,
-    StatusPollResponse,
-)
+from ._generated.models import Error as NativeError
+from .async_client import AsyncNativeClient
+from .client import NativeClient
+from .constants import PRODUCTION_BASE_URL, STEAM_TICKET_IDENTITY
+from .errors import NativeApiError
 
 __all__ = [
+    "PRODUCTION_BASE_URL",
+    "STEAM_TICKET_IDENTITY",
+    "AsyncNativeClient",
+    "DirectIssueAccessKeyRequest",
+    "DirectIssueAccessKeyResponse",
+    "DirectIssueSteamTicketRequest",
+    "DirectIssueSteamTicketResponse",
+    "NativeApiError",
     "NativeClient",
-    "NativeClientOptions",
     "NativeError",
-    "StatusPollRequest",
-    "StatusPollResponse",
 ]
-
-
-@dataclass(slots=True)
-class NativeClientOptions:
-    base_url: str
-
-
-class NativeClient:
-    """Client for the Sudomimus Native API."""
-
-    def __init__(
-        self,
-        *,
-        base_url: str,
-        transport: httpx.Client | None = None,
-    ) -> None:
-        self._base_url = base_url.rstrip("/")
-        self._transport = transport
-
-    @property
-    def base_url(self) -> str:
-        return self._base_url

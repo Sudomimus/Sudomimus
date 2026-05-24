@@ -1,15 +1,126 @@
-"""Smoke tests for sudomimus_native."""
+"""Tests for sudomimus_native."""
 
 from __future__ import annotations
 
-from sudomimus_native import NativeClient, StatusPollRequest
+import asyncio
+import json
+from collections.abc import Callable
+
+import httpx
+import pytest
+from sudomimus_native import (
+    PRODUCTION_BASE_URL,
+    AsyncNativeClient,
+    DirectIssueAccessKeyRequest,
+    DirectIssueSteamTicketRequest,
+    NativeApiError,
+    NativeClient,
+)
+
+Handler = Callable[[httpx.Request], httpx.Response]
 
 
-def test_client_normalizes_base_url() -> None:
+def _client(handler: Handler) -> NativeClient:
+    return NativeClient(http_client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def _token_response(request: httpx.Request) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "applicationAnchor": "my-app",
+            "accessToken": "a.b.c",
+            "refreshToken": "d.e.f",
+        },
+    )
+
+
+def test_base_url_normalized() -> None:
     client = NativeClient(base_url="https://native.example.com/")
     assert client.base_url == "https://native.example.com"
 
 
-def test_generated_model_round_trip() -> None:
-    request = StatusPollRequest(pollToken="poll-token")
-    assert request.pollToken == "poll-token"
+def test_default_base_url_is_production() -> None:
+    assert NativeClient().base_url == PRODUCTION_BASE_URL
+
+
+def test_direct_issue_steam_ticket() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        return _token_response(request)
+
+    with _client(handler) as client:
+        result = client.direct_issue_steam_ticket(
+            DirectIssueSteamTicketRequest(
+                applicationAnchor="my-app", steamTicketHex="deadbeef", steamAppId=480
+            )
+        )
+
+    assert captured["url"].endswith("/direct-issue/steam-ticket")
+    assert captured["body"] == {
+        "applicationAnchor": "my-app",
+        "steamTicketHex": "deadbeef",
+        "steamAppId": 480,
+    }
+    assert result.accessToken == "a.b.c"
+    assert result.refreshToken == "d.e.f"
+
+
+def test_direct_issue_access_key() -> None:
+    with _client(_token_response) as client:
+        result = client.direct_issue_access_key(
+            DirectIssueAccessKeyRequest(
+                applicationAnchor="my-app",
+                accessKeyIdentifier="11111111-1111-4111-8111-111111111111",
+                accessKeySecret="0" * 64,
+            )
+        )
+    assert result.accessToken == "a.b.c"
+
+
+def test_error_with_reason() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"reason": "AccessKeyDirectDenied"})
+
+    with _client(handler) as client, pytest.raises(NativeApiError) as exc:
+        client.direct_issue_access_key(
+            DirectIssueAccessKeyRequest(
+                applicationAnchor="my-app",
+                accessKeyIdentifier="11111111-1111-4111-8111-111111111111",
+                accessKeySecret="0" * 64,
+            )
+        )
+    assert exc.value.status == 401
+    assert exc.value.reason == "AccessKeyDirectDenied"
+
+
+def test_error_with_empty_body() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, content=b"")
+
+    with _client(handler) as client, pytest.raises(NativeApiError) as exc:
+        client.direct_issue_steam_ticket(
+            DirectIssueSteamTicketRequest(
+                applicationAnchor="my-app", steamTicketHex="ab", steamAppId=1
+            )
+        )
+    assert exc.value.status == 403
+    assert exc.value.reason is None
+
+
+def test_async_direct_issue_steam_ticket() -> None:
+    async def run() -> str:
+        async with AsyncNativeClient(
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(_token_response))
+        ) as client:
+            result = await client.direct_issue_steam_ticket(
+                DirectIssueSteamTicketRequest(
+                    applicationAnchor="my-app", steamTicketHex="ab", steamAppId=1
+                )
+            )
+            return result.accessToken
+
+    assert asyncio.run(run()) == "a.b.c"

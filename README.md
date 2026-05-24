@@ -11,8 +11,9 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 | TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info) | alpha |
 | TypeScript | [`@sudomimus/token`](sdks/typescript/packages/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Direct-issue (Steam ticket / access key) | alpha |
-| Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Token exchange (Establish / Redeem / Refresh) | scaffolded |
-| Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Native client entry point | scaffolded |
+| Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info) | alpha |
+| Python | [`sudomimus-token`](sdks/python/packages/sudomimus-token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
+| Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Direct-issue (Steam ticket / access key) | alpha |
 
 ## Repository layout
 

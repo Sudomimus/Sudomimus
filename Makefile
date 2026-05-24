@@ -1,5 +1,7 @@
 TS_SDK := sdks/typescript
 CSHARP_SDK := sdks/csharp
+PYTHON_SDK := sdks/python
+PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src
 NUGET_SOURCE := https://api.nuget.org/v3/index.json
 NUGET_PACK_DIR := $(CSHARP_SDK)/artifacts
 
@@ -78,6 +80,29 @@ lint-native:
 .PHONY: test-native
 test-native:
 	pnpm -C $(TS_SDK) --filter=@sudomimus/native run test
+
+# ---------- Python SDKs (sudomimus-token + sudomimus-native + sudomimus-connect) ----------
+# All -py targets operate on sdks/python/ (uv workspace).
+
+.PHONY: install-py
+install-py:
+	cd $(PYTHON_SDK) && uv sync
+
+.PHONY: generate-py
+generate-py:
+	cd $(PYTHON_SDK) && uv run python tasks.py generate
+
+.PHONY: lint-py
+lint-py:
+	cd $(PYTHON_SDK) && uv run ruff check
+
+.PHONY: typecheck-py
+typecheck-py:
+	cd $(PYTHON_SDK) && uv run mypy $(PYTHON_SRC)
+
+.PHONY: test-py
+test-py:
+	cd $(PYTHON_SDK) && uv run pytest
 
 # ---------- Publish ----------
 

@@ -4,72 +4,250 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any, Literal
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
-class EstablishRequest(BaseModel):
-    applicationKey: str = Field(
-        ..., description="Public key identifying the integrating application."
-    )
-    redirectUri: AnyUrl = Field(
-        ..., description="URI the platform will redirect to after authentication."
-    )
-    state: str | None = Field(
-        None,
-        description="Opaque value echoed back in the redirect for CSRF protection.",
-    )
+class HealthResponse(BaseModel):
+    ready: bool
+    service: str
+    version: str
 
 
 class EstablishResponse(BaseModel):
-    sessionId: str = Field(
-        ..., description="Identifier for the established connect session."
+    applicationAnchor: str
+    exposureKey: str = Field(
+        ...,
+        description="Public half of the inquiry key pair; safe to share with the user agent.",
     )
-    authorizeUrl: AnyUrl = Field(
-        ..., description="URL the end user should visit to complete authentication."
+    hiddenKey: str = Field(
+        ...,
+        description="Private half of the inquiry key pair; must stay on the originating client.",
     )
-    expiresAt: AwareDatetime | None = Field(
-        None, description="When this session will expire if unused."
+
+
+class StatusPollRequest(BaseModel):
+    exposureKey: str
+    hiddenKey: str
+
+
+class Status(StrEnum):
+    PENDING = "PENDING"
+
+
+class StatusPollPendingResponse(BaseModel):
+    status: Literal["PENDING"]
+
+
+class Status1(StrEnum):
+    REALIZED = "REALIZED"
+
+
+class StatusPollRealizedResponse(BaseModel):
+    status: Literal["REALIZED"]
+    confirmationKey: str = Field(
+        ...,
+        description="One-time key proving the inquiry has been realized; pass to /redeem.",
     )
 
 
 class RedeemRequest(BaseModel):
-    sessionId: str = Field(
-        ..., description="Session identifier returned from /establish."
-    )
-    code: str = Field(
-        ..., description="Authentication code obtained after the end user signs in."
-    )
+    exposureKey: str
+    hiddenKey: str
+    confirmationKey: str
+
+
+class RedeemResponse(BaseModel):
+    applicationAnchor: str
+    refreshToken: str = Field(..., description="Long-lived refresh token (JWT).")
+    accessToken: str = Field(..., description="Short-lived access token (JWT).")
 
 
 class RefreshRequest(BaseModel):
-    refreshToken: str = Field(
-        ..., description="Refresh token previously issued by /redeem or /refresh."
-    )
+    refreshToken: str
 
 
-class TokenType(StrEnum):
-    """
-    Token type; currently always "Bearer".
-    """
-
-    Bearer = "Bearer"
-
-
-class TokenPair(BaseModel):
+class RefreshResponse(BaseModel):
     accessToken: str = Field(
-        ..., description="Short-lived application access token (JWT)."
+        ...,
+        description="Short-lived access token (JWT). No new refresh token is issued.",
     )
-    refreshToken: str = Field(..., description="Long-lived refresh token.")
-    expiresIn: int = Field(..., description="Lifetime of the access token in seconds.")
-    tokenType: TokenType | None = Field(
-        "Bearer", description='Token type; currently always "Bearer".'
+
+
+class InfoRequest(BaseModel):
+    applicationAnchor: str
+    locale: str = Field(
+        ...,
+        description='IETF BCP 47 locale tag (e.g. "en-US"). Falls back to the application\'s default locale if not available.',
+    )
+
+
+class InfoResponse(BaseModel):
+    applicationAnchor: str
+    applicationName: str = Field(..., description="Localized application display name.")
+    applicationPublicKey: str = Field(
+        ...,
+        description="PEM-encoded application public key used to verify issued JWTs.",
+    )
+
+
+class Method(StrEnum):
+    """
+    Which authentication method this constraint narrows to.
+    """
+
+    PASSKEY = "PASSKEY"
+    EMAIL_VERIFICATION = "EMAIL_VERIFICATION"
+
+
+class AuthenticationRulePasskeyPayload(BaseModel):
+    """
+    Empty payload — passkey constraints carry no further parameters.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleEmailVerificationPayload(BaseModel):
+    """
+    Empty payload — email-verification constraints carry no further parameters.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class ConstraintType(StrEnum):
+    """
+    Which realize-rule kind this constraint narrows to.
+    """
+
+    EMAIL = "EMAIL"
+
+
+class RealizeRuleEmailPayload(BaseModel):
+    allowedEmails: list[str] = Field(
+        ...,
+        description="List of email addresses or glob patterns the realized identity\nmust match. Glob patterns are bounded by server-side limits to\nprevent regex backtracking attacks.\n",
+    )
+
+
+class Type(StrEnum):
+    CALLBACK = "CALLBACK"
+
+
+class Payload(BaseModel):
+    callbackUrl: str = Field(
+        ...,
+        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains.\n",
+    )
+
+
+class ReturnMethodCallback(BaseModel):
+    type: Literal["CALLBACK"]
+    payload: Payload
+
+
+class Type1(StrEnum):
+    STATUS_POLL = "STATUS_POLL"
+
+
+class ReturnMethodStatusPoll(BaseModel):
+    type: Literal["STATUS_POLL"]
+    payload: dict[str, Any] = Field(
+        ...,
+        description="Empty payload — STATUS_POLL carries no per-inquiry parameters.",
+    )
+
+
+class Type2(StrEnum):
+    REVEAL = "REVEAL"
+
+
+class ReturnMethodReveal(BaseModel):
+    type: Literal["REVEAL"]
+    payload: dict[str, Any] = Field(
+        ..., description="Empty payload — REVEAL surfaces tokens directly in the UI."
     )
 
 
 class Error(BaseModel):
-    code: str = Field(..., description="Stable machine-readable error code.")
-    message: str = Field(..., description="Human-readable error message.")
-    requestId: str | None = Field(
-        None, description="Identifier for correlating with platform logs."
+    """
+    Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
+    for known failure modes. When the reason symbol's description begins with
+    `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+    signal — both `reason` and the body itself are absent in that case.
+
+    """
+
+    reason: str | None = Field(None, description="Stable machine-readable reason code.")
+
+
+class StatusPollResponse(
+    RootModel[StatusPollPendingResponse | StatusPollRealizedResponse]
+):
+    root: StatusPollPendingResponse | StatusPollRealizedResponse = Field(
+        ..., discriminator="status"
+    )
+
+
+class AuthenticationRuleConstraint(BaseModel):
+    method: Method = Field(
+        ..., description="Which authentication method this constraint narrows to."
+    )
+    payload: (
+        AuthenticationRulePasskeyPayload | AuthenticationRuleEmailVerificationPayload
+    )
+    accessTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for access token lifetime. Resolved at realize time.",
+    )
+    refreshTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
+    )
+
+
+class RealizeRuleConstraint(BaseModel):
+    constraintType: ConstraintType = Field(
+        ..., description="Which realize-rule kind this constraint narrows to."
+    )
+    payload: RealizeRuleEmailPayload
+    accessTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for access token lifetime. Resolved at realize time.",
+    )
+    refreshTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
+    )
+
+
+class ReturnMethodDeclaration(
+    RootModel[ReturnMethodCallback | ReturnMethodStatusPoll | ReturnMethodReveal]
+):
+    root: ReturnMethodCallback | ReturnMethodStatusPoll | ReturnMethodReveal = Field(
+        ..., discriminator="type"
+    )
+
+
+class EstablishRequest(BaseModel):
+    applicationAnchor: str = Field(
+        ..., description="Public anchor identifying the integrating application."
+    )
+    authenticationConstraints: list[AuthenticationRuleConstraint] | None = Field(
+        None,
+        description="Optional per-inquiry narrowing of the application's\nauthentication-rule layer. Absent means no narrowing. If present,\nthe array MUST be non-empty; empty arrays are rejected with 400.\n",
+    )
+    realizeConstraints: list[RealizeRuleConstraint] | None = Field(
+        None,
+        description="Optional per-inquiry narrowing of the application's realize-rule\nlayer. Absent means no narrowing. If present, the array MUST be\nnon-empty; empty arrays are rejected with 400.\n",
+    )
+    returnMethods: list[ReturnMethodDeclaration] | None = Field(
+        None,
+        description="Optional per-inquiry return-method declaration. Doubles as the\nconcrete delivery info for CALLBACK (carries the callback URL).\nAbsent means no per-inquiry narrowing (CALLBACK is unreachable\nfor this inquiry because no URL is anchored). If present, the\narray MUST be non-empty; empty arrays are rejected with 400.\n",
     )

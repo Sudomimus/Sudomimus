@@ -10,6 +10,7 @@ members = ["packages/*"]
 [tool.uv.sources]
 sudomimus-connect = { workspace = true }
 sudomimus-native = { workspace = true }
+sudomimus-token = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -19,7 +20,12 @@ dev = [
     "ruff>=0.8",
     "sudomimus-connect",
     "sudomimus-native",
+    "sudomimus-token",
 ]
+
+[tool.mypy]
+python_version = "3.11"
+exclude = ['/_generated/']
 
 [tool.ruff]
 line-length = 100
