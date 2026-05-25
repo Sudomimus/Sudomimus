@@ -92,6 +92,63 @@ class InfoResponse(BaseModel):
     )
 
 
+class IntrospectRequest(BaseModel):
+    accessToken: str = Field(
+        ...,
+        description="A Sudomimus-issued access token (JWT). Its signature is verified; its own expiry is not enforced.",
+    )
+
+
+class Status2(StrEnum):
+    """
+    Revocation state of the session behind the access token. `not_found`
+    covers an unknown session or one belonging to a different application.
+
+    """
+
+    active = "active"
+    revoked = "revoked"
+    expired = "expired"
+    not_found = "not_found"
+
+
+class IntrospectResponse(BaseModel):
+    status: Status2 = Field(
+        ...,
+        description="Revocation state of the session behind the access token. `not_found`\ncovers an unknown session or one belonging to a different application.\n",
+    )
+    recommendedRecheckSeconds: int = Field(
+        ...,
+        description="Suggested minimum number of seconds to cache this result before re-checking.",
+    )
+
+
+class LogoutRequest(BaseModel):
+    refreshToken: str = Field(
+        ..., description="The refresh token (JWT) whose session should be revoked."
+    )
+
+
+class LogoutResponse(BaseModel):
+    revoked: bool = Field(
+        ...,
+        description="True if the session is now revoked, including sessions that were already revoked or expired.",
+    )
+
+
+class RevokeAllRequest(BaseModel):
+    accountIdentifier: str = Field(
+        ...,
+        description="Identifier of the account whose sessions should be revoked for the calling application.",
+    )
+
+
+class RevokeAllResponse(BaseModel):
+    revokedCount: int = Field(
+        ..., description="Number of refresh tokens that were revoked."
+    )
+
+
 class Method(StrEnum):
     """
     Which authentication method this constraint narrows to.

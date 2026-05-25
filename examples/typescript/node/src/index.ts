@@ -9,6 +9,7 @@
  *   5. Poll /status-poll until REALIZED.
  *   6. POST /redeem and verify the issued access token.
  *   7. Print the accountIdentifier as the "login succeeded" signal.
+ *   8. POST /logout to revoke the session's refresh token.
  */
 
 import { ConnectClient, RETURN_METHOD } from "@sudomimus/connect";
@@ -73,7 +74,13 @@ while (confirmationKey === undefined) {
 }
 
 console.log("\nInquiry realized. Calling /redeem ...");
-const { accessToken } = await client.redeem({ exposureKey, hiddenKey, confirmationKey });
+const { accessToken, refreshToken } = await client.redeem({ exposureKey, hiddenKey, confirmationKey });
 const verified = await client.verifyAccessToken(accessToken);
 
 console.log(`\n✓ Login successful. accountIdentifier=${verified.body.accountIdentifier}`);
+
+// Tear the session back down. /logout revokes the refresh token; possession
+// of the token authorizes the revocation, so no client-auth JWT is needed.
+console.log("\nCalling /logout ...");
+const { revoked } = await client.logout({ refreshToken });
+console.log(`✓ Session revoked=${revoked}`);

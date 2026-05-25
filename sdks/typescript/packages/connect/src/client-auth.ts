@@ -2,7 +2,7 @@
  * @author Sudomimus Contributors
  * @package Connect
  * @namespace ClientAuth
- * @description Client-auth JWT helpers for /establish
+ * @description Client-auth JWT helpers for /establish and /revoke-all
  */
 
 import { JWTCreator } from "@sudoo/jwt";

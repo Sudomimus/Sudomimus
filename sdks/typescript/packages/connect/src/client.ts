@@ -18,10 +18,16 @@ import type {
     HealthResponse,
     InfoRequest,
     InfoResponse,
+    IntrospectRequest,
+    IntrospectResponse,
+    LogoutRequest,
+    LogoutResponse,
     RedeemRequest,
     RedeemResponse,
     RefreshRequest,
     RefreshResponse,
+    RevokeAllRequest,
+    RevokeAllResponse,
     StatusPollRequest,
     StatusPollResponse,
 } from "./declare";
@@ -65,32 +71,7 @@ export class ConnectClient {
 
     public async establish(request: EstablishRequest): Promise<EstablishResponse> {
 
-        if (this._clientAuth === undefined) {
-
-            throw new ConnectConfigError(
-                "ConnectClient.establish() requires a clientAuth config. Pass clientAuth in the ConnectClientOptions.",
-            );
-        }
-
-        // Serialize once. The exact bytes here are what the server hashes
-        // against the JWT's body_sha256 claim — letting fetch re-serialize
-        // (or going through _post) risks drift on key ordering or whitespace.
-        const rawBody: string = JSON.stringify(request);
-
-        const jwt: string = "signer" in this._clientAuth
-            ? await this._clientAuth.signer(rawBody)
-            : signEstablishClientJwt(this._clientAuth, rawBody);
-
-        const response: Response = await this._fetch(`${this._baseUrl}/establish`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Authorization": `${CLIENT_JWT_AUTH_SCHEME} ${jwt}`,
-            },
-            body: rawBody,
-        });
-        return this._handle<EstablishResponse>(response);
+        return this._postWithClientAuth<EstablishResponse>("establish", "/establish", request);
     }
 
     public async statusPoll(request: StatusPollRequest): Promise<StatusPollResponse> {
@@ -111,6 +92,21 @@ export class ConnectClient {
     public async info(request: InfoRequest): Promise<InfoResponse> {
 
         return this._post<InfoRequest, InfoResponse>("/info", request);
+    }
+
+    public async introspect(request: IntrospectRequest): Promise<IntrospectResponse> {
+
+        return this._post<IntrospectRequest, IntrospectResponse>("/introspect", request);
+    }
+
+    public async logout(request: LogoutRequest): Promise<LogoutResponse> {
+
+        return this._post<LogoutRequest, LogoutResponse>("/logout", request);
+    }
+
+    public async revokeAll(request: RevokeAllRequest): Promise<RevokeAllResponse> {
+
+        return this._postWithClientAuth<RevokeAllResponse>("revokeAll", "/revoke-all", request);
     }
 
     public async getApplicationPublicKey(
@@ -180,6 +176,40 @@ export class ConnectClient {
                 "Accept": "application/json",
             },
             body: JSON.stringify(body),
+        });
+        return this._handle<TRes>(response);
+    }
+
+    private async _postWithClientAuth<TRes>(
+        methodName: string,
+        path: string,
+        request: unknown,
+    ): Promise<TRes> {
+
+        if (this._clientAuth === undefined) {
+
+            throw new ConnectConfigError(
+                `ConnectClient.${methodName}() requires a clientAuth config. Pass clientAuth in the ConnectClientOptions.`,
+            );
+        }
+
+        // Serialize once. The exact bytes here are what the server hashes
+        // against the JWT's body_sha256 claim — letting fetch re-serialize
+        // (or going through _post) risks drift on key ordering or whitespace.
+        const rawBody: string = JSON.stringify(request);
+
+        const jwt: string = "signer" in this._clientAuth
+            ? await this._clientAuth.signer(rawBody)
+            : signEstablishClientJwt(this._clientAuth, rawBody);
+
+        const response: Response = await this._fetch(`${this._baseUrl}${path}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `${CLIENT_JWT_AUTH_SCHEME} ${jwt}`,
+            },
+            body: rawBody,
         });
         return this._handle<TRes>(response);
     }

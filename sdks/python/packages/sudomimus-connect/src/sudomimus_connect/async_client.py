@@ -16,10 +16,16 @@ from ._generated.models import (
     HealthResponse,
     InfoRequest,
     InfoResponse,
+    IntrospectRequest,
+    IntrospectResponse,
+    LogoutRequest,
+    LogoutResponse,
     RedeemRequest,
     RedeemResponse,
     RefreshRequest,
     RefreshResponse,
+    RevokeAllRequest,
+    RevokeAllResponse,
     StatusPollRequest,
     StatusPollResponse,
 )
@@ -85,28 +91,9 @@ class AsyncConnectClient:
         return _handle(response, HealthResponse)
 
     async def establish(self, request: EstablishRequest) -> EstablishResponse:
-        if self._client_auth is None:
-            raise ConnectConfigError(
-                "AsyncConnectClient.establish() requires client_auth. "
-                "Pass client_auth to the AsyncConnectClient constructor."
-            )
-
-        # Serialize once: these exact bytes are what the server hashes against
-        # the JWT's body_sha256 claim, so they must match the wire body.
-        raw_body = request.model_dump_json(exclude_none=True)
-
-        if isinstance(self._client_auth, ConnectClientAuthWithSigner):
-            signed = self._client_auth.signer(raw_body)
-            jwt = await signed if inspect.isawaitable(signed) else signed
-        else:
-            jwt = sign_establish_client_jwt(self._client_auth, raw_body)
-
-        response = await self._client.post(
-            f"{self._base_url}/establish",
-            content=raw_body,
-            headers={**_JSON_HEADERS, "Authorization": f"{CLIENT_JWT_AUTH_SCHEME} {jwt}"},
+        return await self._post_with_client_auth(
+            "/establish", request, EstablishResponse, method_name="establish"
         )
-        return _handle(response, EstablishResponse)
 
     async def status_poll(self, request: StatusPollRequest) -> StatusPollResponse:
         return await self._post("/status-poll", request, StatusPollResponse)
@@ -119,6 +106,17 @@ class AsyncConnectClient:
 
     async def info(self, request: InfoRequest) -> InfoResponse:
         return await self._post("/info", request, InfoResponse)
+
+    async def introspect(self, request: IntrospectRequest) -> IntrospectResponse:
+        return await self._post("/introspect", request, IntrospectResponse)
+
+    async def logout(self, request: LogoutRequest) -> LogoutResponse:
+        return await self._post("/logout", request, LogoutResponse)
+
+    async def revoke_all(self, request: RevokeAllRequest) -> RevokeAllResponse:
+        return await self._post_with_client_auth(
+            "/revoke-all", request, RevokeAllResponse, method_name="revoke_all"
+        )
 
     async def get_application_public_key(
         self,
@@ -156,5 +154,36 @@ class AsyncConnectClient:
         raw = request.model_dump_json(exclude_none=True)
         response = await self._client.post(
             f"{self._base_url}{path}", content=raw, headers=_JSON_HEADERS
+        )
+        return _handle(response, response_model)
+
+    async def _post_with_client_auth(
+        self,
+        path: str,
+        request: BaseModel,
+        response_model: type[_ResponseT],
+        *,
+        method_name: str,
+    ) -> _ResponseT:
+        if self._client_auth is None:
+            raise ConnectConfigError(
+                f"AsyncConnectClient.{method_name}() requires client_auth. "
+                "Pass client_auth to the AsyncConnectClient constructor."
+            )
+
+        # Serialize once: these exact bytes are what the server hashes against
+        # the JWT's body_sha256 claim, so they must match the wire body.
+        raw_body = request.model_dump_json(exclude_none=True)
+
+        if isinstance(self._client_auth, ConnectClientAuthWithSigner):
+            signed = self._client_auth.signer(raw_body)
+            jwt = await signed if inspect.isawaitable(signed) else signed
+        else:
+            jwt = sign_establish_client_jwt(self._client_auth, raw_body)
+
+        response = await self._client.post(
+            f"{self._base_url}{path}",
+            content=raw_body,
+            headers={**_JSON_HEADERS, "Authorization": f"{CLIENT_JWT_AUTH_SCHEME} {jwt}"},
         )
         return _handle(response, response_model)

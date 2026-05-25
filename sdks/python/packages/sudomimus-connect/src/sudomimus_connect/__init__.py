@@ -2,8 +2,11 @@
 
 Token-exchange client for the Sudomimus authentication platform: establish an
 inquiry, poll its status, redeem it for application tokens, refresh access
-tokens, and fetch localized application metadata. Includes client-auth JWT
-signing for ``/establish`` and token verification (via ``sudomimus-token``).
+tokens, fetch localized application metadata, introspect a session's
+revocation status, and revoke sessions (a single session via ``/logout`` or
+every session of an account via ``/revoke-all``). Includes client-auth JWT
+signing for ``/establish`` and ``/revoke-all``, and token verification (via
+``sudomimus-token``).
 """
 
 from __future__ import annotations
@@ -17,6 +20,10 @@ from ._generated.models import (
     HealthResponse,
     InfoRequest,
     InfoResponse,
+    IntrospectRequest,
+    IntrospectResponse,
+    LogoutRequest,
+    LogoutResponse,
     RealizeRuleConstraint,
     RealizeRuleEmailPayload,
     RedeemRequest,
@@ -27,6 +34,8 @@ from ._generated.models import (
     ReturnMethodDeclaration,
     ReturnMethodReveal,
     ReturnMethodStatusPoll,
+    RevokeAllRequest,
+    RevokeAllResponse,
     StatusPollPendingResponse,
     StatusPollRealizedResponse,
     StatusPollRequest,
@@ -78,6 +87,10 @@ __all__ = [
     "HealthResponse",
     "InfoRequest",
     "InfoResponse",
+    "IntrospectRequest",
+    "IntrospectResponse",
+    "LogoutRequest",
+    "LogoutResponse",
     "RealizeRuleConstraint",
     "RealizeRuleEmailPayload",
     "RedeemRequest",
@@ -88,6 +101,8 @@ __all__ = [
     "ReturnMethodDeclaration",
     "ReturnMethodReveal",
     "ReturnMethodStatusPoll",
+    "RevokeAllRequest",
+    "RevokeAllResponse",
     "StatusPollPendingResponse",
     "StatusPollRealizedResponse",
     "StatusPollRequest",
