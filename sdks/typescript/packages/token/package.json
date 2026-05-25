@@ -29,6 +29,7 @@
         "compile": "tsc --project typescript/tsconfig.compile.json",
         "lint": "eslint src",
         "test": "jest",
+        "coverage": "jest --coverage",
         "release": "pnpm lint && pnpm test && pnpm compile",
         "release:dry-run": "pnpm release && pnpm pack --pack-destination /tmp && pnpm publish --dry-run --no-git-checks --access=public",
         "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"

@@ -17,6 +17,7 @@ dev = [
     "datamodel-code-generator>=0.26",
     "mypy>=1.13",
     "pytest>=8.3",
+    "pytest-cov>=5.0",
     "ruff>=0.8",
     "sudomimus-connect",
     "sudomimus-native",
@@ -38,3 +39,12 @@ select = ["E", "F", "I", "UP", "B"]
 testpaths = ["packages"]
 python_files = ["test_*.py"]
 addopts = ["--import-mode=importlib"]
+
+[tool.coverage.run]
+branch = true
+source = ["sudomimus_token", "sudomimus_native", "sudomimus_connect"]
+omit = ["*/_generated/*"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "\\.\\.\\."]
