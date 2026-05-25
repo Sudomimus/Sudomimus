@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths:
       - "sdks/python/**"
-      - "specs/**"
+      - "specs"
       - ".github/workflows/ci-python.yml"
   pull_request:
     paths:
       - "sdks/python/**"
-      - "specs/**"
+      - "specs"
       - ".github/workflows/ci-python.yml"
 
 defaults:
@@ -28,6 +28,8 @@ jobs:
         python: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       - uses: actions/setup-python@v5

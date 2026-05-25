@@ -30,6 +30,14 @@ See [`sdks/typescript/README.md`](sdks/typescript/README.md) and [`sdks/python/R
 
 Public API contracts live in [`specs/`](specs) as hand-maintained OpenAPI 3.1 documents. Each SDK generates strongly typed request, response, and error models from the corresponding spec; client logic (HTTP, authentication, retries) is written by hand.
 
+`specs/` is a git submodule tracking [`sudomimus/sudomimus-spec`](https://github.com/sudomimus/sudomimus-spec), shared with the internal platform repository. Clone with submodules so the spec files are present:
+
+```
+git clone --recurse-submodules https://github.com/sudomimus/sudomimus.git
+# or, in an existing checkout:
+git submodule update --init --recursive
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
