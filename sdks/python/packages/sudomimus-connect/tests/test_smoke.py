@@ -263,6 +263,88 @@ def test_verify_access_token_end_to_end() -> None:
     assert token.body.accountIdentifier == "acct-1"
 
 
+def test_close_closes_owned_client() -> None:
+    client = ConnectClient()  # owns its httpx.Client
+    client.close()
+    assert client._client.is_closed
+
+
+def test_health() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/health"
+        return httpx.Response(200, json={"ready": True, "service": "connect", "version": "1"})
+
+    with _client(handler) as client:
+        result = client.health()
+    assert result.ready is True
+    assert result.service == "connect"
+
+
+def test_clear_whole_public_key_cache() -> None:
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(
+            200,
+            json={
+                "applicationAnchor": "my-app",
+                "applicationName": "My App",
+                "applicationPublicKey": "PEM",
+            },
+        )
+
+    with _client(handler) as client:
+        client.get_application_public_key("my-app")
+        client.clear_public_key_cache()  # no anchor -> clears everything
+        client.get_application_public_key("my-app")
+        assert calls["n"] == 2
+
+
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")  # guard discards the un-awaited coroutine
+def test_sync_signer_returning_awaitable_raises() -> None:
+    async def async_signer(_raw: str) -> str:
+        return "nope"
+
+    auth = ConnectClientAuthWithSigner(application_anchor="my-app", signer=async_signer)
+    with _client(lambda r: httpx.Response(200), client_auth=auth) as client:
+        with pytest.raises(ConnectConfigError):
+            client.establish(EstablishRequest(applicationAnchor="my-app"))
+
+
+def test_error_with_unparseable_body() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, content=b"<html>internal error</html>")
+
+    with _client(handler) as client, pytest.raises(ConnectApiError) as exc:
+        client.refresh(RefreshRequest(refreshToken="r.t"))
+    assert exc.value.status == 500
+    assert exc.value.reason is None
+
+
+def test_verify_refresh_token_end_to_end() -> None:
+    private_pem, public_pem = _keypair()
+    jwt = create_jwt(
+        {"kty": "Refresh", "aud": "my-app", "iat": int(time.time()), "exp": int(time.time()) + 60},
+        {"accountIdentifier": "acct-1"},
+        private_pem,
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "applicationAnchor": "my-app",
+                "applicationName": "My App",
+                "applicationPublicKey": public_pem,
+            },
+        )
+
+    with _client(handler) as client:
+        token = client.verify_refresh_token(jwt)
+    assert token.body.accountIdentifier == "acct-1"
+
+
 def test_async_redeem_and_info() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/info":
@@ -343,3 +425,138 @@ def test_async_logout_and_revoke_all() -> None:
     revoked, count = asyncio.run(run())
     assert revoked is True
     assert count == 5
+
+
+def test_async_base_url_normalized_and_default() -> None:
+    assert AsyncConnectClient(base_url="https://connect.example.com/").base_url == (
+        "https://connect.example.com"
+    )
+    assert AsyncConnectClient().base_url == PRODUCTION_BASE_URL
+
+
+def test_async_aclose_closes_owned_client() -> None:
+    async def run() -> bool:
+        # No http_client passed, so the client owns (and must close) its own.
+        client = AsyncConnectClient()
+        await client.aclose()
+        return client._client.is_closed
+
+    assert asyncio.run(run()) is True
+
+
+def test_async_health_status_poll_refresh_introspect() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/health":
+            return httpx.Response(200, json={"ready": True, "service": "connect", "version": "1"})
+        if path == "/status-poll":
+            return httpx.Response(200, json={"status": "PENDING"})
+        if path == "/refresh":
+            return httpx.Response(200, json={"accessToken": "a2"})
+        if path == "/introspect":
+            return httpx.Response(200, json={"status": "active", "recommendedRecheckSeconds": 15})
+        return httpx.Response(404)
+
+    async def run() -> tuple[bool, str, str, str, int]:
+        async with AsyncConnectClient(
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        ) as client:
+            health = await client.health()
+            poll = await client.status_poll(StatusPollRequest(exposureKey="ek", hiddenKey="hk"))
+            refreshed = await client.refresh(RefreshRequest(refreshToken="r.t"))
+            introspected = await client.introspect(IntrospectRequest(accessToken="a.t"))
+            return (
+                health.ready,
+                poll.root.status,
+                refreshed.accessToken,
+                introspected.status,
+                introspected.recommendedRecheckSeconds,
+            )
+
+    ready, status, access_token, introspect_status, recheck = asyncio.run(run())
+    assert ready is True
+    assert status == "PENDING"
+    assert access_token == "a2"
+    assert introspect_status == "active"
+    assert recheck == 15
+
+
+def test_async_public_key_cache_hit_and_clear() -> None:
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(
+            200,
+            json={
+                "applicationAnchor": "my-app",
+                "applicationName": "My App",
+                "applicationPublicKey": "PEM",
+            },
+        )
+
+    async def run() -> None:
+        async with AsyncConnectClient(
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        ) as client:
+            assert await client.get_application_public_key("my-app") == "PEM"
+            # Second call is served from cache — no extra request.
+            assert await client.get_application_public_key("my-app") == "PEM"
+            assert calls["n"] == 1
+            client.clear_public_key_cache("my-app")
+            await client.get_application_public_key("my-app")
+            assert calls["n"] == 2
+            # Clearing the whole cache forces another fetch too.
+            client.clear_public_key_cache()
+            await client.get_application_public_key("my-app")
+            assert calls["n"] == 3
+
+    asyncio.run(run())
+
+
+def test_async_requires_client_auth_for_establish() -> None:
+    transport = httpx.MockTransport(lambda r: httpx.Response(200))
+
+    async def run() -> None:
+        async with AsyncConnectClient(http_client=httpx.AsyncClient(transport=transport)) as client:
+            await client.establish(EstablishRequest(applicationAnchor="my-app"))
+
+    with pytest.raises(ConnectConfigError):
+        asyncio.run(run())
+
+
+def test_async_verify_access_and_refresh_token() -> None:
+    private_pem, public_pem = _keypair()
+    now = int(time.time())
+    access_jwt = create_jwt(
+        {"kty": "Access", "aud": "my-app", "iat": now, "exp": now + 60},
+        {"accountIdentifier": "acct-1", "firstName": "Ada"},
+        private_pem,
+    )
+    refresh_jwt = create_jwt(
+        {"kty": "Refresh", "aud": "my-app", "iat": now, "exp": now + 60},
+        {"accountIdentifier": "acct-1"},
+        private_pem,
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "applicationAnchor": "my-app",
+                "applicationName": "My App",
+                "applicationPublicKey": public_pem,
+            },
+        )
+
+    async def run() -> tuple[str, str]:
+        async with AsyncConnectClient(
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        ) as client:
+            access = await client.verify_access_token(access_jwt)
+            refresh = await client.verify_refresh_token(refresh_jwt)
+            return access.body.accountIdentifier, refresh.body.accountIdentifier
+
+    access_acct, refresh_acct = asyncio.run(run())
+    assert access_acct == "acct-1"
+    assert refresh_acct == "acct-1"

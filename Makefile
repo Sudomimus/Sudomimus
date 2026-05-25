@@ -104,6 +104,14 @@ typecheck-py:
 test-py:
 	cd $(PYTHON_SDK) && uv run pytest
 
+.PHONY: coverage-py
+coverage-py:
+	cd $(PYTHON_SDK) && uv run pytest \
+		--cov=sudomimus_token \
+		--cov=sudomimus_native \
+		--cov=sudomimus_connect \
+		--cov-report=term-missing
+
 # ---------- Publish ----------
 
 .PHONY: publish-dry-run-token
@@ -137,6 +145,12 @@ compile-csharp:
 .PHONY: test-csharp
 test-csharp:
 	dotnet test $(CSHARP_SDK)/Sudomimus.slnx -c Release
+
+.PHONY: coverage-csharp
+coverage-csharp:
+	dotnet test $(CSHARP_SDK)/Sudomimus.slnx -c Release \
+		--collect:"XPlat Code Coverage" \
+		--results-directory $(CSHARP_SDK)/artifacts/coverage
 
 .PHONY: pack-csharp
 pack-csharp:

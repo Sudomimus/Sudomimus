@@ -42,6 +42,17 @@ internal static class TestHelpers
         return StripPadding(Convert.ToBase64String(bytes)).Replace('+', '-').Replace('/', '_');
     }
 
+    /// <summary>base64url-encode a raw (already-serialized) segment string.</summary>
+    public static string EncodeSegment(string raw) => ToBase64Url(Encoding.UTF8.GetBytes(raw));
+
+    /// <summary>
+    /// Build a structurally valid (3-segment) JWT from raw, pre-base64url
+    /// header/body/signature payloads. The signature is not real — useful for
+    /// exercising parse paths that run before signature verification.
+    /// </summary>
+    public static string MintRaw(string headerJson, string bodyJson, string signature = "sig")
+        => $"{EncodeSegment(headerJson)}.{EncodeSegment(bodyJson)}.{EncodeSegment(signature)}";
+
     public static string MintAccessToken(string privateKeyPem, string applicationAnchor = "anchor-1")
     {
         var iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
