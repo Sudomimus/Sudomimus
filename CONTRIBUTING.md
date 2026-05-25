@@ -4,7 +4,7 @@ Thank you for your interest in contributing. This repository hosts open-source S
 
 ## Repository layout
 
-- `specs/` — OpenAPI 3.1 contracts (hand-maintained, one file per public API service)
+- `specs/` — OpenAPI 3.1 contracts, a git submodule tracking [`sudomimus/sudomimus-spec`](https://github.com/sudomimus/sudomimus-spec) (one file per public API service)
 - `sdks/typescript/` — TypeScript / JavaScript SDKs (pnpm + Turborepo workspace)
 - `sdks/python/` — Python SDKs (uv workspace)
 - `examples/` — usage examples per language
@@ -44,12 +44,19 @@ Code style:
 
 ## OpenAPI schema changes
 
-The contracts in `specs/` are the source of truth for SDK type generation. When changing a schema:
+The contracts in `specs/` are the source of truth for SDK type generation. They
+live in the [`sudomimus/sudomimus-spec`](https://github.com/sudomimus/sudomimus-spec)
+submodule, so a schema change spans two repositories. When changing a schema:
 
-1. Edit the spec file (`specs/<service>.yaml`).
-2. Regenerate models in every affected SDK (`pnpm generate` in `sdks/typescript`, `uv run task generate` in `sdks/python`).
-3. Commit both the spec change and the regenerated files in the same commit.
-4. Apply SemVer to the spec: **major** for breaking changes, **minor** for additive changes, **patch** for descriptive-only changes.
+1. Edit the spec file inside the submodule (`specs/<service>.yaml`), then commit
+   and push it from the `sudomimus-spec` repository. Apply SemVer to the spec:
+   **major** for breaking changes, **minor** for additive changes, **patch** for
+   descriptive-only changes.
+2. In this repository, bump the submodule pointer to the new spec commit
+   (`git -C specs pull` to advance it, then `git add specs`).
+3. Regenerate models in every affected SDK (`pnpm generate` in `sdks/typescript`,
+   `uv run task generate` in `sdks/python`).
+4. Commit the submodule pointer bump and the regenerated files in the same commit.
 
 CI verifies the generated files match the spec via `git diff --exit-code`.
 

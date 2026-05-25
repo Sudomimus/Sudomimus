@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths:
       - "sdks/typescript/**"
-      - "specs/**"
+      - "specs"
       - ".github/workflows/ci-typescript.yml"
   pull_request:
     paths:
       - "sdks/typescript/**"
-      - "specs/**"
+      - "specs"
       - ".github/workflows/ci-typescript.yml"
 
 defaults:
@@ -28,6 +28,8 @@ jobs:
         node: ["22", "24"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install pnpm
         uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
