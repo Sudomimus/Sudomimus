@@ -1,6 +1,6 @@
 # @sudomimus/connect
 
-TypeScript SDK for the [Sudomimus](https://sudomimus.com) Connect API — the public entry point for integrating applications. Establish an inquiry, poll for status, redeem for tokens, refresh access tokens, and fetch localized application metadata.
+TypeScript SDK for the [Sudomimus](https://sudomimus.com) Connect API — the public entry point for integrating applications. Establish an inquiry, poll for status, redeem for tokens, refresh access tokens, fetch localized application metadata, introspect a session's revocation status, and revoke sessions (one via `/logout` or all of an account's via `/revoke-all`).
 
 ## Install
 
@@ -71,6 +71,28 @@ The public key cache is per-`ConnectClient` instance and keyed by `applicationAn
 
 If you only need to verify tokens (you are an application backend and do not drive the auth flow), depend on [`@sudomimus/token`](../token) directly and provide your own `PublicKeyResolver`.
 
+### Sessions: introspect, logout, revoke
+
+```typescript
+// Near-real-time revocation check for a session behind an access token.
+// The token is self-authenticating (signature verified server-side); its own
+// expiry is NOT enforced here. Cache the answer for recommendedRecheckSeconds.
+const { status, recommendedRecheckSeconds } = await client.introspect({ accessToken });
+if (status !== "active") {
+    // status is one of "active" | "revoked" | "expired" | "not_found"
+}
+
+// Revoke a single session. Possession of the refresh token authorizes it, so
+// no client-auth JWT is required. Idempotent: already-revoked tokens report
+// revoked: true; unresolvable tokens report revoked: false.
+await client.logout({ refreshToken });
+
+// Revoke every session of an account for the calling application
+// ("log out everywhere"). This is an application-authority action, so — like
+// establish — it requires a clientAuth config on the ConnectClient.
+const { revokedCount } = await client.revokeAll({ accountIdentifier: "acct-1" });
+```
+
 ### Error handling
 
 All non-2xx HTTP responses surface as `ConnectApiError`:
@@ -106,6 +128,12 @@ import type {
     RefreshResponse,
     InfoRequest,
     InfoResponse,
+    IntrospectRequest,
+    IntrospectResponse,
+    LogoutRequest,
+    LogoutResponse,
+    RevokeAllRequest,
+    RevokeAllResponse,
     AuthAction,
     AuthActionCallback,
     AuthActionStatusPoll,

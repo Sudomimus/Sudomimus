@@ -122,6 +122,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/introspect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check whether the session behind an access token is still valid.
+         * @description Returns the revocation status of the refresh token (session) that the
+         *     supplied access token descends from. Intended for strict applications
+         *     that want near-real-time revocation: validate the access token offline
+         *     as usual, then call this endpoint — caching the result for at least
+         *     `recommendedRecheckSeconds` — to decide whether to keep trusting it.
+         *
+         *     The access token is self-authenticating: its signature is verified
+         *     against the issuing application's public key, so no client-auth JWT is
+         *     required. The access token's own expiry is NOT enforced here; the answer
+         *     describes the underlying session, not the access token's freshness.
+         *
+         */
+        post: operations["introspect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke the session behind a refresh token.
+         * @description Revokes the single session identified by the supplied refresh token
+         *     (RFC 7009 style). Possession of a genuine refresh token authorizes the
+         *     revocation, so no client-auth JWT is required.
+         *
+         *     The operation is idempotent: a token that is already revoked or expired
+         *     reports `revoked: true`, and a token that cannot be resolved reports
+         *     `revoked: false` without revealing whether it ever existed.
+         *
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke every session of an account for the calling application.
+         * @description Revokes all refresh tokens belonging to the given account that were
+         *     issued for the calling application (log out everywhere). This is an
+         *     application-authority action — not something a single session capability
+         *     can authorize — so it requires a client-auth JWT, exactly like
+         *     /establish. Revocation is scoped to the calling application; sessions of
+         *     the same account under other applications are unaffected.
+         *
+         */
+        post: operations["revokeAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -210,6 +293,37 @@ export interface components {
             applicationName: string;
             /** @description PEM-encoded application public key used to verify issued JWTs. */
             applicationPublicKey: string;
+        };
+        IntrospectRequest: {
+            /** @description A Sudomimus-issued access token (JWT). Its signature is verified; its own expiry is not enforced. */
+            accessToken: string;
+        };
+        IntrospectResponse: {
+            /**
+             * @description Revocation state of the session behind the access token. `not_found`
+             *     covers an unknown session or one belonging to a different application.
+             *
+             * @enum {string}
+             */
+            status: "active" | "revoked" | "expired" | "not_found";
+            /** @description Suggested minimum number of seconds to cache this result before re-checking. */
+            recommendedRecheckSeconds: number;
+        };
+        LogoutRequest: {
+            /** @description The refresh token (JWT) whose session should be revoked. */
+            refreshToken: string;
+        };
+        LogoutResponse: {
+            /** @description True if the session is now revoked, including sessions that were already revoked or expired. */
+            revoked: boolean;
+        };
+        RevokeAllRequest: {
+            /** @description Identifier of the account whose sessions should be revoked for the calling application. */
+            accountIdentifier: string;
+        };
+        RevokeAllResponse: {
+            /** @description Number of refresh tokens that were revoked. */
+            revokedCount: number;
         };
         AuthenticationRuleConstraint: {
             /**
@@ -477,6 +591,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InfoResponse"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    introspect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntrospectRequest"];
+            };
+        };
+        responses: {
+            /** @description Status of the session behind the access token. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntrospectResponse"];
+                };
+            };
+            /** @description Access token missing, malformed, or with an invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Revocation outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutResponse"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    revokeAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeAllRequest"];
+            };
+        };
+        responses: {
+            /** @description Number of sessions revoked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeAllResponse"];
+                };
+            };
+            /** @description Client-auth JWT missing, malformed, expired, or invalid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Error response. */

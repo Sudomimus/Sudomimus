@@ -19,8 +19,11 @@ import type {
     EstablishResponse,
     HealthResponse,
     InfoResponse,
+    IntrospectResponse,
+    LogoutResponse,
     RedeemResponse,
     RefreshResponse,
+    RevokeAllResponse,
     StatusPollResponse,
 } from "../../src";
 import { buildInfoResponse, makeFetch } from "../helpers/fetch";
@@ -285,6 +288,103 @@ describe("ConnectClient", () => {
 
             expect(result).toEqual(expected);
             expect(fetchMock.mock.calls[0][0]).toBe("https://connect.example.com/info");
+        });
+    });
+
+    describe("introspect", () => {
+
+        it("POSTs /introspect (no client auth) and returns the session status", async () => {
+
+            const expected: IntrospectResponse = {
+                status: "active",
+                recommendedRecheckSeconds: 30,
+            };
+            const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const result = await client.introspect({ accessToken: "a-jwt" });
+
+            expect(result).toEqual(expected);
+            const [url, init] = fetchMock.mock.calls[0];
+            expect(url).toBe("https://connect.example.com/introspect");
+            expect(init.method).toBe("POST");
+            expect((init.headers as Record<string, string>)["Authorization"]).toBeUndefined();
+        });
+    });
+
+    describe("logout", () => {
+
+        it("POSTs /logout and returns the revocation outcome", async () => {
+
+            const expected: LogoutResponse = { revoked: true };
+            const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const result = await client.logout({ refreshToken: "r-jwt" });
+
+            expect(result).toEqual(expected);
+            expect(fetchMock.mock.calls[0][0]).toBe("https://connect.example.com/logout");
+        });
+    });
+
+    describe("revokeAll", () => {
+
+        it("throws ConnectConfigError when clientAuth is not configured", async () => {
+
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: makeFetch([]) as unknown as typeof globalThis.fetch,
+            });
+
+            await expect(client.revokeAll({
+                accountIdentifier: "acct-1",
+            })).rejects.toBeInstanceOf(ConnectConfigError);
+        });
+
+        it("POSTs /revoke-all with a client-auth JWT bound to the body", async () => {
+
+            const { privateKey, publicKey } = generateRsaKeyPair();
+            const expected: RevokeAllResponse = { revokedCount: 3 };
+            const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+            const client = new ConnectClient({
+                baseUrl: "https://connect.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+                clientAuth: {
+                    applicationAnchor: APPLICATION_ANCHOR,
+                    privateKeyPem: privateKey,
+                },
+            });
+
+            const result = await client.revokeAll({ accountIdentifier: "acct-1" });
+
+            expect(result).toEqual(expected);
+            const [url, init] = fetchMock.mock.calls[0];
+            expect(url).toBe("https://connect.example.com/revoke-all");
+            expect(init.method).toBe("POST");
+
+            const headers = init.headers as Record<string, string>;
+            expect(headers["Authorization"]).toMatch(new RegExp(`^${CLIENT_JWT_AUTH_SCHEME} `));
+
+            const sentBody = init.body as string;
+            expect(JSON.parse(sentBody)).toEqual({ accountIdentifier: "acct-1" });
+
+            const jwt = headers["Authorization"].slice(CLIENT_JWT_AUTH_SCHEME.length + 1);
+            const parsed = JWTToken.fromTokenOrNull<Record<string, unknown>, {
+                iss: string;
+                aud: string;
+                body_sha256: string;
+            }>(jwt);
+            expect(parsed).not.toBeNull();
+            expect(parsed!.body.iss).toBe(APPLICATION_ANCHOR);
+            expect(parsed!.body.aud).toBe(CLIENT_JWT_AUDIENCE);
+            expect(parsed!.body.body_sha256).toBe(sha256Base64(sentBody));
+            expect(parsed!.verifySignature(publicKey)).toBe(true);
         });
     });
 

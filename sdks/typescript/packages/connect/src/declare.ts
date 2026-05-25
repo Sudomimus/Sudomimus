@@ -23,6 +23,12 @@ export type RefreshRequest = components["schemas"]["RefreshRequest"];
 export type RefreshResponse = components["schemas"]["RefreshResponse"];
 export type InfoRequest = components["schemas"]["InfoRequest"];
 export type InfoResponse = components["schemas"]["InfoResponse"];
+export type IntrospectRequest = components["schemas"]["IntrospectRequest"];
+export type IntrospectResponse = components["schemas"]["IntrospectResponse"];
+export type LogoutRequest = components["schemas"]["LogoutRequest"];
+export type LogoutResponse = components["schemas"]["LogoutResponse"];
+export type RevokeAllRequest = components["schemas"]["RevokeAllRequest"];
+export type RevokeAllResponse = components["schemas"]["RevokeAllResponse"];
 
 export type AuthenticationRuleConstraint = components["schemas"]["AuthenticationRuleConstraint"];
 export type AuthenticationRulePasskeyPayload = components["schemas"]["AuthenticationRulePasskeyPayload"];
@@ -61,6 +67,14 @@ export const RETURN_METHOD = {
     REVEAL: "REVEAL",
 } as const;
 export type ReturnMethod = ReturnMethodDeclaration["type"];
+
+export const INTROSPECT_STATUS = {
+    ACTIVE: "active",
+    REVOKED: "revoked",
+    EXPIRED: "expired",
+    NOT_FOUND: "not_found",
+} as const;
+export type IntrospectStatus = IntrospectResponse["status"];
 
 /**
  * Signature for a BYO (bring-your-own) client-auth JWT signer.
