@@ -111,6 +111,26 @@ def test_error_with_empty_body() -> None:
     assert exc.value.reason is None
 
 
+def test_close_closes_owned_client() -> None:
+    client = NativeClient()  # owns its httpx.Client
+    client.close()
+    assert client._client.is_closed
+
+
+def test_error_with_unparseable_body() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, content=b"<html>internal error</html>")
+
+    with _client(handler) as client, pytest.raises(NativeApiError) as exc:
+        client.direct_issue_steam_ticket(
+            DirectIssueSteamTicketRequest(
+                applicationAnchor="my-app", steamTicketHex="ab", steamAppId=1
+            )
+        )
+    assert exc.value.status == 500
+    assert exc.value.reason is None
+
+
 def test_async_direct_issue_steam_ticket() -> None:
     async def run() -> str:
         async with AsyncNativeClient(
@@ -119,6 +139,40 @@ def test_async_direct_issue_steam_ticket() -> None:
             result = await client.direct_issue_steam_ticket(
                 DirectIssueSteamTicketRequest(
                     applicationAnchor="my-app", steamTicketHex="ab", steamAppId=1
+                )
+            )
+            return result.accessToken
+
+    assert asyncio.run(run()) == "a.b.c"
+
+
+def test_async_base_url_normalized_and_default() -> None:
+    assert AsyncNativeClient(base_url="https://native.example.com/").base_url == (
+        "https://native.example.com"
+    )
+    assert AsyncNativeClient().base_url == PRODUCTION_BASE_URL
+
+
+def test_async_aclose_closes_owned_client() -> None:
+    async def run() -> bool:
+        # No http_client passed, so the client owns (and must close) its own.
+        client = AsyncNativeClient()
+        await client.aclose()
+        return client._client.is_closed
+
+    assert asyncio.run(run()) is True
+
+
+def test_async_direct_issue_access_key() -> None:
+    async def run() -> str:
+        async with AsyncNativeClient(
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(_token_response))
+        ) as client:
+            result = await client.direct_issue_access_key(
+                DirectIssueAccessKeyRequest(
+                    applicationAnchor="my-app",
+                    accessKeyIdentifier="11111111-1111-4111-8111-111111111111",
+                    accessKeySecret="0" * 64,
                 )
             )
             return result.accessToken
