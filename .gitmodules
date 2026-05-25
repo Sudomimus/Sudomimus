@@ -1,4 +1,4 @@
 [submodule "specs"]
 	path = specs
 	url = https://github.com/sudomimus/sudomimus-spec.git
-	branch = claude/spec-submodule-sharing-ga3GS
+	branch = main
