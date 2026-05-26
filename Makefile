@@ -2,8 +2,11 @@ TS_SDK := sdks/typescript
 CSHARP_SDK := sdks/csharp
 PYTHON_SDK := sdks/python
 PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src
+GO_SDK := sdks/go
+JAVA_SDK := sdks/java
 NUGET_SOURCE := https://api.nuget.org/v3/index.json
 NUGET_PACK_DIR := $(CSHARP_SDK)/artifacts
+GRADLEW := ./gradlew
 
 .PHONY: install
 install:
@@ -130,7 +133,7 @@ publish-token:
 publish-connect:
 	pnpm -C $(TS_SDK) run publish:connect
 
-# ---------- C# SDK (Sudomimus.Native + Sudomimus.Token) ----------
+# ---------- C# SDK (Sudomimus.Connect + Sudomimus.Native + Sudomimus.Token) ----------
 # All -cs targets operate on sdks/csharp/. NuGet pushes require
 # NUGET_API_KEY to be set (see docs/csharp-nuget-publish.md).
 
@@ -216,3 +219,88 @@ publish-native-cs: pack-native-cs
 		--api-key $(NUGET_API_KEY) \
 		--source $(NUGET_SOURCE) \
 		--skip-duplicate
+
+# ---------- Sudomimus.Connect (C#) ----------
+
+.PHONY: compile-connect-cs
+compile-connect-cs:
+	dotnet build $(CSHARP_SDK)/src/Sudomimus.Connect/Sudomimus.Connect.csproj -c Release
+
+.PHONY: test-connect-cs
+test-connect-cs:
+	dotnet test $(CSHARP_SDK)/tests/Sudomimus.Connect.Tests/Sudomimus.Connect.Tests.csproj -c Release
+
+.PHONY: pack-connect-cs
+pack-connect-cs:
+	dotnet pack $(CSHARP_SDK)/src/Sudomimus.Connect/Sudomimus.Connect.csproj -c Release -o $(NUGET_PACK_DIR)
+
+.PHONY: publish-dry-run-connect-cs
+publish-dry-run-connect-cs: pack-connect-cs
+	@ls -la $(NUGET_PACK_DIR)/Sudomimus.Connect.*.nupkg
+	@echo ""
+	@echo "Inspect the .nupkg above. To publish: make publish-connect-cs"
+
+.PHONY: publish-connect-cs
+publish-connect-cs: pack-connect-cs
+	@test -n "$(NUGET_API_KEY)" || (echo "ERROR: NUGET_API_KEY env var not set" && exit 1)
+	dotnet nuget push "$(NUGET_PACK_DIR)/Sudomimus.Connect.*.nupkg" \
+		--api-key $(NUGET_API_KEY) \
+		--source $(NUGET_SOURCE) \
+		--skip-duplicate
+
+# ---------- Go SDK (sudomimus-go) ----------
+# All -go targets operate on sdks/go/ (single Go module rooted at
+# github.com/sudomimus/sudomimus-go).
+
+.PHONY: compile-go
+compile-go:
+	cd $(GO_SDK) && go build ./...
+
+.PHONY: lint-go
+lint-go:
+	cd $(GO_SDK) && go vet ./...
+
+.PHONY: test-go
+test-go:
+	cd $(GO_SDK) && go test ./...
+
+.PHONY: coverage-go
+coverage-go:
+	cd $(GO_SDK) && go test ./... -coverprofile=coverage.out -covermode=atomic
+
+# ---------- sudomimus-go/token ----------
+
+.PHONY: compile-token-go
+compile-token-go:
+	cd $(GO_SDK) && go build ./token/...
+
+.PHONY: test-token-go
+test-token-go:
+	cd $(GO_SDK) && go test ./token/...
+
+# ---------- Java SDK (com.sudomimus:*) ----------
+# All -java targets operate on sdks/java/ (Gradle Kotlin DSL multi-module on
+# JDK 17). Generate the wrapper once with `cd sdks/java && gradle wrapper`.
+
+.PHONY: compile-java
+compile-java:
+	cd $(JAVA_SDK) && $(GRADLEW) build -x test
+
+.PHONY: test-java
+test-java:
+	cd $(JAVA_SDK) && $(GRADLEW) test
+
+.PHONY: coverage-java
+coverage-java:
+	cd $(JAVA_SDK) && $(GRADLEW) test jacocoTestReport || \
+		(echo "NOTE: enable the jacoco plugin in token/build.gradle.kts for coverage reports" && exit 1)
+
+# ---------- com.sudomimus:sudomimus-token (Java) ----------
+
+.PHONY: compile-token-java
+compile-token-java:
+	cd $(JAVA_SDK) && $(GRADLEW) :token:build -x test
+
+.PHONY: test-token-java
+test-token-java:
+	cd $(JAVA_SDK) && $(GRADLEW) :token:test

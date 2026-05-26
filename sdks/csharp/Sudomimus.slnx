@@ -1,9 +1,11 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Sudomimus.Connect/Sudomimus.Connect.csproj" />
     <Project Path="src/Sudomimus.Native/Sudomimus.Native.csproj" />
     <Project Path="src/Sudomimus.Token/Sudomimus.Token.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Sudomimus.Connect.Tests/Sudomimus.Connect.Tests.csproj" />
     <Project Path="tests/Sudomimus.Native.Tests/Sudomimus.Native.Tests.csproj" />
     <Project Path="tests/Sudomimus.Token.Tests/Sudomimus.Token.Tests.csproj" />
   </Folder>
