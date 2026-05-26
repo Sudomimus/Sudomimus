@@ -6,7 +6,7 @@ This workspace hosts the Python SDKs published to PyPI.
 
 | Package | Spec | Purpose |
 | --- | --- | --- |
-| [`sudomimus-connect`](packages/sudomimus-connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info) |
+| [`sudomimus-connect`](packages/sudomimus-connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info / Introspect / Logout / RevokeAll) |
 | [`sudomimus-token`](packages/sudomimus-token) | — (hand-written) | Parse and verify Sudomimus access / refresh JWTs |
 | [`sudomimus-native`](packages/sudomimus-native) | [`specs/native.yaml`](../../specs/native.yaml) | Direct-issue (Steam ticket / access key) |
 
@@ -27,6 +27,7 @@ uv run python tasks.py generate    # regenerate packages/*/src/sudomimus_*/_gene
 uv run ruff check
 uv run mypy packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src
 uv run pytest
+uv run pytest --cov=sudomimus_token --cov=sudomimus_native --cov=sudomimus_connect --cov-report=term-missing
 ```
 
 Generated files live under `packages/*/src/sudomimus_*/_generated/` and are checked in. After editing a spec, run `uv run python tasks.py generate` and commit the regenerated files. `sudomimus-token` has no spec — its models are hand-written.

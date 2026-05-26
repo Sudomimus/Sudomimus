@@ -14,6 +14,8 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 | Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info / Introspect / Logout / RevokeAll) | alpha |
 | Python | [`sudomimus-token`](sdks/python/packages/sudomimus-token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Direct-issue (Steam ticket / access key) | alpha |
+| C# / .NET | [`Sudomimus.Token`](sdks/csharp/src/Sudomimus.Token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
+| C# / .NET | [`Sudomimus.Native`](sdks/csharp/src/Sudomimus.Native) | Direct-issue (Steam ticket / access key) | alpha |
 
 ## Repository layout
 
@@ -21,10 +23,11 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 specs/                   OpenAPI 3.1 contracts, one file per public service
 sdks/typescript/         TypeScript / JavaScript SDKs (pnpm + Turborepo workspace)
 sdks/python/             Python SDKs (uv workspace)
+sdks/csharp/             C# / .NET 8 SDKs (dotnet solution, NuGet packages)
 examples/                Per-language usage examples
 ```
 
-See [`sdks/typescript/README.md`](sdks/typescript/README.md) and [`sdks/python/README.md`](sdks/python/README.md) for language-specific development instructions.
+See [`sdks/typescript/README.md`](sdks/typescript/README.md), [`sdks/python/README.md`](sdks/python/README.md), and the per-project READMEs under [`sdks/csharp/src/`](sdks/csharp/src) for language-specific development instructions. The repo-root [`Makefile`](Makefile) exposes consistent `compile-*`, `test-*`, `coverage-*`, and `pack-*` targets across all three languages.
 
 ## API schemas
 

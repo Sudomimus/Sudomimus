@@ -6,9 +6,9 @@ This workspace hosts the TypeScript / JavaScript SDKs published to npm under the
 
 | Package | Spec | Purpose |
 | --- | --- | --- |
-| [`@sudomimus/connect`](packages/connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / Redeem / Refresh) |
+| [`@sudomimus/connect`](packages/connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info / Introspect / Logout / RevokeAll) |
 | [`@sudomimus/token`](packages/token) | — | Parse and verify Sudomimus access / refresh JWTs |
-| [`@sudomimus/native`](packages/native) | [`specs/native.yaml`](../../specs/native.yaml) | Native client entry point |
+| [`@sudomimus/native`](packages/native) | [`specs/native.yaml`](../../specs/native.yaml) | Direct-issue (Steam ticket / access key) |
 
 ## Tooling
 
@@ -28,6 +28,7 @@ pnpm generate     # regenerate packages/*/src/_generated/schema.ts from the spec
 pnpm compile      # tsc per package, emits dist/
 pnpm lint
 pnpm test
+pnpm coverage     # jest --coverage per package
 ```
 
 Generated files live in `packages/*/src/_generated/` and are checked in. After editing a spec, run `pnpm generate` and commit the regenerated files.
