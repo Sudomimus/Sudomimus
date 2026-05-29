@@ -7,13 +7,17 @@ public static class AuthenticationMethod
 {
     public const string Passkey = "PASSKEY";
     public const string EmailVerification = "EMAIL_VERIFICATION";
+    public const string SteamTicket = "STEAM_TICKET";
+    public const string SteamOpenId = "STEAM_OPENID";
+    public const string AccessKeyDirect = "ACCESS_KEY_DIRECT";
+    public const string GoogleOAuth = "GOOGLE_OAUTH";
+    public const string GitHubOAuth = "GITHUB_OAUTH";
+    public const string DiscordOAuth = "DISCORD_OAUTH";
 }
 
 /// <summary>
 /// Per-inquiry narrowing of the application's authentication-rule layer.
-/// The shape of <see cref="Payload"/> is determined by <see cref="Method"/>;
-/// for the currently defined methods (PASSKEY, EMAIL_VERIFICATION) the
-/// payload is empty.
+/// The shape of <see cref="Payload"/> is determined by <see cref="Method"/>.
 /// </summary>
 public sealed record AuthenticationRuleConstraint
 {
@@ -34,9 +38,34 @@ public sealed record AuthenticationRuleConstraint
 }
 
 /// <summary>
-/// Empty payload — both currently defined authentication methods (PASSKEY
-/// and EMAIL_VERIFICATION) carry no further parameters. The class exists
-/// so the field can be strongly typed and to leave room for future
-/// per-method fields without a breaking change.
+/// Authentication-rule payload. Method-specific fields are optional and
+/// only meaningful for the matching <c>Method</c>:
+/// <list type="bullet">
+///   <item><c>PASSKEY</c>: <see cref="AllowUsernameless"/></item>
+///   <item><c>STEAM_TICKET</c>: <see cref="AllowedSteamAppIds"/></item>
+///   <item><c>GITHUB_OAUTH</c>: <see cref="AllowedGitHubOrgs"/></item>
+///   <item><c>EMAIL_VERIFICATION</c>, <c>STEAM_OPENID</c>, <c>ACCESS_KEY_DIRECT</c>,
+///     <c>GOOGLE_OAUTH</c>, <c>DISCORD_OAUTH</c>: empty payload.</item>
+/// </list>
 /// </summary>
-public sealed record AuthenticationRulePayload;
+public sealed record AuthenticationRulePayload
+{
+    /// <summary>PASSKEY: opt in to discoverable-credential ("usernameless") login.</summary>
+    [JsonPropertyName("allowUsernameless")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? AllowUsernameless { get; init; }
+
+    /// <summary>STEAM_TICKET: non-empty list of accepted Steam App IDs.</summary>
+    [JsonPropertyName("allowedSteamAppIds")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<long>? AllowedSteamAppIds { get; init; }
+
+    /// <summary>
+    /// GITHUB_OAUTH: case-insensitive list of GitHub org <c>login</c>
+    /// values. Empty array means no org gating; non-empty requires
+    /// membership in at least one listed org.
+    /// </summary>
+    [JsonPropertyName("allowedGitHubOrgs")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? AllowedGitHubOrgs { get; init; }
+}

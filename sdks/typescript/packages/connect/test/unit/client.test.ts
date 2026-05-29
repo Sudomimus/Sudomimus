@@ -253,9 +253,9 @@ describe("ConnectClient", () => {
 
     describe("refresh", () => {
 
-        it("returns an access token only", async () => {
+        it("returns a rotated access token and refresh token", async () => {
 
-            const expected: RefreshResponse = { accessToken: "a-jwt-2" };
+            const expected: RefreshResponse = { accessToken: "a-jwt-2", refreshToken: "r-jwt-2" };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
             const client = new ConnectClient({
                 baseUrl: "https://connect.example.com",

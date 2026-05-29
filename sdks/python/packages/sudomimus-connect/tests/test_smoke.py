@@ -452,7 +452,7 @@ def test_async_health_status_poll_refresh_introspect() -> None:
         if path == "/status-poll":
             return httpx.Response(200, json={"status": "PENDING"})
         if path == "/refresh":
-            return httpx.Response(200, json={"accessToken": "a2"})
+            return httpx.Response(200, json={"accessToken": "a2", "refreshToken": "r2"})
         if path == "/introspect":
             return httpx.Response(200, json={"status": "active", "recommendedRecheckSeconds": 15})
         return httpx.Response(404)

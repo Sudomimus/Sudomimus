@@ -104,11 +104,12 @@ public class ConnectClientTests
     public async Task RefreshAsync_RoundTrips()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "new-a" }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "new-a", "refreshToken": "new-r" }""");
         var client = NewClient(handler);
 
         var resp = await client.RefreshAsync(new RefreshRequest { RefreshToken = "r" });
         Assert.Equal("new-a", resp.AccessToken);
+        Assert.Equal("new-r", resp.RefreshToken);
     }
 
     [Fact]

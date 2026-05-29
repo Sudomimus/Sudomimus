@@ -41,8 +41,25 @@ The other endpoints need no client auth:
 ```python
 status = client.status_poll(StatusPollRequest(exposureKey=..., hiddenKey=...))
 tokens = client.redeem(RedeemRequest(exposureKey=..., hiddenKey=..., confirmationKey=...))
+# `/refresh` rotates the refresh token (OAuth 2.1 BCP §4.14.2 strict
+# mode): every call returns BOTH a new access token AND a new refresh
+# token, and invalidates the one you presented. Persist
+# `fresh.refreshToken` BEFORE the next call. See the "Token storage
+# contract" section below for the full rules.
 fresh = client.refresh(RefreshRequest(refreshToken=tokens.refreshToken))
 ```
+
+### Token storage contract (read this before shipping refresh)
+
+The Connect API does **OAuth 2.1 BCP §4.14.2 strict refresh-token rotation**: every `/refresh` returns a new pair AND invalidates the refresh token you presented. Re-presenting an already-rotated refresh token (or losing the rotation race to a concurrent caller) is treated as evidence of compromise — the server revokes the entire refresh-token family and the user must re-authenticate from scratch.
+
+This means **every successful `/refresh` MUST atomically replace your persisted refresh token** with the new one before any other code can read the old one. The contract is:
+
+- Between the moment you read the current refresh token and the moment you persist the new pair, no other code path may read the old token. Use a per-session lock (database row lock, Redis `SETNX`, …) around `load → /refresh → save`.
+- A partial write — new access stored, new refresh dropped — desynchronises you from the server, and the next `/refresh` will trip `RefreshTokenFamilyCompromised`.
+- Two concurrent `/refresh` calls on the same refresh token will trip `RefreshTokenRotationRaceLost` on whichever loses the conditional write; the family is revoked on the server side.
+
+The Python SDK does not currently ship a `TokenStore` abstraction. The TypeScript and .NET SDKs do (`RotatingConnectClient` + `TokenStore` / `ITokenStore`); a Python equivalent is on the roadmap. Until then, implement the locking and atomic-replace yourself, or open an issue if your use case would benefit from a built-in store.
 
 Verify issued tokens (resolves and caches the application public key via
 `/info`):

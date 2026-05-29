@@ -115,7 +115,7 @@ coverage-py:
 		--cov=sudomimus_connect \
 		--cov-report=term-missing
 
-# ---------- Publish ----------
+# ---------- Publish (npm) ----------
 
 .PHONY: publish-dry-run-token
 publish-dry-run-token:
@@ -125,6 +125,10 @@ publish-dry-run-token:
 publish-dry-run-connect:
 	pnpm -C $(TS_SDK) run publish-dry-run:connect
 
+.PHONY: publish-dry-run-native
+publish-dry-run-native:
+	pnpm -C $(TS_SDK) run publish-dry-run:native
+
 .PHONY: publish-token
 publish-token:
 	pnpm -C $(TS_SDK) run publish:token
@@ -132,6 +136,74 @@ publish-token:
 .PHONY: publish-connect
 publish-connect:
 	pnpm -C $(TS_SDK) run publish:connect
+
+.PHONY: publish-native
+publish-native:
+	pnpm -C $(TS_SDK) run publish:native
+
+# ---------- Publish (PyPI) ----------
+# `make build-py` produces wheels + sdists for every Python package into
+# sdks/python/dist/. The per-package publish-{token,native,connect}-py
+# targets push that one package to PyPI via `uv publish`. Set
+# UV_PUBLISH_TOKEN (PyPI API token, e.g. `pypi-XXXX…`) before pushing.
+# Dry-run targets only build + list the artifacts so you can inspect them.
+
+PYTHON_DIST_DIR := $(PYTHON_SDK)/dist
+
+.PHONY: clean-build-py
+clean-build-py:
+	rm -rf $(PYTHON_DIST_DIR)
+
+.PHONY: build-py
+build-py: clean-build-py
+	cd $(PYTHON_SDK) && uv build --package sudomimus-token --out-dir dist
+	cd $(PYTHON_SDK) && uv build --package sudomimus-native --out-dir dist
+	cd $(PYTHON_SDK) && uv build --package sudomimus-connect --out-dir dist
+
+.PHONY: build-token-py
+build-token-py: clean-build-py
+	cd $(PYTHON_SDK) && uv build --package sudomimus-token --out-dir dist
+
+.PHONY: build-native-py
+build-native-py: clean-build-py
+	cd $(PYTHON_SDK) && uv build --package sudomimus-native --out-dir dist
+
+.PHONY: build-connect-py
+build-connect-py: clean-build-py
+	cd $(PYTHON_SDK) && uv build --package sudomimus-connect --out-dir dist
+
+.PHONY: publish-dry-run-token-py
+publish-dry-run-token-py: build-token-py
+	@ls -la $(PYTHON_DIST_DIR)/sudomimus_token-*
+	@echo ""
+	@echo "Inspect the artifacts above. To publish: make publish-token-py"
+
+.PHONY: publish-dry-run-native-py
+publish-dry-run-native-py: build-native-py
+	@ls -la $(PYTHON_DIST_DIR)/sudomimus_native-*
+	@echo ""
+	@echo "Inspect the artifacts above. To publish: make publish-native-py"
+
+.PHONY: publish-dry-run-connect-py
+publish-dry-run-connect-py: build-connect-py
+	@ls -la $(PYTHON_DIST_DIR)/sudomimus_connect-*
+	@echo ""
+	@echo "Inspect the artifacts above. To publish: make publish-connect-py"
+
+.PHONY: publish-token-py
+publish-token-py: build-token-py
+	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
+	cd $(PYTHON_SDK) && uv publish dist/sudomimus_token-*
+
+.PHONY: publish-native-py
+publish-native-py: build-native-py
+	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
+	cd $(PYTHON_SDK) && uv publish dist/sudomimus_native-*
+
+.PHONY: publish-connect-py
+publish-connect-py: build-connect-py
+	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
+	cd $(PYTHON_SDK) && uv publish dist/sudomimus_connect-*
 
 # ---------- C# SDK (Sudomimus.Connect + Sudomimus.Native + Sudomimus.Token) ----------
 # All -cs targets operate on sdks/csharp/. NuGet pushes require
@@ -144,6 +216,16 @@ restore-csharp:
 .PHONY: compile-csharp
 compile-csharp:
 	dotnet build $(CSHARP_SDK)/Sudomimus.slnx -c Release
+
+.PHONY: lint-csharp
+lint-csharp:
+	dotnet format $(CSHARP_SDK)/Sudomimus.slnx --verify-no-changes
+
+# `make format-csharp` mutates files in place — use it to fix what
+# `lint-csharp` flagged. CI should run lint-csharp, never format-csharp.
+.PHONY: format-csharp
+format-csharp:
+	dotnet format $(CSHARP_SDK)/Sudomimus.slnx
 
 .PHONY: test-csharp
 test-csharp:
@@ -166,6 +248,10 @@ pack-csharp:
 compile-token-cs:
 	dotnet build $(CSHARP_SDK)/src/Sudomimus.Token/Sudomimus.Token.csproj -c Release
 
+.PHONY: lint-token-cs
+lint-token-cs:
+	dotnet format $(CSHARP_SDK)/src/Sudomimus.Token/Sudomimus.Token.csproj --verify-no-changes
+
 .PHONY: test-token-cs
 test-token-cs:
 	dotnet test $(CSHARP_SDK)/tests/Sudomimus.Token.Tests/Sudomimus.Token.Tests.csproj -c Release
@@ -179,6 +265,10 @@ pack-token-cs:
 .PHONY: compile-native-cs
 compile-native-cs:
 	dotnet build $(CSHARP_SDK)/src/Sudomimus.Native/Sudomimus.Native.csproj -c Release
+
+.PHONY: lint-native-cs
+lint-native-cs:
+	dotnet format $(CSHARP_SDK)/src/Sudomimus.Native/Sudomimus.Native.csproj --verify-no-changes
 
 .PHONY: test-native-cs
 test-native-cs:
@@ -225,6 +315,10 @@ publish-native-cs: pack-native-cs
 .PHONY: compile-connect-cs
 compile-connect-cs:
 	dotnet build $(CSHARP_SDK)/src/Sudomimus.Connect/Sudomimus.Connect.csproj -c Release
+
+.PHONY: lint-connect-cs
+lint-connect-cs:
+	dotnet format $(CSHARP_SDK)/src/Sudomimus.Connect/Sudomimus.Connect.csproj --verify-no-changes
 
 .PHONY: test-connect-cs
 test-connect-cs:
@@ -304,3 +398,14 @@ compile-token-java:
 .PHONY: test-token-java
 test-token-java:
 	cd $(JAVA_SDK) && $(GRADLEW) :token:test
+
+# ---------- Java Publish (Maven) ----------
+# Publishes the built jar (+ pom + sources) to the local Maven repository
+# (~/.m2/repository). Use this to consume the SDK from another local
+# Gradle/Maven project without going through Maven Central. Pushing to
+# Maven Central requires additional Gradle config (sonatype creds,
+# signing) that isn't wired up here yet.
+
+.PHONY: publish-local-token-java
+publish-local-token-java:
+	cd $(JAVA_SDK) && $(GRADLEW) :token:publishToMavenLocal

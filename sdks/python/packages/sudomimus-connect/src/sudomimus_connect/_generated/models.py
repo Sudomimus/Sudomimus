@@ -69,9 +69,15 @@ class RefreshRequest(BaseModel):
 
 
 class RefreshResponse(BaseModel):
-    accessToken: str = Field(
+    accessToken: str = Field(..., description="Short-lived access token (JWT).")
+    refreshToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). No new refresh token is issued.",
+        description=(
+            "Newly issued refresh token (JWT). The presented refresh token is "
+            "invalidated atomically as part of the same call; re-presenting it "
+            "is treated as compromise under OAuth 2.1 BCP §4.14.2 strict "
+            "rotation."
+        ),
     )
 
 

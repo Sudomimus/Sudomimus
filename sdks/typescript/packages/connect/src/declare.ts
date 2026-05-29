@@ -33,14 +33,24 @@ export type RevokeAllResponse = components["schemas"]["RevokeAllResponse"];
 export type AuthenticationRuleConstraint = components["schemas"]["AuthenticationRuleConstraint"];
 export type AuthenticationRulePasskeyPayload = components["schemas"]["AuthenticationRulePasskeyPayload"];
 export type AuthenticationRuleEmailVerificationPayload = components["schemas"]["AuthenticationRuleEmailVerificationPayload"];
+export type AuthenticationRuleSteamTicketPayload = components["schemas"]["AuthenticationRuleSteamTicketPayload"];
+export type AuthenticationRuleSteamOpenIdPayload = components["schemas"]["AuthenticationRuleSteamOpenIdPayload"];
+export type AuthenticationRuleAccessKeyDirectPayload = components["schemas"]["AuthenticationRuleAccessKeyDirectPayload"];
+export type AuthenticationRuleGoogleOAuthPayload = components["schemas"]["AuthenticationRuleGoogleOAuthPayload"];
+export type AuthenticationRuleGitHubOAuthPayload = components["schemas"]["AuthenticationRuleGitHubOAuthPayload"];
+export type AuthenticationRuleDiscordOAuthPayload = components["schemas"]["AuthenticationRuleDiscordOAuthPayload"];
 
 export type RealizeRuleConstraint = components["schemas"]["RealizeRuleConstraint"];
 export type RealizeRuleEmailPayload = components["schemas"]["RealizeRuleEmailPayload"];
+export type RealizeRuleSteamIdPayload = components["schemas"]["RealizeRuleSteamIdPayload"];
+export type RealizeRuleAccountIdentifierPayload = components["schemas"]["RealizeRuleAccountIdentifierPayload"];
 
 export type ReturnMethodDeclaration = components["schemas"]["ReturnMethodDeclaration"];
 export type ReturnMethodCallback = components["schemas"]["ReturnMethodCallback"];
 export type ReturnMethodStatusPoll = components["schemas"]["ReturnMethodStatusPoll"];
 export type ReturnMethodReveal = components["schemas"]["ReturnMethodReveal"];
+export type ReturnMethodDirectIssue = components["schemas"]["ReturnMethodDirectIssue"];
+export type ReturnMethodOidc = components["schemas"]["ReturnMethodOidc"];
 
 export type ConnectErrorBody = components["schemas"]["Error"];
 
@@ -53,11 +63,19 @@ export type ConnectErrorBody = components["schemas"]["Error"];
 export const AUTHENTICATION_METHOD = {
     PASSKEY: "PASSKEY",
     EMAIL_VERIFICATION: "EMAIL_VERIFICATION",
+    STEAM_TICKET: "STEAM_TICKET",
+    STEAM_OPENID: "STEAM_OPENID",
+    ACCESS_KEY_DIRECT: "ACCESS_KEY_DIRECT",
+    GOOGLE_OAUTH: "GOOGLE_OAUTH",
+    GITHUB_OAUTH: "GITHUB_OAUTH",
+    DISCORD_OAUTH: "DISCORD_OAUTH",
 } as const;
 export type AuthenticationMethod = AuthenticationRuleConstraint["method"];
 
 export const REALIZE_CONSTRAINT_TYPE = {
     EMAIL: "EMAIL",
+    STEAM_ID: "STEAM_ID",
+    ACCOUNT_IDENTIFIER: "ACCOUNT_IDENTIFIER",
 } as const;
 export type RealizeConstraintType = RealizeRuleConstraint["constraintType"];
 
@@ -65,6 +83,8 @@ export const RETURN_METHOD = {
     CALLBACK: "CALLBACK",
     STATUS_POLL: "STATUS_POLL",
     REVEAL: "REVEAL",
+    DIRECT_ISSUE: "DIRECT_ISSUE",
+    OIDC: "OIDC",
 } as const;
 export type ReturnMethod = ReturnMethodDeclaration["type"];
 

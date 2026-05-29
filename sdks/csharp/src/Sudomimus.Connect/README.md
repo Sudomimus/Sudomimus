@@ -65,6 +65,37 @@ ClientAuth = new ConnectClientAuthWithSigner
 };
 ```
 
+## Token storage contract (read this before shipping refresh)
+
+The Connect API does **OAuth 2.1 BCP §4.14.2 strict refresh-token rotation**: every `/refresh` returns a new pair AND invalidates the refresh token you presented. Re-presenting an already-rotated refresh token (or losing the rotation race to a concurrent caller) is treated as evidence of compromise — the server revokes the entire refresh-token family and the user must re-authenticate from scratch.
+
+In practice this means **every successful `/refresh` MUST atomically replace your persisted refresh token** with the new one before any other code can read the old one. The bare `ConnectClient` does not do this for you — it is a stateless HTTP wrapper. Two options:
+
+**Option 1 — use `RotatingConnectClient`** (recommended for most servers):
+
+```csharp
+using Sudomimus.Connect;
+
+var connect = new ConnectClient(ConnectConstants.ProductionBaseUrl);
+
+// One store per session. Swap InMemoryTokenStore for a Redis-/DB-backed
+// implementation of the ITokenStore interface in production.
+var session = new RotatingConnectClient(connect, new InMemoryTokenStore());
+
+await session.SeedAsync(new TokenPair
+{
+    AccessToken = tokensFromRedeem.AccessToken,
+    RefreshToken = tokensFromRedeem.RefreshToken,
+});
+var access = await session.GetAccessTokenAsync();
+var next   = await session.RefreshAsync();   // rotates, persists, returns new access token
+await session.LogoutAsync();                  // best-effort /logout + clear store
+```
+
+`RotatingConnectClient` also coalesces concurrent `RefreshAsync` calls on the same instance onto a single in-flight `/refresh`, which avoids tripping `RefreshTokenRotationRaceLost` when many requests fire simultaneously. **Cross-process** races still need an external lock (Redis, DB row lock) wrapping `load → /refresh → save`.
+
+**Option 2 — implement the bookkeeping yourself.** If you do, the contract is: between the moment you read the current refresh token and the moment you persist the new pair, no other code path may read the old token. Any partial write (new access stored, new refresh dropped) desynchronises you from the server and the next `/refresh` will trip `RefreshTokenFamilyCompromised`.
+
 ## Error handling
 
 Non-2xx responses throw [`ConnectApiException`](./ConnectApiException.cs)
