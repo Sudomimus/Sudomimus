@@ -62,6 +62,14 @@ from .constants import (
     PRODUCTION_BASE_URL,
 )
 from .errors import ConnectApiError, ConnectConfigError
+from .rotating_client import AsyncRotatingConnectClient, RotatingConnectClient
+from .token_store import (
+    AsyncInMemoryTokenStore,
+    AsyncTokenStore,
+    InMemoryTokenStore,
+    TokenPair,
+    TokenStore,
+)
 
 __all__ = [
     "CLIENT_JWT_AUDIENCE",
@@ -71,6 +79,9 @@ __all__ = [
     "DEFAULT_PUBLIC_KEY_LOCALE",
     "PRODUCTION_BASE_URL",
     "AsyncConnectClient",
+    "AsyncInMemoryTokenStore",
+    "AsyncRotatingConnectClient",
+    "AsyncTokenStore",
     "AuthenticationRuleConstraint",
     "AuthenticationRuleEmailVerificationPayload",
     "AuthenticationRulePasskeyPayload",
@@ -85,6 +96,7 @@ __all__ = [
     "EstablishRequest",
     "EstablishResponse",
     "HealthResponse",
+    "InMemoryTokenStore",
     "InfoRequest",
     "InfoResponse",
     "IntrospectRequest",
@@ -103,10 +115,13 @@ __all__ = [
     "ReturnMethodStatusPoll",
     "RevokeAllRequest",
     "RevokeAllResponse",
+    "RotatingConnectClient",
     "StatusPollPendingResponse",
     "StatusPollRealizedResponse",
     "StatusPollRequest",
     "StatusPollResponse",
+    "TokenPair",
+    "TokenStore",
     "build_establish_client_jwt_claims",
     "sha256_base64",
     "sign_establish_client_jwt",

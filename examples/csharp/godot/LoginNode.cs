@@ -10,9 +10,15 @@
 //                        games should not embed long-lived secrets.
 //
 // Both paths parse the returned access token with Sudomimus.Token (without
-// signature verification — see README) and show the resulting user.
+// signature verification — see README), show the resulting user, and seed
+// a RotatingConnectClient + InMemoryTokenStore from the returned pair so
+// the "Refresh token" and "Logout" buttons can demonstrate the OAuth 2.1
+// strict-rotation primitives. A real game would persist the pair to disk
+// (encrypted) instead of an InMemoryTokenStore so the player stays logged
+// in across launches.
 
 using Godot;
+using Sudomimus.Connect;
 using Sudomimus.Native;
 using Sudomimus.Token;
 
@@ -24,6 +30,8 @@ public partial class LoginNode : Control
     // real App ID when wiring up against a production Sudomimus app.
     private const long SteamAppId = 480;
 
+    private const string ConnectBaseUrl = "https://connect-api.sudomimus.com";
+
     private LineEdit _anchorInput = null!;
     private Button _steamLoginButton = null!;
     private LineEdit _accessKeyIdInput = null!;
@@ -31,9 +39,12 @@ public partial class LoginNode : Control
     private Button _accessKeyLoginButton = null!;
     private Label _statusLabel = null!;
     private Label _resultLabel = null!;
+    private Button _refreshButton = null!;
+    private Button _logoutButton = null!;
     private Node _steam = null!;
 
     private uint _pendingTicketHandle;
+    private RotatingConnectClient? _rotating;
 
     public override void _Ready()
     {
@@ -44,11 +55,15 @@ public partial class LoginNode : Control
         _accessKeyLoginButton = GetNode<Button>("VBox/Tabs/AccessKey/AccessKeyLoginButton");
         _statusLabel = GetNode<Label>("VBox/StatusLabel");
         _resultLabel = GetNode<Label>("VBox/ResultLabel");
+        _refreshButton = GetNode<Button>("VBox/SessionButtons/RefreshButton");
+        _logoutButton = GetNode<Button>("VBox/SessionButtons/LogoutButton");
 
         _steam = GetNode("/root/Steam");
 
         _steamLoginButton.Pressed += OnSteamLoginPressed;
         _accessKeyLoginButton.Pressed += OnAccessKeyLoginPressed;
+        _refreshButton.Pressed += OnRefreshPressed;
+        _logoutButton.Pressed += OnLogoutPressed;
         _steam.Connect("get_ticket_for_web_api_response", new Callable(this, nameof(OnTicketReady)));
 
         // Initialize Steamworks. GodotSteam's `steamInit()` returns a
@@ -109,7 +124,7 @@ public partial class LoginNode : Control
                 SteamTicketHex = ticketHex,
                 SteamAppId = SteamAppId,
             });
-            DisplayLoggedInUser(tokens.AccessToken);
+            await OnLoginSucceeded(tokens.AccessToken, tokens.RefreshToken);
         }
         catch (NativeApiException ex)
         {
@@ -148,7 +163,7 @@ public partial class LoginNode : Control
                 AccessKeyIdentifier = keyId,
                 AccessKeySecret = keySecret,
             });
-            DisplayLoggedInUser(tokens.AccessToken);
+            await OnLoginSucceeded(tokens.AccessToken, tokens.RefreshToken);
         }
         catch (NativeApiException ex)
         {
@@ -160,7 +175,81 @@ public partial class LoginNode : Control
         }
     }
 
+    // -------- Refresh / logout -----------------------------------------
+
+    private async void OnRefreshPressed()
+    {
+        if (_rotating is null)
+        {
+            return;
+        }
+
+        _refreshButton.Disabled = true;
+        _logoutButton.Disabled = true;
+        _statusLabel.Text = "Calling /refresh...";
+
+        try
+        {
+            var rotatedAccessToken = await _rotating.RefreshAsync();
+            DisplayLoggedInUser(rotatedAccessToken);
+            _statusLabel.Text = "✓ Refresh rotated the pair.";
+            _refreshButton.Disabled = false;
+            _logoutButton.Disabled = false;
+        }
+        catch (ConnectApiException ex)
+        {
+            // RefreshTokenFamilyCompromised / RefreshTokenRotationRaceLost
+            // — the server has revoked the family. Drop the rotating client
+            // so the buttons stay disabled until a fresh login.
+            _statusLabel.Text = $"Refresh rejected: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"} — please log in again.";
+            _resultLabel.Text = "";
+            _rotating = null;
+        }
+    }
+
+    private async void OnLogoutPressed()
+    {
+        if (_rotating is null)
+        {
+            return;
+        }
+
+        _refreshButton.Disabled = true;
+        _logoutButton.Disabled = true;
+        _statusLabel.Text = "Calling /logout...";
+
+        try
+        {
+            await _rotating.LogoutAsync();
+            _statusLabel.Text = "✓ Logged out. Refresh token revoked.";
+        }
+        catch (ConnectApiException ex)
+        {
+            _statusLabel.Text = $"Logout server-side failed ({(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}); store cleared locally.";
+        }
+        finally
+        {
+            _resultLabel.Text = "";
+            _rotating = null;
+        }
+    }
+
     // -------- Shared post-login display --------------------------------
+
+    private async Task OnLoginSucceeded(string accessToken, string refreshToken)
+    {
+        DisplayLoggedInUser(accessToken);
+
+        // /refresh and /logout do not need clientAuth — the refresh token
+        // authorizes both. One ConnectClient + RotatingConnectClient per
+        // session is the natural shape here.
+        var connect = new ConnectClient(ConnectBaseUrl);
+        _rotating = new RotatingConnectClient(connect, new InMemoryTokenStore());
+        await _rotating.SeedAsync(new TokenPair { AccessToken = accessToken, RefreshToken = refreshToken });
+
+        _refreshButton.Disabled = false;
+        _logoutButton.Disabled = false;
+    }
 
     private void DisplayLoggedInUser(string accessToken)
     {

@@ -9,10 +9,19 @@
  *   5. Poll /status-poll until REALIZED.
  *   6. POST /redeem and verify the issued access token.
  *   7. Print the accountIdentifier as the "login succeeded" signal.
- *   8. POST /logout to revoke the session's refresh token.
+ *   8. Seed a RotatingConnectClient + InMemoryTokenStore from the pair, demo
+ *      one /refresh rotation (the SDK persists the rotated pair into the
+ *      store atomically — OAuth 2.1 BCP §4.14.2 strict mode).
+ *   9. /logout via the rotating client, which best-effort revokes the
+ *      current refresh token server-side and clears the store.
  */
 
-import { ConnectClient, RETURN_METHOD } from "@sudomimus/connect";
+import {
+    ConnectClient,
+    InMemoryTokenStore,
+    RETURN_METHOD,
+    RotatingConnectClient,
+} from "@sudomimus/connect";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
@@ -74,13 +83,30 @@ while (confirmationKey === undefined) {
 }
 
 console.log("\nInquiry realized. Calling /redeem ...");
-const { accessToken, refreshToken } = await client.redeem({ exposureKey, hiddenKey, confirmationKey });
-const verified = await client.verifyAccessToken(accessToken);
+const redeemed = await client.redeem({ exposureKey, hiddenKey, confirmationKey });
+const verified = await client.verifyAccessToken(redeemed.accessToken);
 
 console.log(`\n✓ Login successful. accountIdentifier=${verified.body.accountIdentifier}`);
 
-// Tear the session back down. /logout revokes the refresh token; possession
-// of the token authorizes the revocation, so no client-auth JWT is needed.
+// Demonstrate refresh-token rotation. The store would be backed by a
+// database row, Redis hash, or cookie jar in a real integration —
+// InMemoryTokenStore is fine for a short-lived CLI.
+const rotating = new RotatingConnectClient(client, new InMemoryTokenStore());
+await rotating.seed({
+    accessToken: redeemed.accessToken,
+    refreshToken: redeemed.refreshToken,
+});
+
+console.log("\nCalling /refresh ...");
+const rotatedAccessToken: string = await rotating.refresh();
+console.log(
+    `✓ Rotated. accessToken changed=${rotatedAccessToken !== redeemed.accessToken}`,
+);
+
+// Tear the session back down. Possession of the (current, just-rotated)
+// refresh token authorizes the revocation, so no client-auth JWT is
+// needed. RotatingConnectClient.logout pulls the refresh token out of
+// the store and clears the store afterwards.
 console.log("\nCalling /logout ...");
-const { revoked } = await client.logout({ refreshToken });
-console.log(`✓ Session revoked=${revoked}`);
+await rotating.logout();
+console.log("✓ Session revoked.");

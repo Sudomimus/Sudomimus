@@ -43,9 +43,9 @@ status = client.status_poll(StatusPollRequest(exposureKey=..., hiddenKey=...))
 tokens = client.redeem(RedeemRequest(exposureKey=..., hiddenKey=..., confirmationKey=...))
 # `/refresh` rotates the refresh token (OAuth 2.1 BCP §4.14.2 strict
 # mode): every call returns BOTH a new access token AND a new refresh
-# token, and invalidates the one you presented. Persist
-# `fresh.refreshToken` BEFORE the next call. See the "Token storage
-# contract" section below for the full rules.
+# token, and invalidates the one you presented. Replace your stored
+# refresh token with `fresh.refreshToken` before the next call — or use
+# `RotatingConnectClient` (below), which handles this for you.
 fresh = client.refresh(RefreshRequest(refreshToken=tokens.refreshToken))
 ```
 
@@ -53,13 +53,56 @@ fresh = client.refresh(RefreshRequest(refreshToken=tokens.refreshToken))
 
 The Connect API does **OAuth 2.1 BCP §4.14.2 strict refresh-token rotation**: every `/refresh` returns a new pair AND invalidates the refresh token you presented. Re-presenting an already-rotated refresh token (or losing the rotation race to a concurrent caller) is treated as evidence of compromise — the server revokes the entire refresh-token family and the user must re-authenticate from scratch.
 
-This means **every successful `/refresh` MUST atomically replace your persisted refresh token** with the new one before any other code can read the old one. The contract is:
+In practice this means **every successful `/refresh` MUST atomically replace your persisted refresh token** with the new one before any other code can read the old one. The bare `ConnectClient` does not do this for you — it is a stateless HTTP wrapper. Two options:
 
-- Between the moment you read the current refresh token and the moment you persist the new pair, no other code path may read the old token. Use a per-session lock (database row lock, Redis `SETNX`, …) around `load → /refresh → save`.
-- A partial write — new access stored, new refresh dropped — desynchronises you from the server, and the next `/refresh` will trip `RefreshTokenFamilyCompromised`.
-- Two concurrent `/refresh` calls on the same refresh token will trip `RefreshTokenRotationRaceLost` on whichever loses the conditional write; the family is revoked on the server side.
+**Option 1 — use `RotatingConnectClient`** (recommended for most servers):
 
-The Python SDK does not currently ship a `TokenStore` abstraction. The TypeScript and .NET SDKs do (`RotatingConnectClient` + `TokenStore` / `ITokenStore`); a Python equivalent is on the roadmap. Until then, implement the locking and atomic-replace yourself, or open an issue if your use case would benefit from a built-in store.
+```python
+from sudomimus_connect import (
+    ConnectClient,
+    InMemoryTokenStore,
+    RotatingConnectClient,
+    TokenPair,
+)
+
+connect = ConnectClient()
+
+# One store per session. Swap InMemoryTokenStore for a Redis-/DB-backed
+# implementation of the `TokenStore` Protocol in production.
+session = RotatingConnectClient(connect, InMemoryTokenStore())
+
+session.seed(TokenPair(
+    access_token=redeemed.accessToken,
+    refresh_token=redeemed.refreshToken,
+))
+access_token = session.get_access_token()
+new_access  = session.refresh()    # rotates, persists, returns new access token
+session.logout()                   # best-effort /logout + clear store
+```
+
+`RotatingConnectClient` also coalesces concurrent `refresh()` calls on the same instance onto a single in-flight `/refresh`, which avoids tripping `RefreshTokenRotationRaceLost` when many threads fire simultaneously. **Cross-process** races still need an external lock (Redis `SETNX`, a DB row lock) wrapping `load → /refresh → save`.
+
+An `AsyncRotatingConnectClient` mirrors the sync API for `asyncio` callers — wire it with `AsyncConnectClient` + `AsyncInMemoryTokenStore` (or your own `AsyncTokenStore` implementation):
+
+```python
+from sudomimus_connect import (
+    AsyncConnectClient,
+    AsyncInMemoryTokenStore,
+    AsyncRotatingConnectClient,
+    TokenPair,
+)
+
+async with AsyncConnectClient() as connect:
+    session = AsyncRotatingConnectClient(connect, AsyncInMemoryTokenStore())
+    await session.seed(TokenPair(
+        access_token=redeemed.accessToken,
+        refresh_token=redeemed.refreshToken,
+    ))
+    new_access = await session.refresh()
+    await session.logout()
+```
+
+**Option 2 — implement the bookkeeping yourself.** If you do, the contract is: between the moment you read the current refresh token and the moment you persist the new pair, no other code path may read the old token. Any partial write (new access stored, new refresh dropped) desynchronises you from the server and the next `/refresh` will trip `RefreshTokenFamilyCompromised`.
 
 Verify issued tokens (resolves and caches the application public key via
 `/info`):

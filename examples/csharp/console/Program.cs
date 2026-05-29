@@ -7,13 +7,21 @@
 //   * access-key   — exchange a long-lived access-key credential for tokens.
 //
 // Both paths converge: the example parses the returned access token via
-// Sudomimus.Token and prints the resulting user. A real game uses
-// steam-ticket; CI / server-to-server / automation uses access-key.
+// Sudomimus.Token and prints the resulting user. After verifying the user,
+// the example seeds a RotatingConnectClient + InMemoryTokenStore from the
+// returned pair and demonstrates one /refresh rotation followed by a
+// /logout — exercising the new 1.0 token-storage and rotation primitives
+// even though the original credential came from the Native API.
+//
+// A real game uses steam-ticket; CI / server-to-server / automation uses
+// access-key.
 
+using Sudomimus.Connect;
 using Sudomimus.Native;
 using Sudomimus.Token;
 
 const string PemEndLine = "-----END PUBLIC KEY-----";
+const string ConnectBaseUrl = "https://connect-api.sudomimus.com";
 
 Console.Write("Auth method (steam-ticket / access-key): ");
 var method = (Console.ReadLine() ?? string.Empty).Trim().ToLowerInvariant();
@@ -21,8 +29,9 @@ var method = (Console.ReadLine() ?? string.Empty).Trim().ToLowerInvariant();
 Console.Write("applicationAnchor: ");
 var anchor = (Console.ReadLine() ?? string.Empty).Trim();
 
-var client = new NativeClient();
+var nativeClient = new NativeClient();
 string accessToken;
+string refreshToken;
 
 try
 {
@@ -44,13 +53,14 @@ try
             Console.WriteLine();
             Console.WriteLine("Calling /direct-issue/steam-ticket ...");
 
-            var steamResponse = await client.DirectIssueSteamTicketAsync(new DirectIssueSteamTicketRequest
+            var steamResponse = await nativeClient.DirectIssueSteamTicketAsync(new DirectIssueSteamTicketRequest
             {
                 ApplicationAnchor = anchor,
                 SteamTicketHex = ticketHex,
                 SteamAppId = appId,
             });
             accessToken = steamResponse.AccessToken;
+            refreshToken = steamResponse.RefreshToken;
             break;
         }
 
@@ -66,13 +76,14 @@ try
             Console.WriteLine();
             Console.WriteLine("Calling /direct-issue/access-key ...");
 
-            var keyResponse = await client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
+            var keyResponse = await nativeClient.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
             {
                 ApplicationAnchor = anchor,
                 AccessKeyIdentifier = keyId,
                 AccessKeySecret = keySecret,
             });
             accessToken = keyResponse.AccessToken;
+            refreshToken = keyResponse.RefreshToken;
             break;
         }
 
@@ -135,5 +146,33 @@ if (!string.IsNullOrEmpty(parsed.Body.LastName))
 {
     Console.WriteLine($"  lastName:          {parsed.Body.LastName}");
 }
+
+// Demonstrate refresh-token rotation. The ConnectClient does not need
+// clientAuth here — /refresh and /logout authorize themselves with the
+// refresh token. InMemoryTokenStore is fine for a short-lived CLI; a
+// real game would persist the pair to disk (encrypted) so the user
+// stays logged in across launches.
+Console.WriteLine();
+Console.WriteLine("Seeding RotatingConnectClient and calling /refresh ...");
+
+var connectClient = new ConnectClient(ConnectBaseUrl);
+var rotating = new RotatingConnectClient(connectClient, new InMemoryTokenStore());
+await rotating.SeedAsync(new TokenPair { AccessToken = accessToken, RefreshToken = refreshToken });
+
+try
+{
+    var rotatedAccessToken = await rotating.RefreshAsync();
+    Console.WriteLine($"✓ Rotated. accessToken changed={!string.Equals(rotatedAccessToken, accessToken, StringComparison.Ordinal)}");
+}
+catch (ConnectApiException ex)
+{
+    Console.Error.WriteLine($"Refresh failed: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}");
+    return 4;
+}
+
+Console.WriteLine();
+Console.WriteLine("Calling /logout ...");
+await rotating.LogoutAsync();
+Console.WriteLine("✓ Session revoked, store cleared.");
 
 return 0;

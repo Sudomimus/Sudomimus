@@ -11,8 +11,10 @@
   <ItemGroup>
     <!-- Local source references for the in-repo demo. Real consumers
          would replace these with NuGet PackageReferences:
-           <PackageReference Include="Sudomimus.Native" Version="0.0.1" />
-           <PackageReference Include="Sudomimus.Token"  Version="0.0.1" /> -->
+           <PackageReference Include="Sudomimus.Connect" Version="1.0.0" />
+           <PackageReference Include="Sudomimus.Native"  Version="1.0.0" />
+           <PackageReference Include="Sudomimus.Token"   Version="1.0.0" /> -->
+    <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Connect\Sudomimus.Connect.csproj" />
     <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Native\Sudomimus.Native.csproj" />
     <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Token\Sudomimus.Token.csproj" />
   </ItemGroup>

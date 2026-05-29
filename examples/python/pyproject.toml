@@ -1,0 +1,20 @@
+[project]
+name = "sudomimus-example-python"
+version = "0.0.0"
+description = "Sudomimus Connect SDK example — Python CLI login flow."
+requires-python = ">=3.11"
+dependencies = [
+    "sudomimus-connect",
+]
+
+[tool.uv.sources]
+sudomimus-connect = { path = "../../sdks/python/packages/sudomimus-connect", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# This example is a script, not a library — pack the single module so
+# `pip install .` still has something to install.
+include = ["login_example.py"]
