@@ -10,6 +10,9 @@ public enum TokenErrorCode
     MissingAudience,
     Expired,
     InvalidSignature,
+    WrongAudience,
+    WrongIssuer,
+    WrongNonce,
 }
 
 /// <summary>

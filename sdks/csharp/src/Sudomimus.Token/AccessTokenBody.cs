@@ -12,12 +12,23 @@ namespace Sudomimus.Token;
 /// </remarks>
 public sealed record AccessTokenBody
 {
-    [JsonPropertyName("accountIdentifier")]
-    public required string AccountIdentifier { get; init; }
+    /// <summary>
+    /// The application-visible user identifier — the per-(account, sector)
+    /// "sector subject", also the OIDC <c>sub</c>. The raw internal account
+    /// identifier never appears in a token. Opaque: never parse it.
+    /// </summary>
+    [JsonPropertyName("subject")]
+    public required string Subject { get; init; }
 
     [JsonPropertyName("firstName")]
     public required string FirstName { get; init; }
 
     [JsonPropertyName("lastName")]
     public string? LastName { get; init; }
+
+    /// <summary>
+    /// Verified email associated with this login, when the account owns one.
+    /// </summary>
+    [JsonPropertyName("emailAddress")]
+    public string? EmailAddress { get; init; }
 }

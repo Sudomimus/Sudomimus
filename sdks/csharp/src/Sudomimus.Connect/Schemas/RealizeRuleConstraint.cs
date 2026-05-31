@@ -7,7 +7,8 @@ public static class RealizeConstraintType
 {
     public const string Email = "EMAIL";
     public const string SteamId = "STEAM_ID";
-    public const string AccountIdentifier = "ACCOUNT_IDENTIFIER";
+    public const string AccountAlias = "ACCOUNT_ALIAS";
+    public const string SectorSubject = "SECTOR_SUBJECT";
 }
 
 public sealed record RealizeRuleConstraint
@@ -34,7 +35,8 @@ public sealed record RealizeRuleConstraint
 /// <list type="bullet">
 ///   <item><c>EMAIL</c>: <see cref="AllowedEmails"/></item>
 ///   <item><c>STEAM_ID</c>: <see cref="AllowedSteamIds"/> (decimal SteamID64 strings or the literal <c>"*"</c>)</item>
-///   <item><c>ACCOUNT_IDENTIFIER</c>: <see cref="AllowedAccountIdentifiers"/> (no wildcard)</item>
+///   <item><c>ACCOUNT_ALIAS</c>: <see cref="AllowedAccountAliases"/> (no wildcard)</item>
+///   <item><c>SECTOR_SUBJECT</c>: <see cref="AllowedSectorSubjects"/> (no wildcard)</item>
 /// </list>
 /// </summary>
 public sealed record RealizeRulePayload
@@ -50,13 +52,23 @@ public sealed record RealizeRulePayload
     public IReadOnlyList<string>? AllowedSteamIds { get; init; }
 
     /// <summary>
-    /// ACCOUNT_IDENTIFIER: exact-match account UUIDs. No wildcard;
-    /// matches nothing for fresh sign-ups because the account does not
-    /// yet exist.
+    /// ACCOUNT_ALIAS: exact-match account aliases — the user-visible,
+    /// application-invisible, rotatable handle. No wildcard; matches
+    /// nothing for fresh sign-ups because the account does not yet exist.
+    /// Opaque: never parsed or format-validated.
     /// </summary>
-    [JsonPropertyName("allowedAccountIdentifiers")]
+    [JsonPropertyName("allowedAccountAliases")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IReadOnlyList<string>? AllowedAccountIdentifiers { get; init; }
+    public IReadOnlyList<string>? AllowedAccountAliases { get; init; }
+
+    /// <summary>
+    /// SECTOR_SUBJECT: exact-match sector subjects (the application-visible
+    /// token <c>sub</c>) for the realizing application's sector. No
+    /// wildcard. Opaque: never parsed or format-validated.
+    /// </summary>
+    [JsonPropertyName("allowedSectorSubjects")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? AllowedSectorSubjects { get; init; }
 }
 
 /// <summary>Back-compat alias for the EMAIL-shaped payload.</summary>

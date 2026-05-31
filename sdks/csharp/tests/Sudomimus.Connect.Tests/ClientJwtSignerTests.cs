@@ -161,7 +161,7 @@ public class ClientJwtSignerTests
 
         var resp = await client.RevokeAllAsync(new RevokeAllRequest
         {
-            AccountIdentifier = "acct-1",
+            Subject = "subject-1",
         });
         Assert.Equal(3, resp.RevokedCount);
 

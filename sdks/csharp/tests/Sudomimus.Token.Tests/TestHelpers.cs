@@ -70,9 +70,10 @@ internal static class TestHelpers
         };
         var body = new
         {
-            accountIdentifier = "acct-1",
+            subject = "subject-1",
             firstName = "Ada",
             lastName = "Lovelace",
+            emailAddress = "ada@example.com",
         };
         return MintToken(header, body, privateKeyPem);
     }
@@ -93,7 +94,7 @@ internal static class TestHelpers
         };
         var body = new
         {
-            accountIdentifier = "acct-1",
+            subject = "subject-1",
         };
         return MintToken(header, body, privateKeyPem);
     }

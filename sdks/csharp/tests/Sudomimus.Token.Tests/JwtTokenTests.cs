@@ -6,7 +6,7 @@ namespace Sudomimus.Token.Tests;
 public class JwtTokenTests
 {
     private const string ValidHeader = """{"alg":"RS256","typ":"JWT","kty":"Access","aud":"anchor-1"}""";
-    private const string ValidBody = """{"accountIdentifier":"acct-1","firstName":"Ada"}""";
+    private const string ValidBody = """{"subject":"subject-1","firstName":"Ada"}""";
 
     [Fact]
     public void VerifyExpiration_ReturnsTrue_WhenExpInFuture()

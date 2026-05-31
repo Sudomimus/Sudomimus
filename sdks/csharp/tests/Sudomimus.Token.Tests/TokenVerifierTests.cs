@@ -22,7 +22,7 @@ public class TokenVerifierTests
         var verifier = MakeVerifier(keys.PublicKeyPem);
         var token = await verifier.VerifyAccessTokenAsync(jwt);
 
-        Assert.Equal("acct-1", token.Body.AccountIdentifier);
+        Assert.Equal("subject-1", token.Body.Subject);
         Assert.Equal("Ada", token.Body.FirstName);
     }
 
@@ -47,7 +47,7 @@ public class TokenVerifierTests
         var verifier = MakeVerifier(keys.PublicKeyPem);
         var token = await verifier.VerifyRefreshTokenAsync(jwt);
 
-        Assert.Equal("acct-1", token.Body.AccountIdentifier);
+        Assert.Equal("subject-1", token.Body.Subject);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class TokenVerifierTests
         var keys = TestHelpers.GenerateRsaKeyPair();
         // Mint a token with no aud claim.
         var header = new { alg = "RS256", typ = "JWT", iat = 0, exp = long.MaxValue, kty = "Access" };
-        var body = new { accountIdentifier = "acct-1", firstName = "Ada" };
+        var body = new { subject = "subject-1", firstName = "Ada" };
         var jwt = TestHelpers.MintToken(header, body, keys.PrivateKeyPem);
 
         var verifier = MakeVerifier(keys.PublicKeyPem);

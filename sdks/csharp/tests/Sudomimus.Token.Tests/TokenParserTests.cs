@@ -15,7 +15,7 @@ public class TokenParserTests
 
         Assert.Equal("Ada", token.Body.FirstName);
         Assert.Equal("Lovelace", token.Body.LastName);
-        Assert.Equal("acct-1", token.Body.AccountIdentifier);
+        Assert.Equal("subject-1", token.Body.Subject);
         Assert.Equal("Access", token.Header.KeyType);
         Assert.Equal("anchor-1", token.Header.Audience);
         Assert.Equal("RS256", token.Header.Algorithm);
@@ -29,7 +29,7 @@ public class TokenParserTests
 
         var token = TokenParser.ParseRefreshToken(jwt);
 
-        Assert.Equal("acct-1", token.Body.AccountIdentifier);
+        Assert.Equal("subject-1", token.Body.Subject);
         Assert.Equal("Refresh", token.Header.KeyType);
     }
 
@@ -87,7 +87,7 @@ public class TokenParserTests
     {
         var jwt = TestHelpers.MintRaw(
             """{"alg":"RS256","typ":"JWT","kty":"Access","aud":"anchor-1","nbf":100,"ver":"1.0"}""",
-            """{"accountIdentifier":"acct-1"}""");
+            """{"subject":"subject-1"}""");
 
         var header = TokenParser.PeekHeader(jwt);
 
@@ -117,7 +117,7 @@ public class TokenParserTests
     [Fact]
     public void PeekHeader_ThrowsInvalidJwt_WhenHeaderIsNotJson()
     {
-        var jwt = TestHelpers.MintRaw("not-json", """{"accountIdentifier":"acct-1"}""");
+        var jwt = TestHelpers.MintRaw("not-json", """{"subject":"subject-1"}""");
 
         var ex = Assert.Throws<TokenException>(() => TokenParser.PeekHeader(jwt));
         Assert.Equal(TokenErrorCode.InvalidJwt, ex.Code);
@@ -126,7 +126,7 @@ public class TokenParserTests
     [Fact]
     public void PeekHeader_ThrowsInvalidJwt_WhenHeaderIsJsonNull()
     {
-        var jwt = TestHelpers.MintRaw("null", """{"accountIdentifier":"acct-1"}""");
+        var jwt = TestHelpers.MintRaw("null", """{"subject":"subject-1"}""");
 
         var ex = Assert.Throws<TokenException>(() => TokenParser.PeekHeader(jwt));
         Assert.Equal(TokenErrorCode.InvalidJwt, ex.Code);

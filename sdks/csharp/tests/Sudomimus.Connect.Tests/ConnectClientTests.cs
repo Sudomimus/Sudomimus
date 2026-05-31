@@ -239,7 +239,7 @@ public class ConnectClientTests
         var client = NewClient(handler);
 
         await Assert.ThrowsAsync<ConnectConfigException>(() =>
-            client.RevokeAllAsync(new RevokeAllRequest { AccountIdentifier = "acct-1" }));
+            client.RevokeAllAsync(new RevokeAllRequest { Subject = "subject-1" }));
     }
 
     // ───────── helpers ─────────
