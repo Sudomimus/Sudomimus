@@ -143,9 +143,9 @@ class LogoutResponse(BaseModel):
 
 
 class RevokeAllRequest(BaseModel):
-    accountIdentifier: str = Field(
+    subject: str = Field(
         ...,
-        description="Identifier of the account whose sessions should be revoked for the calling application.",
+        description="The sector subject the application sees for the user (the access / id token `sub`). Reverse-mapped server-side to the underlying account; a subject the application has never been issued (or one from another sector) revokes nothing.",
     )
 
 
@@ -190,12 +190,36 @@ class ConstraintType(StrEnum):
     """
 
     EMAIL = "EMAIL"
+    STEAM_ID = "STEAM_ID"
+    ACCOUNT_ALIAS = "ACCOUNT_ALIAS"
+    SECTOR_SUBJECT = "SECTOR_SUBJECT"
 
 
 class RealizeRuleEmailPayload(BaseModel):
     allowedEmails: list[str] = Field(
         ...,
         description="List of email addresses or glob patterns the realized identity\nmust match. Glob patterns are bounded by server-side limits to\nprevent regex backtracking attacks.\n",
+    )
+
+
+class RealizeRuleSteamIdPayload(BaseModel):
+    allowedSteamIds: list[str] = Field(
+        ...,
+        description='Per-realize-time check against the realized account\'s SteamID64.\nEach entry is either the literal "*" (wildcard) or a decimal SteamID64 string.\n',
+    )
+
+
+class RealizeRuleAccountAliasPayload(BaseModel):
+    allowedAccountAliases: list[str] = Field(
+        ...,
+        description="Exact match on the realizing account's account alias — the user-visible, application-invisible, rotatable handle. No wildcard. Opaque: never parsed or format-validated.",
+    )
+
+
+class RealizeRuleSectorSubjectPayload(BaseModel):
+    allowedSectorSubjects: list[str] = Field(
+        ...,
+        description="Exact match on the realizing account's sector subject for the application's sector (the application-visible token `sub`). No wildcard. Opaque: never parsed or format-validated.",
     )
 
 
@@ -279,7 +303,12 @@ class RealizeRuleConstraint(BaseModel):
     constraintType: ConstraintType = Field(
         ..., description="Which realize-rule kind this constraint narrows to."
     )
-    payload: RealizeRuleEmailPayload
+    payload: (
+        RealizeRuleEmailPayload
+        | RealizeRuleSteamIdPayload
+        | RealizeRuleAccountAliasPayload
+        | RealizeRuleSectorSubjectPayload
+    )
     accessTokenTtlSeconds: int | None = Field(
         None,
         description="Per-constraint override for access token lifetime. Resolved at realize time.",

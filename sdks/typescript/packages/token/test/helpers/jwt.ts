@@ -48,9 +48,10 @@ export const mintAccessToken = (
         subject: "refresh-1",
         header: {},
         body: {
-            accountIdentifier: "acct-1",
+            subject: "subject-1",
             firstName: "Ada",
             lastName: "Lovelace",
+            emailAddress: "ada@example.com",
         },
     });
 };
@@ -73,7 +74,7 @@ export const mintRefreshToken = (
         issuer: "sudomimus.com",
         audience: overrides.audience ?? APPLICATION_ANCHOR,
         header: {},
-        body: { accountIdentifier: "acct-1" },
+        body: { subject: "subject-1" },
     });
 };
 

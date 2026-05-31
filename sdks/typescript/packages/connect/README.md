@@ -93,7 +93,7 @@ const client = new ConnectClient({ baseUrl: "https://connect-api.sudomimus.com" 
 
 try {
     const token = await client.verifyAccessToken(accessJwt);
-    console.log(token.body.accountIdentifier, token.body.firstName);
+    console.log(token.body.subject, token.body.firstName);
 } catch (err) {
     if (err instanceof TokenError) {
         // err.code: "INVALID_JWT" | "WRONG_KEY_TYPE" | "MISSING_AUDIENCE" | "EXPIRED" | "INVALID_SIGNATURE"
@@ -101,7 +101,7 @@ try {
 }
 
 const refresh = await client.verifyRefreshToken(refreshJwt);
-console.log(refresh.body.accountIdentifier);
+console.log(refresh.body.subject);
 ```
 
 The public key cache is per-`ConnectClient` instance and keyed by `applicationAnchor` (the JWT's `aud` header). Override the locale used for the cache-populating `/info` call with `new ConnectClient({ baseUrl, publicKeyFetchLocale: "zh-CN" })`. Force a refresh with `client.getApplicationPublicKey(anchor, { force: true })`, or evict entries with `client.clearPublicKeyCache(anchor?)`.
@@ -127,7 +127,7 @@ await client.logout({ refreshToken });
 // Revoke every session of an account for the calling application
 // ("log out everywhere"). This is an application-authority action, so — like
 // establish — it requires a clientAuth config on the ConnectClient.
-const { revokedCount } = await client.revokeAll({ accountIdentifier: "acct-1" });
+const { revokedCount } = await client.revokeAll({ subject: "subject-1" });
 ```
 
 ### Error handling

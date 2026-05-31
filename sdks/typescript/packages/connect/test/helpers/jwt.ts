@@ -43,9 +43,10 @@ export const mintAccessToken = (privateKey: string): string => {
         subject: "refresh-1",
         header: {},
         body: {
-            accountIdentifier: "acct-1",
+            subject: "subject-1",
             firstName: "Ada",
             lastName: "Lovelace",
+            emailAddress: "ada@example.com",
         },
     });
 };
@@ -65,6 +66,6 @@ export const mintRefreshToken = (privateKey: string): string => {
         issuer: "sudomimus.com",
         audience: APPLICATION_ANCHOR,
         header: {},
-        body: { accountIdentifier: "acct-1" },
+        body: { subject: "subject-1" },
     });
 };

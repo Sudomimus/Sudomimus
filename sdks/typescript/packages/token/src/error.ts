@@ -10,7 +10,10 @@ export type TokenErrorCode =
     | "WRONG_KEY_TYPE"
     | "MISSING_AUDIENCE"
     | "EXPIRED"
-    | "INVALID_SIGNATURE";
+    | "INVALID_SIGNATURE"
+    | "WRONG_AUDIENCE"
+    | "WRONG_ISSUER"
+    | "WRONG_NONCE";
 
 export class TokenError extends Error {
 

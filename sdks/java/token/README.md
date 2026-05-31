@@ -24,7 +24,7 @@ var verifier = new TokenVerifier(applicationAnchor -> {
 
 try {
     JwtToken<AccessTokenBody> token = verifier.verifyAccessToken(jwt);
-    System.out.println(token.getBody().accountIdentifier + " " + token.getBody().firstName);
+    System.out.println(token.getBody().subject + " " + token.getBody().firstName);
 } catch (TokenException e) {
     // e.getCode(): INVALID_JWT | WRONG_KEY_TYPE | MISSING_AUDIENCE | EXPIRED | INVALID_SIGNATURE
 }

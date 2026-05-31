@@ -62,9 +62,10 @@ func mintAccessToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string {
 		"jti": "access-1", "kty": "Access", "sub": "refresh-1",
 	}
 	body := map[string]any{
-		"accountIdentifier": "acct-1",
-		"firstName":         "Ada",
-		"lastName":          "Lovelace",
+		"subject":      "subject-1",
+		"firstName":    "Ada",
+		"lastName":     "Lovelace",
+		"emailAddress": "ada@example.com",
 	}
 	return mintToken(t, header, body, priv)
 }
@@ -76,7 +77,7 @@ func mintRefreshToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string 
 		"aud": anchor, "iat": iat, "exp": iat + 30*24*3600,
 		"jti": "refresh-1", "kty": "Refresh",
 	}
-	body := map[string]any{"accountIdentifier": "acct-1"}
+	body := map[string]any{"subject": "subject-1"}
 	return mintToken(t, header, body, priv)
 }
 
@@ -93,7 +94,7 @@ func TestVerifyAccessToken_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if tok.Body.AccountIdentifier != "acct-1" || tok.Body.FirstName != "Ada" {
+	if tok.Body.Subject != "subject-1" || tok.Body.FirstName != "Ada" {
 		t.Fatalf("unexpected body: %+v", tok.Body)
 	}
 }
@@ -107,7 +108,7 @@ func TestVerifyRefreshToken_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if tok.Body.AccountIdentifier != "acct-1" {
+	if tok.Body.Subject != "subject-1" {
 		t.Fatalf("unexpected body: %+v", tok.Body)
 	}
 }
@@ -147,7 +148,7 @@ func TestVerifyAccessToken_MissingAudience(t *testing.T) {
 		"alg": "RS256", "typ": "JWT",
 		"iat": int64(0), "exp": int64(1<<62), "kty": "Access",
 	}
-	body := map[string]any{"accountIdentifier": "acct-1", "firstName": "Ada"}
+	body := map[string]any{"subject": "subject-1", "firstName": "Ada"}
 	jwt := mintToken(t, header, body, keys.privateKey)
 
 	v := NewVerifier(staticResolver(keys.publicPEM))

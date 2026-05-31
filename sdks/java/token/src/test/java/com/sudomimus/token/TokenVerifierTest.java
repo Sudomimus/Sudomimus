@@ -29,7 +29,7 @@ class TokenVerifierTest {
         TokenVerifier v = makeVerifier(keys.publicPem, null);
         JwtToken<AccessTokenBody> token = v.verifyAccessToken(jwt);
 
-        assertEquals("acct-1", token.getBody().accountIdentifier);
+        assertEquals("subject-1", token.getBody().subject);
         assertEquals("Ada", token.getBody().firstName);
     }
 
@@ -41,7 +41,7 @@ class TokenVerifierTest {
         TokenVerifier v = makeVerifier(keys.publicPem, null);
         JwtToken<RefreshTokenBody> token = v.verifyRefreshToken(jwt);
 
-        assertEquals("acct-1", token.getBody().accountIdentifier);
+        assertEquals("subject-1", token.getBody().subject);
     }
 
     @Test

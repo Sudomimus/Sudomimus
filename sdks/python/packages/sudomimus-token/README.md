@@ -25,7 +25,7 @@ def resolve_public_key(application_anchor: str) -> str:
 
 verifier = TokenVerifier(resolve_public_key)
 access = verifier.verify_access_token(jwt)
-print(access.body.accountIdentifier, access.header.aud)
+print(access.body.subject, access.header.aud)
 ```
 
 Async callers use `AsyncTokenVerifier` with an awaitable resolver:

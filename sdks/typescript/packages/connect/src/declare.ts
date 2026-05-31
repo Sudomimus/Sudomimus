@@ -43,7 +43,8 @@ export type AuthenticationRuleDiscordOAuthPayload = components["schemas"]["Authe
 export type RealizeRuleConstraint = components["schemas"]["RealizeRuleConstraint"];
 export type RealizeRuleEmailPayload = components["schemas"]["RealizeRuleEmailPayload"];
 export type RealizeRuleSteamIdPayload = components["schemas"]["RealizeRuleSteamIdPayload"];
-export type RealizeRuleAccountIdentifierPayload = components["schemas"]["RealizeRuleAccountIdentifierPayload"];
+export type RealizeRuleAccountAliasPayload = components["schemas"]["RealizeRuleAccountAliasPayload"];
+export type RealizeRuleSectorSubjectPayload = components["schemas"]["RealizeRuleSectorSubjectPayload"];
 
 export type ReturnMethodDeclaration = components["schemas"]["ReturnMethodDeclaration"];
 export type ReturnMethodCallback = components["schemas"]["ReturnMethodCallback"];
@@ -75,7 +76,8 @@ export type AuthenticationMethod = AuthenticationRuleConstraint["method"];
 export const REALIZE_CONSTRAINT_TYPE = {
     EMAIL: "EMAIL",
     STEAM_ID: "STEAM_ID",
-    ACCOUNT_IDENTIFIER: "ACCOUNT_IDENTIFIER",
+    ACCOUNT_ALIAS: "ACCOUNT_ALIAS",
+    SECTOR_SUBJECT: "SECTOR_SUBJECT",
 } as const;
 export type RealizeConstraintType = RealizeRuleConstraint["constraintType"];
 

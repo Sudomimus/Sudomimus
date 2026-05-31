@@ -287,23 +287,68 @@ export interface components {
         };
         RedeemResponse: {
             applicationAnchor: string;
-            /** @description Long-lived refresh token (JWT). */
+            /** @description Long-lived refresh token (JWT). Decode its body to
+             *     `RefreshTokenBody` (see schema). The refresh token leaves the
+             *     system, so its body carries the sector `subject`, never the
+             *     internal account identifier.
+             *      */
             refreshToken: string;
-            /** @description Short-lived access token (JWT). */
+            /** @description Short-lived access token (JWT). Decode its body to
+             *     `AccessTokenBody` (see schema) — the application-visible user
+             *     key is the `subject` (sector subject) claim.
+             *      */
             accessToken: string;
         };
         RefreshRequest: {
             refreshToken: string;
         };
         RefreshResponse: {
-            /** @description Short-lived access token (JWT). */
+            /** @description Short-lived access token (JWT). Decode its body to
+             *     `AccessTokenBody` (see schema) — the application-visible user
+             *     key is the `subject` (sector subject) claim.
+             *      */
             accessToken: string;
-            /** @description Newly issued refresh token (JWT). The presented refresh
-             *     token is invalidated atomically as part of the same call;
-             *     re-presenting it is treated as compromise under OAuth 2.1
-             *     BCP §4.14.2 strict rotation.
+            /** @description Newly issued refresh token (JWT); body is `RefreshTokenBody`.
+             *     The presented refresh token is invalidated atomically as part
+             *     of the same call; re-presenting it is treated as compromise
+             *     under OAuth 2.1 BCP §4.14.2 strict rotation.
              *      */
             refreshToken: string;
+        };
+        /** @description Decoded body (payload) of a Sudomimus access token. The standard
+         *     JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
+         *     `sub`) live in the JWT *header*; this object is the body. The
+         *     application keys its users on `subject`.
+         *      */
+        AccessTokenBody: {
+            /** @description The application-visible user identifier — the per-(account,
+             *     sector) **sector subject**, also the OIDC `sub`. This is the
+             *     value an application keys its users on; the raw internal
+             *     account identifier never appears in a token. User-rotatable.
+             *     Opaque: never parse or format-validate it.
+             *      */
+            subject: string;
+            firstName: string;
+            lastName?: string;
+            /** @description Verified email associated with this login. Present only when
+             *     the account owns a verified email: the exact email typed for
+             *     email-OTP logins, otherwise the account's primary email.
+             *     Omitted for accounts with no verified email (e.g. Steam-only
+             *     or AccessKey-only).
+             *      */
+            emailAddress?: string;
+        };
+        /** @description Decoded body (payload) of a Sudomimus refresh token. Carries the
+         *     sector `subject` (the same pairwise identifier as the access-token
+         *     body) because the refresh token leaves the system and must never
+         *     expose the internal account identifier. Informational only —
+         *     `/refresh` resolves the token by its `jti`, not by reading the body.
+         *      */
+        RefreshTokenBody: {
+            /** @description The application-visible **sector subject**. Opaque: never
+             *     parse or format-validate it.
+             *      */
+            subject: string;
         };
         InfoRequest: {
             applicationAnchor: string;
@@ -341,8 +386,8 @@ export interface components {
             revoked: boolean;
         };
         RevokeAllRequest: {
-            /** @description Identifier of the account whose sessions should be revoked for the calling application. */
-            accountIdentifier: string;
+            /** @description The sector subject the application sees for the user (the access / id token `sub`). Reverse-mapped server-side to the underlying account, whose sessions are then revoked for the calling application. A subject the application has never been issued (or one from another sector) revokes nothing. */
+            subject: string;
         };
         RevokeAllResponse: {
             /** @description Number of refresh tokens that were revoked. */
@@ -418,8 +463,8 @@ export interface components {
              * @description Which realize-rule kind this constraint narrows to.
              * @enum {string}
              */
-            constraintType: "EMAIL" | "STEAM_ID" | "ACCOUNT_IDENTIFIER";
-            payload: components["schemas"]["RealizeRuleEmailPayload"] | components["schemas"]["RealizeRuleSteamIdPayload"] | components["schemas"]["RealizeRuleAccountIdentifierPayload"];
+            constraintType: "EMAIL" | "STEAM_ID" | "ACCOUNT_ALIAS" | "SECTOR_SUBJECT";
+            payload: components["schemas"]["RealizeRuleEmailPayload"] | components["schemas"]["RealizeRuleSteamIdPayload"] | components["schemas"]["RealizeRuleAccountAliasPayload"] | components["schemas"]["RealizeRuleSectorSubjectPayload"];
             /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
             accessTokenTtlSeconds?: number;
             /** @description Per-constraint override for refresh token lifetime. Resolved at realize time. */
@@ -439,13 +484,27 @@ export interface components {
         RealizeRuleSteamIdPayload: {
             allowedSteamIds: string[];
         };
-        /** @description Exact match on the realizing account's UUID. No wildcard —
-         *     because the account does not yet exist during fresh
-         *     registration, this constraint matches nothing for new sign-ups,
-         *     so use it only for known-existing accounts.
+        /** @description Exact match on the realizing account's **account alias** — the
+         *     user-visible, application-invisible, rotatable handle the user
+         *     reads in the With portal and shares out-of-band with whoever
+         *     configures the rule. No wildcard — because the account does not
+         *     yet exist during fresh registration, this constraint matches
+         *     nothing for new sign-ups. The alias is opaque: it is compared by
+         *     exact-string equality and never parsed or format-validated.
          *      */
-        RealizeRuleAccountIdentifierPayload: {
-            allowedAccountIdentifiers: string[];
+        RealizeRuleAccountAliasPayload: {
+            allowedAccountAliases: string[];
+        };
+        /** @description Exact match on the realizing account's **sector subject** for the
+         *     realizing application's sector — the application-visible token
+         *     `sub` the owner already sees in their own logs. No wildcard.
+         *     Rotating the subject locks the user out (it becomes a brand-new,
+         *     not-yet-allow-listed identity) rather than letting them bypass the
+         *     rule. The subject is opaque: compared by exact-string equality and
+         *     never parsed or format-validated.
+         *      */
+        RealizeRuleSectorSubjectPayload: {
+            allowedSectorSubjects: string[];
         };
         ReturnMethodDeclaration: components["schemas"]["ReturnMethodCallback"] | components["schemas"]["ReturnMethodStatusPoll"] | components["schemas"]["ReturnMethodReveal"] | components["schemas"]["ReturnMethodDirectIssue"] | components["schemas"]["ReturnMethodOidc"];
         ReturnMethodCallback: {

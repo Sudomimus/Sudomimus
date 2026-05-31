@@ -8,5 +8,6 @@
 export * from "./constants";
 export * from "./declare";
 export * from "./error";
+export * from "./id";
 export * from "./parse";
 export * from "./verifier";

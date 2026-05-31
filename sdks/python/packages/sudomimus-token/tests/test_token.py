@@ -49,9 +49,9 @@ def _mint(
     if aud is not None:
         header["aud"] = aud
     default_body = (
-        {"accountIdentifier": "acct-1", "firstName": "Ada"}
+        {"subject": "subject-1", "firstName": "Ada"}
         if kty == "Access"
-        else {"accountIdentifier": "acct-1"}
+        else {"subject": "subject-1"}
     )
     return create_jwt(header, body if body is not None else default_body, private_pem)
 
@@ -65,7 +65,7 @@ def test_verify_access_token_happy_path() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem)
     token = TokenVerifier(lambda _: public_pem).verify_access_token(jwt)
-    assert token.body.accountIdentifier == "acct-1"
+    assert token.body.subject == "subject-1"
     assert token.body.firstName == "Ada"
     assert token.header.aud == ANCHOR
 
@@ -74,7 +74,7 @@ def test_verify_refresh_token_happy_path() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem, kty="Refresh")
     token = TokenVerifier(lambda _: public_pem).verify_refresh_token(jwt)
-    assert token.body.accountIdentifier == "acct-1"
+    assert token.body.subject == "subject-1"
 
 
 def test_wrong_key_type() -> None:
@@ -140,6 +140,6 @@ def test_async_verifier_happy_path() -> None:
 
     async def run() -> str:
         token = await AsyncTokenVerifier(resolver).verify_access_token(jwt)
-        return token.body.accountIdentifier
+        return token.body.subject
 
-    assert asyncio.run(run()) == "acct-1"
+    assert asyncio.run(run()) == "subject-1"

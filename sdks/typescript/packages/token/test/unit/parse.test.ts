@@ -26,8 +26,9 @@ describe("parseAccessToken", () => {
             throw new Error("expected a parsed token");
         }
 
-        expect(parsed.body.accountIdentifier).toBe("acct-1");
+        expect(parsed.body.subject).toBe("subject-1");
         expect(parsed.body.firstName).toBe("Ada");
+        expect(parsed.body.emailAddress).toBe("ada@example.com");
         expect(parsed.header.kty).toBe("Access");
         expect(parsed.header.aud).toBe(APPLICATION_ANCHOR);
     });

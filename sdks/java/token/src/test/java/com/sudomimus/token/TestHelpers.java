@@ -76,9 +76,10 @@ final class TestHelpers {
         header.put("sub", "refresh-1");
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("accountIdentifier", "acct-1");
+        body.put("subject", "subject-1");
         body.put("firstName", "Ada");
         body.put("lastName", "Lovelace");
+        body.put("emailAddress", "ada@example.com");
 
         return mintToken(header, body, priv);
     }
@@ -96,7 +97,7 @@ final class TestHelpers {
         header.put("kty", "Refresh");
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("accountIdentifier", "acct-1");
+        body.put("subject", "subject-1");
 
         return mintToken(header, body, priv);
     }

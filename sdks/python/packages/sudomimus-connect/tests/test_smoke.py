@@ -169,7 +169,7 @@ def test_logout_revokes_session() -> None:
 
 def test_revoke_all_requires_client_auth() -> None:
     with _client(lambda r: httpx.Response(200)) as client, pytest.raises(ConnectConfigError):
-        client.revoke_all(RevokeAllRequest(accountIdentifier="acct-1"))
+        client.revoke_all(RevokeAllRequest(subject="subject-1"))
 
 
 def test_revoke_all_signs_request_with_matching_body_hash() -> None:
@@ -184,7 +184,7 @@ def test_revoke_all_signs_request_with_matching_body_hash() -> None:
 
     auth = ConnectClientAuthWithKey(application_anchor="my-app", private_key_pem=private_pem)
     with _client(handler, client_auth=auth) as client:
-        result = client.revoke_all(RevokeAllRequest(accountIdentifier="acct-1"))
+        result = client.revoke_all(RevokeAllRequest(subject="subject-1"))
 
     assert result.revokedCount == 2
     assert captured["path"] == "/revoke-all"
@@ -244,7 +244,7 @@ def test_verify_access_token_end_to_end() -> None:
     private_pem, public_pem = _keypair()
     jwt = create_jwt(
         {"kty": "Access", "aud": "my-app", "iat": int(time.time()), "exp": int(time.time()) + 60},
-        {"accountIdentifier": "acct-1", "firstName": "Ada"},
+        {"subject": "subject-1", "firstName": "Ada"},
         private_pem,
     )
 
@@ -260,7 +260,7 @@ def test_verify_access_token_end_to_end() -> None:
 
     with _client(handler) as client:
         token = client.verify_access_token(jwt)
-    assert token.body.accountIdentifier == "acct-1"
+    assert token.body.subject == "subject-1"
 
 
 def test_close_closes_owned_client() -> None:
@@ -326,7 +326,7 @@ def test_verify_refresh_token_end_to_end() -> None:
     private_pem, public_pem = _keypair()
     jwt = create_jwt(
         {"kty": "Refresh", "aud": "my-app", "iat": int(time.time()), "exp": int(time.time()) + 60},
-        {"accountIdentifier": "acct-1"},
+        {"subject": "subject-1"},
         private_pem,
     )
 
@@ -342,7 +342,7 @@ def test_verify_refresh_token_end_to_end() -> None:
 
     with _client(handler) as client:
         token = client.verify_refresh_token(jwt)
-    assert token.body.accountIdentifier == "acct-1"
+    assert token.body.subject == "subject-1"
 
 
 def test_async_redeem_and_info() -> None:
@@ -419,7 +419,7 @@ def test_async_logout_and_revoke_all() -> None:
             client_auth=auth,
         ) as client:
             logged_out = await client.logout(LogoutRequest(refreshToken="r.t"))
-            revoked = await client.revoke_all(RevokeAllRequest(accountIdentifier="acct-1"))
+            revoked = await client.revoke_all(RevokeAllRequest(subject="subject-1"))
             return logged_out.revoked, revoked.revokedCount
 
     revoked, count = asyncio.run(run())
@@ -530,12 +530,12 @@ def test_async_verify_access_and_refresh_token() -> None:
     now = int(time.time())
     access_jwt = create_jwt(
         {"kty": "Access", "aud": "my-app", "iat": now, "exp": now + 60},
-        {"accountIdentifier": "acct-1", "firstName": "Ada"},
+        {"subject": "subject-1", "firstName": "Ada"},
         private_pem,
     )
     refresh_jwt = create_jwt(
         {"kty": "Refresh", "aud": "my-app", "iat": now, "exp": now + 60},
-        {"accountIdentifier": "acct-1"},
+        {"subject": "subject-1"},
         private_pem,
     )
 
@@ -555,8 +555,8 @@ def test_async_verify_access_and_refresh_token() -> None:
         ) as client:
             access = await client.verify_access_token(access_jwt)
             refresh = await client.verify_refresh_token(refresh_jwt)
-            return access.body.accountIdentifier, refresh.body.accountIdentifier
+            return access.body.subject, refresh.body.subject
 
-    access_acct, refresh_acct = asyncio.run(run())
-    assert access_acct == "acct-1"
-    assert refresh_acct == "acct-1"
+    access_subject, refresh_subject = asyncio.run(run())
+    assert access_subject == "subject-1"
+    assert refresh_subject == "subject-1"

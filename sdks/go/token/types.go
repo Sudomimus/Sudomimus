@@ -24,15 +24,25 @@ type Header struct {
 }
 
 // AccessTokenBody is the payload of a Sudomimus access token.
+//
+// Subject is the application-visible "sector subject" (also the OIDC sub) —
+// the value an application keys its users on. The raw internal account
+// identifier never appears in a token. It is opaque: never parse or
+// format-validate it.
 type AccessTokenBody struct {
-	AccountIdentifier string `json:"accountIdentifier"`
-	FirstName         string `json:"firstName"`
-	LastName          string `json:"lastName,omitempty"`
+	Subject      string `json:"subject"`
+	FirstName    string `json:"firstName"`
+	LastName     string `json:"lastName,omitempty"`
+	EmailAddress string `json:"emailAddress,omitempty"`
 }
 
-// RefreshTokenBody is the payload of a Sudomimus refresh token.
+// RefreshTokenBody is the payload of a Sudomimus refresh token. It carries the
+// sector Subject (the same pairwise identifier as the access-token body)
+// because the refresh token leaves the system and must never expose the
+// internal account identifier. Informational only — /refresh resolves the
+// token by its jti.
 type RefreshTokenBody struct {
-	AccountIdentifier string `json:"accountIdentifier"`
+	Subject string `json:"subject"`
 }
 
 // AccessToken is a parsed Sudomimus access token.

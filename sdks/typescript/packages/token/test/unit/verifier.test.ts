@@ -22,7 +22,7 @@ describe("TokenVerifier", () => {
         const verifier = new TokenVerifier({ resolver: staticResolver(publicKey) });
 
         const result = await verifier.verifyAccessToken(jwt);
-        expect(result.body.accountIdentifier).toBe("acct-1");
+        expect(result.body.subject).toBe("subject-1");
         expect(result.header.kty).toBe("Access");
     });
 
@@ -33,7 +33,7 @@ describe("TokenVerifier", () => {
         const verifier = new TokenVerifier({ resolver: staticResolver(publicKey) });
 
         const result = await verifier.verifyRefreshToken(jwt);
-        expect(result.body.accountIdentifier).toBe("acct-1");
+        expect(result.body.subject).toBe("subject-1");
         expect(result.header.kty).toBe("Refresh");
     });
 

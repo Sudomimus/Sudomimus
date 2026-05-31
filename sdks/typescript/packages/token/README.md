@@ -23,7 +23,7 @@ import { parseAccessToken, parseRefreshToken } from "@sudomimus/token";
 
 const token = parseAccessToken(jwt);
 if (token !== null) {
-    console.log(token.body.accountIdentifier, token.body.firstName);
+    console.log(token.body.subject, token.body.firstName);
     console.log(token.header.aud); // applicationAnchor
 }
 ```
@@ -44,7 +44,7 @@ const verifier = new TokenVerifier({ resolver });
 
 try {
     const token = await verifier.verifyAccessToken(jwt);
-    console.log(token.body.accountIdentifier);
+    console.log(token.body.subject);
 } catch (err) {
     if (err instanceof TokenError) {
         // err.code: "INVALID_JWT" | "WRONG_KEY_TYPE" | "MISSING_AUDIENCE" | "EXPIRED" | "INVALID_SIGNATURE"

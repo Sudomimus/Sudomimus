@@ -7,4 +7,7 @@ public enum TokenErrorCode {
     MISSING_AUDIENCE,
     EXPIRED,
     INVALID_SIGNATURE,
+    WRONG_AUDIENCE,
+    WRONG_ISSUER,
+    WRONG_NONCE,
 }

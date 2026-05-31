@@ -343,7 +343,7 @@ describe("ConnectClient", () => {
             });
 
             await expect(client.revokeAll({
-                accountIdentifier: "acct-1",
+                subject: "subject-1",
             })).rejects.toBeInstanceOf(ConnectConfigError);
         });
 
@@ -361,7 +361,7 @@ describe("ConnectClient", () => {
                 },
             });
 
-            const result = await client.revokeAll({ accountIdentifier: "acct-1" });
+            const result = await client.revokeAll({ subject: "subject-1" });
 
             expect(result).toEqual(expected);
             const [url, init] = fetchMock.mock.calls[0];
@@ -372,7 +372,7 @@ describe("ConnectClient", () => {
             expect(headers["Authorization"]).toMatch(new RegExp(`^${CLIENT_JWT_AUTH_SCHEME} `));
 
             const sentBody = init.body as string;
-            expect(JSON.parse(sentBody)).toEqual({ accountIdentifier: "acct-1" });
+            expect(JSON.parse(sentBody)).toEqual({ subject: "subject-1" });
 
             const jwt = headers["Authorization"].slice(CLIENT_JWT_AUTH_SCHEME.length + 1);
             const parsed = JWTToken.fromTokenOrNull<Record<string, unknown>, {
@@ -478,10 +478,10 @@ describe("ConnectClient", () => {
             });
 
             const first = await client.verifyAccessToken(jwt);
-            expect(first.body.accountIdentifier).toBe("acct-1");
+            expect(first.body.subject).toBe("subject-1");
 
             const second = await client.verifyAccessToken(mintAccessToken(privateKey));
-            expect(second.body.accountIdentifier).toBe("acct-1");
+            expect(second.body.subject).toBe("subject-1");
 
             expect(fetchMock).toHaveBeenCalledTimes(1);
         });
@@ -501,7 +501,7 @@ describe("ConnectClient", () => {
             });
 
             const result = await client.verifyRefreshToken(jwt);
-            expect(result.body.accountIdentifier).toBe("acct-1");
+            expect(result.body.subject).toBe("subject-1");
             expect(result.header.kty).toBe("Refresh");
         });
 

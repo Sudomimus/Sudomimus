@@ -11,6 +11,9 @@ const (
 	ErrMissingAudience  ErrorCode = "MISSING_AUDIENCE"
 	ErrExpired          ErrorCode = "EXPIRED"
 	ErrInvalidSignature ErrorCode = "INVALID_SIGNATURE"
+	ErrWrongAudience    ErrorCode = "WRONG_AUDIENCE"
+	ErrWrongIssuer      ErrorCode = "WRONG_ISSUER"
+	ErrWrongNonce       ErrorCode = "WRONG_NONCE"
 )
 
 // Error is returned by Parse* and Verifier methods.

@@ -109,7 +109,7 @@ Verify issued tokens (resolves and caches the application public key via
 
 ```python
 access = client.verify_access_token(tokens.accessToken)
-print(access.body.accountIdentifier)
+print(access.body.subject)
 ```
 
 Introspect and revoke sessions. `introspect` and `logout` need no client auth;
@@ -124,7 +124,7 @@ state = client.introspect(IntrospectRequest(accessToken=tokens.accessToken))
 client.logout(LogoutRequest(refreshToken=tokens.refreshToken))
 
 # Revoke every session of an account for the calling application.
-revoked = client.revoke_all(RevokeAllRequest(accountIdentifier="acct-1"))
+revoked = client.revoke_all(RevokeAllRequest(subject="subject-1"))
 print(revoked.revokedCount)
 ```
 
