@@ -42,7 +42,7 @@ Open <http://localhost:5173>.
    email).
 5. The login UI redirects you back to `http://localhost:5173/?exposure-key=...&confirmation-key=...`.
 6. The page calls `/redeem`, verifies the access token, and renders the
-   logged-in user (`accountIdentifier`, `firstName`, `lastName?`).
+   logged-in user (`subject`, `firstName`, `lastName?`).
 
 ## How it works
 

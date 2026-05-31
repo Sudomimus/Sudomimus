@@ -261,7 +261,7 @@ public partial class LoginNode : Control
             var parsed = TokenParser.ParseAccessToken(accessToken);
             _statusLabel.Text = "✓ Login successful.";
             _resultLabel.Text =
-                $"accountIdentifier: {parsed.Body.AccountIdentifier}\n" +
+                $"subject:           {parsed.Body.Subject}\n" +
                 $"firstName:         {parsed.Body.FirstName}";
         }
         catch (TokenException ex)

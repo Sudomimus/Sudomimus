@@ -56,7 +56,7 @@ On success the example prints the decoded access-token claims:
 
 ```
 ✓ Login successful.
-  accountIdentifier: acct-...
+  subject: subject-...
   firstName:         <name or SteamID64>
 ```
 

@@ -46,5 +46,5 @@ The script then:
 - Once `REALIZED`, calls `/redeem`, verifies the access token, and prints:
 
   ```
-  ✓ Login successful. accountIdentifier=acct-...
+  ✓ Login successful. subject=subject-...
   ```

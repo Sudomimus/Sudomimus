@@ -140,7 +140,7 @@ else
 
 Console.WriteLine();
 Console.WriteLine("✓ Login successful.");
-Console.WriteLine($"  accountIdentifier: {parsed.Body.AccountIdentifier}");
+Console.WriteLine($"  subject:           {parsed.Body.Subject}");
 Console.WriteLine($"  firstName:         {parsed.Body.FirstName}");
 if (!string.IsNullOrEmpty(parsed.Body.LastName))
 {

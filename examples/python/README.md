@@ -43,7 +43,7 @@ The script then:
 - Once `REALIZED`, calls `/redeem`, verifies the access token, and prints:
 
   ```
-  ✓ Login successful. accountIdentifier=acct-...
+  ✓ Login successful. subject=subject-...
   ```
 
 - Seeds a `RotatingConnectClient` with the returned pair and calls

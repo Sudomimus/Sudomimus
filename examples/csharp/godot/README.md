@@ -70,7 +70,7 @@ for a plain .NET example with the same logical flows.
   `get_ticket_for_web_api_response`.
 - The example POSTs the hex ticket + App ID to
   `https://native-api.sudomimus.com/direct-issue/steam-ticket`.
-- On success the result label shows `accountIdentifier` and `firstName`.
+- On success the result label shows `subject` and `firstName`.
 - The Steam ticket is canceled (`CancelAuthTicket`).
 
 ### Access Key tab

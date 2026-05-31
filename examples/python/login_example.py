@@ -8,7 +8,7 @@ Interactive CLI login that mirrors the Node example:
   4. Print the login URL — user opens it in a browser and authenticates.
   5. Poll /status-poll until REALIZED.
   6. POST /redeem and verify the issued access token.
-  7. Print the accountIdentifier as the "login succeeded" signal.
+  7. Print the subject (sector subject) as the "login succeeded" signal.
   8. Seed a RotatingConnectClient + InMemoryTokenStore from the pair, demo
      one /refresh rotation (the SDK persists the rotated pair into the
      store atomically — OAuth 2.1 BCP §4.14.2 strict mode).
@@ -94,7 +94,7 @@ def main() -> int:
             )
         )
         verified = client.verify_access_token(redeemed.accessToken)
-        print(f"\n✓ Login successful. accountIdentifier={verified.body.accountIdentifier}")
+        print(f"\n✓ Login successful. subject={verified.body.subject}")
 
         # Demonstrate refresh-token rotation. The store would be backed
         # by a database row, Redis hash, or cookie jar in a real
