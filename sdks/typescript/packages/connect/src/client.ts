@@ -45,7 +45,12 @@ export class ConnectClient {
     public constructor(options: ConnectClientOptions) {
 
         this._baseUrl = options.baseUrl.replace(/\/+$/, "");
-        this._fetch = options.fetch ?? globalThis.fetch;
+        // Bind to `globalThis` on store. Some runtimes (e.g. Cloudflare
+        // Workers) throw "Illegal invocation" when `fetch` is called with a
+        // `this` other than `globalThis`, and we invoke it as `this._fetch(...)`
+        // below — which would otherwise drop the binding. Binding here keeps
+        // callers from having to pass a pre-bound `fetch`.
+        this._fetch = (options.fetch ?? globalThis.fetch).bind(globalThis);
         this._publicKeyLocale = options.publicKeyFetchLocale ?? DEFAULT_PUBLIC_KEY_LOCALE;
         this._publicKeyCache = new Map();
         this._tokenVerifier = new TokenVerifier({

@@ -136,7 +136,10 @@ export interface components {
         };
         DirectIssueAccessKeyResponse: {
             applicationAnchor: string;
-            /** @description Short-lived access token (JWT). Body shape matches the Connect SDK's access token. */
+            /** @description Short-lived access token (JWT). Body shape matches Connect's
+             *     `AccessTokenBody`: the application-visible user key is the
+             *     `subject` (sector subject) claim, not a raw account identifier.
+             *      */
             accessToken: string;
             /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key. */
             refreshToken: string;
@@ -162,7 +165,10 @@ export interface components {
         };
         DirectIssueSteamTicketResponse: {
             applicationAnchor: string;
-            /** @description Short-lived access token (JWT). Body shape matches the Connect SDK's access token. */
+            /** @description Short-lived access token (JWT). Body shape matches Connect's
+             *     `AccessTokenBody`: the application-visible user key is the
+             *     `subject` (sector subject) claim, not a raw account identifier.
+             *      */
             accessToken: string;
             /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket. */
             refreshToken: string;
