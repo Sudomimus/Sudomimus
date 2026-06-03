@@ -258,6 +258,7 @@ test-token-cs:
 
 .PHONY: pack-token-cs
 pack-token-cs:
+	rm -f $(NUGET_PACK_DIR)/Sudomimus.Token.*.nupkg $(NUGET_PACK_DIR)/Sudomimus.Token.*.snupkg
 	dotnet pack $(CSHARP_SDK)/src/Sudomimus.Token/Sudomimus.Token.csproj -c Release -o $(NUGET_PACK_DIR)
 
 # ---------- Sudomimus.Native (C#) ----------
@@ -276,6 +277,7 @@ test-native-cs:
 
 .PHONY: pack-native-cs
 pack-native-cs:
+	rm -f $(NUGET_PACK_DIR)/Sudomimus.Native.*.nupkg $(NUGET_PACK_DIR)/Sudomimus.Native.*.snupkg
 	dotnet pack $(CSHARP_SDK)/src/Sudomimus.Native/Sudomimus.Native.csproj -c Release -o $(NUGET_PACK_DIR)
 
 # ---------- C# Publish (NuGet) ----------
@@ -326,6 +328,7 @@ test-connect-cs:
 
 .PHONY: pack-connect-cs
 pack-connect-cs:
+	rm -f $(NUGET_PACK_DIR)/Sudomimus.Connect.*.nupkg $(NUGET_PACK_DIR)/Sudomimus.Connect.*.snupkg
 	dotnet pack $(CSHARP_SDK)/src/Sudomimus.Connect/Sudomimus.Connect.csproj -c Release -o $(NUGET_PACK_DIR)
 
 .PHONY: publish-dry-run-connect-cs
