@@ -6,6 +6,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Sudomimus.Connect.Tests/Sudomimus.Connect.Tests.csproj" />
+    <Project Path="tests/Sudomimus.Contract.Tests/Sudomimus.Contract.Tests.csproj" />
     <Project Path="tests/Sudomimus.Native.Tests/Sudomimus.Native.Tests.csproj" />
     <Project Path="tests/Sudomimus.Token.Tests/Sudomimus.Token.Tests.csproj" />
   </Folder>

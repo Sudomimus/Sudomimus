@@ -60,8 +60,14 @@ class RedeemRequest(BaseModel):
 
 class RedeemResponse(BaseModel):
     applicationAnchor: str
-    refreshToken: str = Field(..., description="Long-lived refresh token (JWT).")
-    accessToken: str = Field(..., description="Short-lived access token (JWT).")
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Decode its body to\n`RefreshTokenBody` (see schema). The refresh token leaves the\nsystem, so its body carries the sector `subject`, never the\ninternal account identifier.\n",
+    )
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Decode its body to\n`AccessTokenBody` (see schema) — the application-visible user\nkey is the `subject` (sector subject) claim.\n",
+    )
 
 
 class RefreshRequest(BaseModel):
@@ -69,15 +75,59 @@ class RefreshRequest(BaseModel):
 
 
 class RefreshResponse(BaseModel):
-    accessToken: str = Field(..., description="Short-lived access token (JWT).")
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Decode its body to\n`AccessTokenBody` (see schema) — the application-visible user\nkey is the `subject` (sector subject) claim.\n",
+    )
     refreshToken: str = Field(
         ...,
-        description=(
-            "Newly issued refresh token (JWT). The presented refresh token is "
-            "invalidated atomically as part of the same call; re-presenting it "
-            "is treated as compromise under OAuth 2.1 BCP §4.14.2 strict "
-            "rotation."
-        ),
+        description="Newly issued refresh token (JWT); body is `RefreshTokenBody`.\nThe presented refresh token is invalidated atomically as part\nof the same call; re-presenting it is treated as compromise\nunder OAuth 2.1 BCP §4.14.2 strict rotation.\n",
+    )
+
+
+class AccessTokenBody(BaseModel):
+    """
+    Decoded body (payload) of a Sudomimus access token. The standard
+    JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
+    `sub`) live in the JWT *header*; this object is the body. The
+    application keys its users on `subject`. The `firstName`,
+    `lastName`, and `emailAddress` claims are consent-gated (claim
+    sharing): each is minted only when the application's claim policy
+    permits it AND the user has granted that claim, so any of them may
+    be absent.
+
+    """
+
+    subject: str = Field(
+        ...,
+        description="The application-visible user identifier — the per-(account,\nsector) **sector subject**, also the OIDC `sub`. This is the\nvalue an application keys its users on; the raw internal\naccount identifier never appears in a token. User-rotatable.\nOpaque: never parse or format-validate it.\n",
+    )
+    firstName: str | None = Field(
+        None,
+        description="Given name. Minted only when the application's claim policy\npermits it AND the user has granted the claim; may be absent\neven when the account has a value stored.\n",
+    )
+    lastName: str | None = Field(
+        None, description="Family name. Same consent gating as `firstName`.\n"
+    )
+    emailAddress: str | None = Field(
+        None,
+        description="Verified email associated with this login. Consent-gated like\n`firstName` / `lastName` (minted only when policy permits AND\nthe user granted the EMAIL claim). When included: the exact\nemail typed for email-OTP logins, otherwise the account's\nprimary email. Always omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only).\n",
+    )
+
+
+class RefreshTokenBody(BaseModel):
+    """
+    Decoded body (payload) of a Sudomimus refresh token. Carries the
+    sector `subject` (the same pairwise identifier as the access-token
+    body) because the refresh token leaves the system and must never
+    expose the internal account identifier. Informational only —
+    `/refresh` resolves the token by its `jti`, not by reading the body.
+
+    """
+
+    subject: str = Field(
+        ...,
+        description="The application-visible **sector subject**. Opaque: never\nparse or format-validate it.\n",
     )
 
 
@@ -145,7 +195,7 @@ class LogoutResponse(BaseModel):
 class RevokeAllRequest(BaseModel):
     subject: str = Field(
         ...,
-        description="The sector subject the application sees for the user (the access / id token `sub`). Reverse-mapped server-side to the underlying account; a subject the application has never been issued (or one from another sector) revokes nothing.",
+        description="The sector subject the application sees for the user (the access / id token `sub`). Reverse-mapped server-side to the underlying account, whose sessions are then revoked for the calling application. A subject the application has never been issued (or one from another sector) revokes nothing.",
     )
 
 
@@ -162,11 +212,36 @@ class Method(StrEnum):
 
     PASSKEY = "PASSKEY"
     EMAIL_VERIFICATION = "EMAIL_VERIFICATION"
+    STEAM_TICKET = "STEAM_TICKET"
+    STEAM_OPENID = "STEAM_OPENID"
+    ACCESS_KEY_DIRECT = "ACCESS_KEY_DIRECT"
+    GOOGLE_OAUTH = "GOOGLE_OAUTH"
+    GITHUB_OAUTH = "GITHUB_OAUTH"
+    DISCORD_OAUTH = "DISCORD_OAUTH"
+    BATTLENET_OAUTH = "BATTLENET_OAUTH"
+    X_OAUTH = "X_OAUTH"
 
 
 class AuthenticationRulePasskeyPayload(BaseModel):
     """
-    Empty payload — passkey constraints carry no further parameters.
+    Passkey-method payload. `allowUsernameless` opts the application
+    in to discoverable-credential ("usernameless") passkey login,
+    where the user authenticates without first entering an email.
+    Absent or `false` keeps the email-first flow; only the entry
+    path is affected — realize authorization is still decided
+    entirely by Layer 2.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    allowUsernameless: bool | None = None
+
+
+class AuthenticationRuleEmailVerificationPayload(BaseModel):
+    """
+    Empty payload — email-verification constraints carry no further parameters.
     """
 
     model_config = ConfigDict(
@@ -174,9 +249,123 @@ class AuthenticationRulePasskeyPayload(BaseModel):
     )
 
 
-class AuthenticationRuleEmailVerificationPayload(BaseModel):
+class AllowedSteamAppId(RootModel[int]):
+    root: int = Field(..., ge=1)
+
+
+class AuthenticationRuleSteamTicketPayload(BaseModel):
     """
-    Empty payload — email-verification constraints carry no further parameters.
+    Steam-native-ticket payload. Gates native-api's
+    `/direct-issue/steam-ticket` flow. `allowedSteamAppIds` is the
+    non-empty list of Steam App IDs whose tickets are accepted.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    allowedSteamAppIds: list[AllowedSteamAppId] = Field(..., min_length=1)
+
+
+class AuthenticationRuleSteamOpenIdPayload(BaseModel):
+    """
+    Steam OpenID 2.0 carries no app-id concept (that is
+    native-ticket-specific). Any Steam account is accepted as long
+    as the application's rule set allows STEAM_OPENID at all.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleAccessKeyDirectPayload(BaseModel):
+    """
+    Gates native-api's `/direct-issue/access-key` flow. Credentials
+    live in the dedicated `AccessKeyCredential` table; no row of
+    this method ever appears in the `Authentication` table.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleGoogleOAuthPayload(BaseModel):
+    """
+    Phase 1: any Google account is accepted as long as the
+    application's rule set allows GOOGLE_OAUTH at all. A later
+    phase will add `allowedHostedDomains: string[]` for Google
+    Workspace gating.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AllowedGitHubOrg(RootModel[str]):
+    root: str = Field(..., min_length=1)
+
+
+class AuthenticationRuleGitHubOAuthPayload(BaseModel):
+    """
+    Empty `allowedGitHubOrgs` array means no org gating — any
+    GitHub account is accepted. Non-empty means the user must be a
+    member of at least one listed organization (case-insensitive
+    match on the org `login`). The `read:org` OAuth scope is only
+    requested when at least one matching rule carries a non-empty
+    allowlist; applications without org gating keep the minimal
+    `read:user user:email` consent screen.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    allowedGitHubOrgs: list[AllowedGitHubOrg]
+
+
+class AuthenticationRuleDiscordOAuthPayload(BaseModel):
+    """
+    Phase 1: any Discord account is accepted as long as the
+    application's rule set allows DISCORD_OAUTH at all. Phase 1.5
+    will add `allowedDiscordGuilds: string[]` for guild (server)
+    gating, which will additionally request the `guilds` OAuth
+    scope and fetch `GET /users/@me/guilds`.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleBattleNetOAuthPayload(BaseModel):
+    """
+    Battle.net (Blizzard) has no per-application gating concept, so any
+    Battle.net account is accepted as long as the application's rule set
+    allows BATTLENET_OAUTH at all. Empty payload. Battle.net is an
+    email-less provider, so Layer-2 EMAIL rules fail closed against a
+    Battle.net-only account.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleXOAuthPayload(BaseModel):
+    """
+    X (formerly Twitter) has no per-application gating concept, so any
+    X account is accepted as long as the application's rule set allows
+    X_OAUTH at all. Empty payload. X is an email-less provider, so
+    Layer-2 EMAIL rules fail closed against an X-only account.
+
     """
 
     model_config = ConfigDict(
@@ -202,25 +391,57 @@ class RealizeRuleEmailPayload(BaseModel):
     )
 
 
+class AllowedSteamId(RootModel[str]):
+    root: str = Field(..., pattern="^(\\*|[0-9]{1,20})$")
+
+
 class RealizeRuleSteamIdPayload(BaseModel):
-    allowedSteamIds: list[str] = Field(
-        ...,
-        description='Per-realize-time check against the realized account\'s SteamID64.\nEach entry is either the literal "*" (wildcard) or a decimal SteamID64 string.\n',
-    )
+    """
+    Per-realize-time check against the realized account's SteamID64.
+    Each entry is either the literal `"*"` (wildcard, allow any
+    Steam identity) or a decimal SteamID64 string.
+
+    """
+
+    allowedSteamIds: list[AllowedSteamId]
+
+
+class AllowedAccountAliase(RootModel[str]):
+    root: str = Field(..., max_length=128, min_length=1)
 
 
 class RealizeRuleAccountAliasPayload(BaseModel):
-    allowedAccountAliases: list[str] = Field(
-        ...,
-        description="Exact match on the realizing account's account alias — the user-visible, application-invisible, rotatable handle. No wildcard. Opaque: never parsed or format-validated.",
-    )
+    """
+    Exact match on the realizing account's **account alias** — the
+    user-visible, application-invisible, rotatable handle the user
+    reads in the With portal and shares out-of-band with whoever
+    configures the rule. No wildcard — because the account does not
+    yet exist during fresh registration, this constraint matches
+    nothing for new sign-ups. The alias is opaque: it is compared by
+    exact-string equality and never parsed or format-validated.
+
+    """
+
+    allowedAccountAliases: list[AllowedAccountAliase]
+
+
+class AllowedSectorSubject(RootModel[str]):
+    root: str = Field(..., max_length=128, min_length=1)
 
 
 class RealizeRuleSectorSubjectPayload(BaseModel):
-    allowedSectorSubjects: list[str] = Field(
-        ...,
-        description="Exact match on the realizing account's sector subject for the application's sector (the application-visible token `sub`). No wildcard. Opaque: never parsed or format-validated.",
-    )
+    """
+    Exact match on the realizing account's **sector subject** for the
+    realizing application's sector — the application-visible token
+    `sub` the owner already sees in their own logs. No wildcard.
+    Rotating the subject locks the user out (it becomes a brand-new,
+    not-yet-allow-listed identity) rather than letting them bypass the
+    rule. The subject is opaque: compared by exact-string equality and
+    never parsed or format-validated.
+
+    """
+
+    allowedSectorSubjects: list[AllowedSectorSubject]
 
 
 class Type(StrEnum):
@@ -258,7 +479,32 @@ class Type2(StrEnum):
 class ReturnMethodReveal(BaseModel):
     type: Literal["REVEAL"]
     payload: dict[str, Any] = Field(
-        ..., description="Empty payload — REVEAL surfaces tokens directly in the UI."
+        ...,
+        description="Empty payload. Tokens are surfaced directly in the UI at\nrealize time and the inquiry is marked redeemed immediately;\nany subsequent `/redeem` for the same inquiry fails with\n`InquiryAlreadyRedeemed`.\n",
+    )
+
+
+class Type3(StrEnum):
+    DIRECT_ISSUE = "DIRECT_ISSUE"
+
+
+class ReturnMethodDirectIssue(BaseModel):
+    type: Literal["DIRECT_ISSUE"]
+    payload: dict[str, Any] = Field(
+        ...,
+        description="Empty payload. Opts the application in to native-api's\ndirect-issue flows (`/direct-issue/steam-ticket`,\n`/direct-issue/access-key`). Per-inquiry payload is empty\nbecause direct-issue does not flow through `/establish`.\n",
+    )
+
+
+class Type4(StrEnum):
+    OIDC = "OIDC"
+
+
+class ReturnMethodOidc(BaseModel):
+    type: Literal["OIDC"]
+    payload: dict[str, Any] = Field(
+        ...,
+        description="Accepted on the wire for symmetry, but in practice OIDC is\nnot declared per-inquiry — the OIDC API drives its own\ninquiry against Connect via CALLBACK-to-self. The matching\nper-inquiry payload is therefore empty.\n",
     )
 
 
@@ -287,7 +533,16 @@ class AuthenticationRuleConstraint(BaseModel):
         ..., description="Which authentication method this constraint narrows to."
     )
     payload: (
-        AuthenticationRulePasskeyPayload | AuthenticationRuleEmailVerificationPayload
+        AuthenticationRulePasskeyPayload
+        | AuthenticationRuleEmailVerificationPayload
+        | AuthenticationRuleSteamTicketPayload
+        | AuthenticationRuleSteamOpenIdPayload
+        | AuthenticationRuleAccessKeyDirectPayload
+        | AuthenticationRuleGoogleOAuthPayload
+        | AuthenticationRuleGitHubOAuthPayload
+        | AuthenticationRuleDiscordOAuthPayload
+        | AuthenticationRuleBattleNetOAuthPayload
+        | AuthenticationRuleXOAuthPayload
     )
     accessTokenTtlSeconds: int | None = Field(
         None,
@@ -320,11 +575,21 @@ class RealizeRuleConstraint(BaseModel):
 
 
 class ReturnMethodDeclaration(
-    RootModel[ReturnMethodCallback | ReturnMethodStatusPoll | ReturnMethodReveal]
+    RootModel[
+        ReturnMethodCallback
+        | ReturnMethodStatusPoll
+        | ReturnMethodReveal
+        | ReturnMethodDirectIssue
+        | ReturnMethodOidc
+    ]
 ):
-    root: ReturnMethodCallback | ReturnMethodStatusPoll | ReturnMethodReveal = Field(
-        ..., discriminator="type"
-    )
+    root: (
+        ReturnMethodCallback
+        | ReturnMethodStatusPoll
+        | ReturnMethodReveal
+        | ReturnMethodDirectIssue
+        | ReturnMethodOidc
+    ) = Field(..., discriminator="type")
 
 
 class EstablishRequest(BaseModel):

@@ -29,9 +29,13 @@ type Header struct {
 // the value an application keys its users on. The raw internal account
 // identifier never appears in a token. It is opaque: never parse or
 // format-validate it.
+//
+// FirstName, LastName, and EmailAddress are consent-gated (claim sharing):
+// each is minted only when the application's claim policy permits it AND the
+// user has granted that claim, so any of them may be absent.
 type AccessTokenBody struct {
 	Subject      string `json:"subject"`
-	FirstName    string `json:"firstName"`
+	FirstName    string `json:"firstName,omitempty"`
 	LastName     string `json:"lastName,omitempty"`
 	EmailAddress string `json:"emailAddress,omitempty"`
 }

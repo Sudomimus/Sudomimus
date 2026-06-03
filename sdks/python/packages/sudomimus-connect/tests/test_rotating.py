@@ -85,7 +85,9 @@ def test_async_in_memory_store_round_trip() -> None:
 
 
 def test_rotating_refresh_without_seed_raises() -> None:
-    rotating = RotatingConnectClient(_sync_client(lambda r: httpx.Response(404)), InMemoryTokenStore())
+    rotating = RotatingConnectClient(
+        _sync_client(lambda r: httpx.Response(404)), InMemoryTokenStore()
+    )
     with pytest.raises(ConnectConfigError):
         rotating.refresh()
 

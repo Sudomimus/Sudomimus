@@ -20,14 +20,23 @@ public sealed record AccessTokenBody
     [JsonPropertyName("subject")]
     public required string Subject { get; init; }
 
+    /// <summary>
+    /// Given name. Consent-gated (claim sharing): minted only when the
+    /// application's claim policy permits it AND the user has granted the
+    /// claim, so it may be absent even when the account has a value stored.
+    /// </summary>
     [JsonPropertyName("firstName")]
-    public required string FirstName { get; init; }
+    public string? FirstName { get; init; }
 
+    /// <summary>Family name. Same consent gating as <c>FirstName</c>.</summary>
     [JsonPropertyName("lastName")]
     public string? LastName { get; init; }
 
     /// <summary>
-    /// Verified email associated with this login, when the account owns one.
+    /// Verified email associated with this login. Consent-gated like
+    /// <c>FirstName</c> / <c>LastName</c> (minted only when policy permits AND
+    /// the user granted the EMAIL claim), and always omitted for accounts with
+    /// no verified email (e.g. Steam-only or AccessKey-only).
     /// </summary>
     [JsonPropertyName("emailAddress")]
     public string? EmailAddress { get; init; }

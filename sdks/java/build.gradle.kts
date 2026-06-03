@@ -1,6 +1,6 @@
-plugins {
-    `java-library` apply false
-}
+// `java-library` is a core Gradle plugin (always on the classpath), so it is
+// not declared here with `apply false` — Gradle 8+ rejects that as an error.
+// Subprojects apply it themselves; the `subprojects` block below reacts to it.
 
 allprojects {
     group = "com.sudomimus"

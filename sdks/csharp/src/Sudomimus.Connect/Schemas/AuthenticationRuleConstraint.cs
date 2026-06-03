@@ -13,6 +13,8 @@ public static class AuthenticationMethod
     public const string GoogleOAuth = "GOOGLE_OAUTH";
     public const string GitHubOAuth = "GITHUB_OAUTH";
     public const string DiscordOAuth = "DISCORD_OAUTH";
+    public const string BattleNetOAuth = "BATTLENET_OAUTH";
+    public const string XOAuth = "X_OAUTH";
 }
 
 /// <summary>
@@ -45,7 +47,8 @@ public sealed record AuthenticationRuleConstraint
 ///   <item><c>STEAM_TICKET</c>: <see cref="AllowedSteamAppIds"/></item>
 ///   <item><c>GITHUB_OAUTH</c>: <see cref="AllowedGitHubOrgs"/></item>
 ///   <item><c>EMAIL_VERIFICATION</c>, <c>STEAM_OPENID</c>, <c>ACCESS_KEY_DIRECT</c>,
-///     <c>GOOGLE_OAUTH</c>, <c>DISCORD_OAUTH</c>: empty payload.</item>
+///     <c>GOOGLE_OAUTH</c>, <c>DISCORD_OAUTH</c>, <c>BATTLENET_OAUTH</c>,
+///     <c>X_OAUTH</c>: empty payload.</item>
 /// </list>
 /// </summary>
 public sealed record AuthenticationRulePayload

@@ -34,10 +34,15 @@ class AccessTokenBody(BaseModel):
     OIDC ``sub``) — the value an application keys its users on. The raw
     internal account identifier never appears in a token. Opaque: never
     parse or format-validate it.
+
+    ``firstName``, ``lastName``, and ``emailAddress`` are consent-gated
+    (claim sharing): each is minted only when the application's claim
+    policy permits it AND the user has granted that claim, so any of them
+    may be absent.
     """
 
     subject: str
-    firstName: str
+    firstName: str | None = None
     lastName: str | None = None
     emailAddress: str | None = None
 
