@@ -6,6 +6,12 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class HealthResponse(BaseModel):
+    ready: bool
+    service: str
+    version: str
+
+
 class DirectIssueAccessKeyRequest(BaseModel):
     applicationAnchor: str = Field(
         ..., description="Public anchor identifying the integrating application."
@@ -24,7 +30,7 @@ class DirectIssueAccessKeyResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Body shape matches the Connect SDK's access token.",
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
     )
     refreshToken: str = Field(
         ...,
@@ -51,7 +57,7 @@ class DirectIssueSteamTicketResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Body shape matches the Connect SDK's access token.",
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
     )
     refreshToken: str = Field(
         ...,

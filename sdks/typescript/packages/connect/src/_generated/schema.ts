@@ -318,7 +318,11 @@ export interface components {
         /** @description Decoded body (payload) of a Sudomimus access token. The standard
          *     JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
          *     `sub`) live in the JWT *header*; this object is the body. The
-         *     application keys its users on `subject`.
+         *     application keys its users on `subject`. The `firstName`,
+         *     `lastName`, and `emailAddress` claims are consent-gated (claim
+         *     sharing): each is minted only when the application's claim policy
+         *     permits it AND the user has granted that claim, so any of them may
+         *     be absent.
          *      */
         AccessTokenBody: {
             /** @description The application-visible user identifier — the per-(account,
@@ -328,13 +332,20 @@ export interface components {
              *     Opaque: never parse or format-validate it.
              *      */
             subject: string;
-            firstName: string;
+            /** @description Given name. Minted only when the application's claim policy
+             *     permits it AND the user has granted the claim; may be absent
+             *     even when the account has a value stored.
+             *      */
+            firstName?: string;
+            /** @description Family name. Same consent gating as `firstName`.
+             *      */
             lastName?: string;
-            /** @description Verified email associated with this login. Present only when
-             *     the account owns a verified email: the exact email typed for
-             *     email-OTP logins, otherwise the account's primary email.
-             *     Omitted for accounts with no verified email (e.g. Steam-only
-             *     or AccessKey-only).
+            /** @description Verified email associated with this login. Consent-gated like
+             *     `firstName` / `lastName` (minted only when policy permits AND
+             *     the user granted the EMAIL claim). When included: the exact
+             *     email typed for email-OTP logins, otherwise the account's
+             *     primary email. Always omitted for accounts with no verified
+             *     email (e.g. Steam-only or AccessKey-only).
              *      */
             emailAddress?: string;
         };
@@ -398,8 +409,8 @@ export interface components {
              * @description Which authentication method this constraint narrows to.
              * @enum {string}
              */
-            method: "PASSKEY" | "EMAIL_VERIFICATION" | "STEAM_TICKET" | "STEAM_OPENID" | "ACCESS_KEY_DIRECT" | "GOOGLE_OAUTH" | "GITHUB_OAUTH" | "DISCORD_OAUTH";
-            payload: components["schemas"]["AuthenticationRulePasskeyPayload"] | components["schemas"]["AuthenticationRuleEmailVerificationPayload"] | components["schemas"]["AuthenticationRuleSteamTicketPayload"] | components["schemas"]["AuthenticationRuleSteamOpenIdPayload"] | components["schemas"]["AuthenticationRuleAccessKeyDirectPayload"] | components["schemas"]["AuthenticationRuleGoogleOAuthPayload"] | components["schemas"]["AuthenticationRuleGitHubOAuthPayload"] | components["schemas"]["AuthenticationRuleDiscordOAuthPayload"];
+            method: "PASSKEY" | "EMAIL_VERIFICATION" | "STEAM_TICKET" | "STEAM_OPENID" | "ACCESS_KEY_DIRECT" | "GOOGLE_OAUTH" | "GITHUB_OAUTH" | "DISCORD_OAUTH" | "BATTLENET_OAUTH" | "X_OAUTH";
+            payload: components["schemas"]["AuthenticationRulePasskeyPayload"] | components["schemas"]["AuthenticationRuleEmailVerificationPayload"] | components["schemas"]["AuthenticationRuleSteamTicketPayload"] | components["schemas"]["AuthenticationRuleSteamOpenIdPayload"] | components["schemas"]["AuthenticationRuleAccessKeyDirectPayload"] | components["schemas"]["AuthenticationRuleGoogleOAuthPayload"] | components["schemas"]["AuthenticationRuleGitHubOAuthPayload"] | components["schemas"]["AuthenticationRuleDiscordOAuthPayload"] | components["schemas"]["AuthenticationRuleBattleNetOAuthPayload"] | components["schemas"]["AuthenticationRuleXOAuthPayload"];
             /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
             accessTokenTtlSeconds?: number;
             /** @description Per-constraint override for refresh token lifetime. Resolved at realize time. */
@@ -458,6 +469,19 @@ export interface components {
          *     scope and fetch `GET /users/@me/guilds`.
          *      */
         AuthenticationRuleDiscordOAuthPayload: Record<string, never>;
+        /** @description Battle.net (Blizzard) has no per-application gating concept, so any
+         *     Battle.net account is accepted as long as the application's rule set
+         *     allows BATTLENET_OAUTH at all. Empty payload. Battle.net is an
+         *     email-less provider, so Layer-2 EMAIL rules fail closed against a
+         *     Battle.net-only account.
+         *      */
+        AuthenticationRuleBattleNetOAuthPayload: Record<string, never>;
+        /** @description X (formerly Twitter) has no per-application gating concept, so any
+         *     X account is accepted as long as the application's rule set allows
+         *     X_OAUTH at all. Empty payload. X is an email-less provider, so
+         *     Layer-2 EMAIL rules fail closed against an X-only account.
+         *      */
+        AuthenticationRuleXOAuthPayload: Record<string, never>;
         RealizeRuleConstraint: {
             /**
              * @description Which realize-rule kind this constraint narrows to.
@@ -719,6 +743,8 @@ export interface operations {
              *     - `InquiryNotFound` — the `(exposureKey, hiddenKey,
              *       confirmationKey)` triple does not resolve to a realized
              *       inquiry.
+             *     - `InquiryExpired` — the inquiry resolved but its lifetime has
+             *       elapsed (expired by TTL or out of polling attempts).
              *     - `InquiryNotRealized` — the inquiry exists but has not been
              *       realized yet.
              *     - `InquiryAlreadyRedeemed` — the inquiry has already been
@@ -734,8 +760,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Application has been disabled via the admin kill switch.
-             *     Reason `ApplicationDisabled`.
+            /** @description The attempt was refused. The `reason` distinguishes:
+             *
+             *     - `ApplicationDisabled` — the application has been disabled
+             *       via the admin kill switch.
+             *     - `AccountDisabled` — the realizing account is disabled.
+             *     - `AccountDeleted` — the realizing account has been erased.
+             *     - `ClaimConsentRequired` — the application requires a claim
+             *       (email / first name / last name) the user has not granted;
+             *       the standing grant must be (re)established through an
+             *       interactive browser login before tokens can be issued.
              *      */
             403: {
                 headers: {
@@ -778,6 +812,17 @@ export interface operations {
                     "application/json": components["schemas"]["RefreshResponse"];
                 };
             };
+            /** @description Reason `AccountNotFound` — the account behind the refresh token
+             *     could not be resolved.
+             *      */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description Refresh token rejected. The `reason` distinguishes:
              *
              *     - `RefreshTokenNotFound` — token cannot be resolved (unknown
@@ -793,6 +838,24 @@ export interface operations {
              *       also treated as compromise and the family is revoked.
              *      */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The attempt was refused. The `reason` distinguishes:
+             *
+             *     - `AccountDisabled` — the account behind the refresh token is
+             *       disabled.
+             *     - `AccountDeleted` — the account has been erased.
+             *     - `ClaimConsentRequired` — a REQUIRED claim is no longer
+             *       satisfied by a standing grant (e.g. the user revoked it); the
+             *       grant must be re-established through an interactive browser
+             *       login.
+             *      */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

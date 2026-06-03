@@ -70,6 +70,18 @@ def test_verify_access_token_happy_path() -> None:
     assert token.header.aud == ANCHOR
 
 
+def test_verify_access_token_consent_gated_claims_absent() -> None:
+    # firstName / lastName / emailAddress are consent-gated and may be absent;
+    # a token carrying only `subject` must still parse.
+    private_pem, public_pem = _keypair()
+    jwt = _mint(private_pem, body={"subject": "subject-1"})
+    token = TokenVerifier(lambda _: public_pem).verify_access_token(jwt)
+    assert token.body.subject == "subject-1"
+    assert token.body.firstName is None
+    assert token.body.lastName is None
+    assert token.body.emailAddress is None
+
+
 def test_verify_refresh_token_happy_path() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem, kty="Refresh")

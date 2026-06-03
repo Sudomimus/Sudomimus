@@ -99,6 +99,28 @@ func TestVerifyAccessToken_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestVerifyAccessToken_ConsentGatedClaimsAbsent(t *testing.T) {
+	// firstName / lastName / emailAddress are consent-gated and may be
+	// absent; a token carrying only `subject` must still verify.
+	keys := generateRSAKeyPair(t)
+	iat := time.Now().Unix()
+	header := map[string]any{
+		"alg": "RS256", "typ": "JWT", "iss": "sudomimus.com",
+		"aud": "anchor-1", "iat": iat, "exp": iat + 3600,
+		"jti": "access-1", "kty": "Access", "sub": "refresh-1",
+	}
+	jwt := mintToken(t, header, map[string]any{"subject": "subject-1"}, keys.privateKey)
+
+	v := NewVerifier(staticResolver(keys.publicPEM))
+	tok, err := v.VerifyAccessToken(context.Background(), jwt)
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if tok.Body.Subject != "subject-1" || tok.Body.FirstName != "" || tok.Body.EmailAddress != "" {
+		t.Fatalf("unexpected body: %+v", tok.Body)
+	}
+}
+
 func TestVerifyRefreshToken_RoundTrip(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	jwt := mintRefreshToken(t, keys.privateKey, "anchor-1")
@@ -146,7 +168,7 @@ func TestVerifyAccessToken_MissingAudience(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	header := map[string]any{
 		"alg": "RS256", "typ": "JWT",
-		"iat": int64(0), "exp": int64(1<<62), "kty": "Access",
+		"iat": int64(0), "exp": int64(1 << 62), "kty": "Access",
 	}
 	body := map[string]any{"subject": "subject-1", "firstName": "Ada"}
 	jwt := mintToken(t, header, body, keys.privateKey)

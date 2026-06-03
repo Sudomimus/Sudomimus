@@ -46,9 +46,9 @@ export interface paths {
          *          named in `applicationAnchor`, is not revoked, and has not
          *          expired.
          *       4. Timing-safe-verifies `accessKeySecret`.
-         *       5. Validates the realize-rule layer (`STEAM_ID` / `EMAIL` /
-         *          `ACCOUNT_IDENTIFIER`) and ensures a `DIRECT_ISSUE` return
-         *          rule exists.
+         *       5. Validates the realize-rule layer (`EMAIL` / `STEAM_ID` /
+         *          `ACCOUNT_ALIAS` / `SECTOR_SUBJECT`) and ensures a
+         *          `DIRECT_ISSUE` return rule exists.
          *       6. Issues access + refresh JWTs and best-effort touches the
          *          credential's `lastUsedAt` timestamp.
          *
@@ -90,8 +90,9 @@ export interface paths {
          *       3. Verifies the ticket with Steam's
          *          `ISteamUserAuth/AuthenticateUserTicket` endpoint, identity
          *          `"sudomimus"`.
-         *       4. Validates the application's realize-rule layer (`STEAM_ID` /
-         *          `EMAIL`) and ensures a `DIRECT_ISSUE` return rule exists.
+         *       4. Validates the application's realize-rule layer (`EMAIL` /
+         *          `STEAM_ID` / `ACCOUNT_ALIAS` / `SECTOR_SUBJECT`) and ensures a
+         *          `DIRECT_ISSUE` return rule exists.
          *       5. Issues access + refresh JWTs signed with the application's
          *          private key.
          *
@@ -139,6 +140,8 @@ export interface components {
             /** @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
+             *     The `firstName` / `lastName` / `emailAddress` claims are
+             *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              *      */
             accessToken: string;
             /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key. */
@@ -168,6 +171,8 @@ export interface components {
             /** @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
+             *     The `firstName` / `lastName` / `emailAddress` claims are
+             *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              *      */
             accessToken: string;
             /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket. */
@@ -264,6 +269,12 @@ export interface operations {
              *       (which layer is indicated by the reason code).
              *     - `ApplicationDisabled` — the application has been disabled
              *       via the admin kill switch.
+             *     - `AccountDisabled` — the resolved account is disabled.
+             *     - `AccountDeleted` — the resolved account has been erased.
+             *     - `ClaimConsentRequired` — the application requires a claim the
+             *       user has not granted through an interactive browser login;
+             *       direct-issue cannot prompt, so it can only consume a grant
+             *       established earlier.
              *      */
             403: {
                 headers: {
@@ -351,6 +362,12 @@ export interface operations {
              *       (which layer is indicated by the reason code).
              *     - `ApplicationDisabled` — the application has been disabled
              *       via the admin kill switch.
+             *     - `AccountDisabled` — the resolved account is disabled.
+             *     - `AccountDeleted` — the resolved account has been erased.
+             *     - `ClaimConsentRequired` — the application requires a claim the
+             *       user has not granted through an interactive browser login;
+             *       direct-issue cannot prompt, so it can only consume a grant
+             *       established earlier.
              *      */
             403: {
                 headers: {

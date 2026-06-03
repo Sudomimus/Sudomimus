@@ -19,14 +19,25 @@ export type AccessTokenBody = {
      * format-validate it.
      */
     readonly subject: string;
-    readonly firstName: string;
+
+    /**
+     * Given name. Consent-gated (claim sharing): minted only when the
+     * application's claim policy permits it AND the user has granted the
+     * claim, so it may be absent even when the account has a value stored.
+     */
+    readonly firstName?: string;
+
+    /**
+     * Family name. Same consent gating as `firstName`.
+     */
     readonly lastName?: string;
 
     /**
-     * Verified email associated with this login. Present only when the
-     * account owns a verified email: the exact email typed for email-OTP
-     * logins, otherwise the account's primary email. Omitted for accounts
-     * with no verified email (e.g. Steam-only or AccessKey-only).
+     * Verified email associated with this login. Consent-gated like
+     * `firstName` / `lastName` (minted only when policy permits AND the user
+     * granted the EMAIL claim). When included: the exact email typed for
+     * email-OTP logins, otherwise the account's primary email. Always omitted
+     * for accounts with no verified email (e.g. Steam-only or AccessKey-only).
      */
     readonly emailAddress?: string;
 };

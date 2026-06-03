@@ -29,7 +29,12 @@ export const generateRsaKeyPair = (): { privateKey: string; publicKey: string } 
 
 export const mintAccessToken = (
     privateKey: string,
-    overrides: { expirationAt?: Date; keyType?: string; audience?: string } = {},
+    overrides: {
+        expirationAt?: Date;
+        keyType?: string;
+        audience?: string;
+        body?: AccessTokenBody;
+    } = {},
 ): string => {
 
     const creator: JWTCreator<AccessTokenHeader, AccessTokenBody> =
@@ -47,7 +52,7 @@ export const mintAccessToken = (
         audience: overrides.audience ?? APPLICATION_ANCHOR,
         subject: "refresh-1",
         header: {},
-        body: {
+        body: overrides.body ?? {
             subject: "subject-1",
             firstName: "Ada",
             lastName: "Lovelace",
