@@ -78,7 +78,16 @@ public class ConnectClientTests
     {
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.OK, """
-            { "applicationAnchor": "anchor-1", "refreshToken": "r-jwt", "accessToken": "a-jwt" }
+            {
+                "applicationAnchor": "anchor-1",
+                "refreshToken": "r-jwt",
+                "accessToken": "a-jwt",
+                "claims": {
+                    "email": { "requirement": "REQUIRED", "state": "GRANTED" },
+                    "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                }
+            }
             """);
         var client = NewClient(handler);
 
@@ -91,6 +100,8 @@ public class ConnectClientTests
 
         Assert.Equal("anchor-1", resp.ApplicationAnchor);
         Assert.Equal("a-jwt", resp.AccessToken);
+        Assert.Equal(ClaimRequirement.Required, resp.Claims.Email.Requirement);
+        Assert.Equal(ClaimGrantState.Granted, resp.Claims.Email.State);
 
         var req = Assert.Single(handler.Requests);
         Assert.Equal("https://connect.example.com/redeem", req.RequestUri!.ToString());
@@ -104,12 +115,14 @@ public class ConnectClientTests
     public async Task RefreshAsync_RoundTrips()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "new-a", "refreshToken": "new-r" }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "new-a", "refreshToken": "new-r", "claims": { "email": { "requirement": "OPTIONAL", "state": "GRANTED" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
         var client = NewClient(handler);
 
         var resp = await client.RefreshAsync(new RefreshRequest { RefreshToken = "r" });
         Assert.Equal("new-a", resp.AccessToken);
         Assert.Equal("new-r", resp.RefreshToken);
+        Assert.Equal(ClaimRequirement.Optional, resp.Claims.Email.Requirement);
+        Assert.Equal(ClaimGrantState.Granted, resp.Claims.Email.State);
     }
 
     [Fact]

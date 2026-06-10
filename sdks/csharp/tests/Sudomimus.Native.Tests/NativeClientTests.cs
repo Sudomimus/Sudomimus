@@ -23,7 +23,12 @@ public class NativeClientTests
             {
                 "applicationAnchor": "anchor-1",
                 "accessToken": "a-jwt",
-                "refreshToken": "r-jwt"
+                "refreshToken": "r-jwt",
+                "claims": {
+                    "email": { "requirement": "REQUIRED", "state": "GRANTED" },
+                    "firstName": { "requirement": "OPTIONAL", "state": "DENIED" },
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                }
             }
             """);
         using var http = new HttpClient(handler);
@@ -39,6 +44,11 @@ public class NativeClientTests
         Assert.Equal("anchor-1", response.ApplicationAnchor);
         Assert.Equal("a-jwt", response.AccessToken);
         Assert.Equal("r-jwt", response.RefreshToken);
+        Assert.Equal(ClaimRequirement.Required, response.Claims.Email.Requirement);
+        Assert.Equal(ClaimGrantState.Granted, response.Claims.Email.State);
+        Assert.Equal(ClaimRequirement.Optional, response.Claims.FirstName.Requirement);
+        Assert.Equal(ClaimGrantState.Denied, response.Claims.FirstName.State);
+        Assert.Equal(ClaimRequirement.Off, response.Claims.LastName.Requirement);
 
         var sentRequest = Assert.Single(handler.Requests);
         Assert.Equal(HttpMethod.Post, sentRequest.Method);
@@ -122,7 +132,12 @@ public class NativeClientTests
             {
                 "applicationAnchor": "anchor-1",
                 "accessToken": "a-jwt",
-                "refreshToken": "r-jwt"
+                "refreshToken": "r-jwt",
+                "claims": {
+                    "email": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                }
             }
             """);
         using var http = new HttpClient(handler);
@@ -138,6 +153,8 @@ public class NativeClientTests
         Assert.Equal("anchor-1", response.ApplicationAnchor);
         Assert.Equal("a-jwt", response.AccessToken);
         Assert.Equal("r-jwt", response.RefreshToken);
+        Assert.Equal(ClaimRequirement.Off, response.Claims.Email.Requirement);
+        Assert.Equal(ClaimGrantState.Unknown, response.Claims.Email.State);
 
         var sentRequest = Assert.Single(handler.Requests);
         Assert.Equal(HttpMethod.Post, sentRequest.Method);
@@ -202,5 +219,104 @@ public class NativeClientTests
         // Server-side code in clients/native-api/src/steam/verify-ticket.ts
         // hardcodes the same value. Drift here breaks all Steam logins.
         Assert.Equal("sudomimus", NativeConstants.SteamTicketIdentity);
+    }
+
+    [Fact]
+    public async Task DirectIssue_Throws403_ClaimGate_ExposesClaimsAndErrand()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.Forbidden, """
+            {
+                "reason": "ClaimConsentRequired",
+                "claims": {
+                    "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
+                    "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                },
+                "errand": {
+                    "errandKey": "ernd_courier-route-abcdef012345-seal",
+                    "url": "https://via.sudomimus.com/errand?key=ernd_courier-route-abcdef012345-seal",
+                    "expiresAt": "2026-06-10T12:30:00.000Z"
+                }
+            }
+            """);
+        using var http = new HttpClient(handler);
+        var client = new NativeClient("https://native.example.com", http);
+
+        var ex = await Assert.ThrowsAsync<NativeApiException>(() =>
+            client.DirectIssueSteamTicketAsync(new DirectIssueSteamTicketRequest
+            {
+                ApplicationAnchor = "anchor-1",
+                SteamTicketHex = "deadbeef",
+                SteamAppId = 480,
+            }));
+
+        Assert.Equal(HttpStatusCode.Forbidden, ex.StatusCode);
+        Assert.Equal(NativeReason.ClaimConsentRequired, ex.Reason);
+        Assert.True(ex.IsClaimGate);
+
+        Assert.NotNull(ex.Claims);
+        Assert.Equal(ClaimRequirement.Required, ex.Claims!.Email.Requirement);
+        Assert.Equal(ClaimGrantState.Unknown, ex.Claims.Email.State);
+
+        Assert.NotNull(ex.Errand);
+        Assert.Equal("ernd_courier-route-abcdef012345-seal", ex.Errand!.ErrandKey);
+        Assert.Equal(
+            "https://via.sudomimus.com/errand?key=ernd_courier-route-abcdef012345-seal",
+            ex.Errand.Url);
+        Assert.Equal(
+            new DateTimeOffset(2026, 6, 10, 12, 30, 0, TimeSpan.Zero),
+            ex.Errand.ExpiresAt);
+    }
+
+    [Fact]
+    public async Task DirectIssue_Throws403_LayerDenied_IsNotClaimGate()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.Forbidden, """{ "reason": "Layer2Denied" }""");
+        using var http = new HttpClient(handler);
+        var client = new NativeClient("https://native.example.com", http);
+
+        var ex = await Assert.ThrowsAsync<NativeApiException>(() =>
+            client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
+            {
+                ApplicationAnchor = "anchor-1",
+                AccessKeyIdentifier = "01890c5e-1234-4abc-9def-0123456789ab",
+                AccessKeySecret = new string('a', 64),
+            }));
+
+        Assert.Equal(NativeReason.Layer2Denied, ex.Reason);
+        Assert.False(ex.IsClaimGate);
+        Assert.Null(ex.Claims);
+        Assert.Null(ex.Errand);
+    }
+
+    [Fact]
+    public async Task GetErrandStatusAsync_GetsExpectedUrlAndParsesStatus()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.OK, """{ "status": "COMPLETED" }""");
+        using var http = new HttpClient(handler);
+        var client = new NativeClient("https://native.example.com", http);
+
+        var response = await client.GetErrandStatusAsync("ernd_courier-route-abcdef012345-seal");
+
+        Assert.Equal(ErrandStatus.Completed, response.Status);
+
+        var sentRequest = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Get, sentRequest.Method);
+        Assert.Equal(
+            "https://native.example.com/errand/ernd_courier-route-abcdef012345-seal/status",
+            sentRequest.RequestUri!.ToString());
+        Assert.Null(sentRequest.Body);
+    }
+
+    [Fact]
+    public async Task GetErrandStatusAsync_Throws_OnNullOrEmptyKey()
+    {
+        using var http = new HttpClient(new FakeHttpMessageHandler());
+        var client = new NativeClient("https://native.example.com", http);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => client.GetErrandStatusAsync(""));
     }
 }

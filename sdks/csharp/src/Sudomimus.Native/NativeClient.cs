@@ -114,6 +114,54 @@ public sealed class NativeClient
             cancellationToken);
     }
 
+    /// <summary>
+    /// Poll the status of an errand handed back on a claim-gate 403
+    /// (<see cref="NativeApiException.Errand"/>). A pure, side-effect-free read
+    /// — safe to call every couple of seconds while the user completes the
+    /// browser side-trip. Unknown, malformed, and expired keys all report
+    /// <see cref="ErrandStatus.Expired"/> (the endpoint is not a key-validity
+    /// oracle). On <see cref="ErrandStatus.Completed"/>, retry the original
+    /// direct-issue request once.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="errandKey"/> is null or empty.
+    /// </exception>
+    /// <exception cref="NativeApiException">
+    /// The Native API returned a non-success HTTP status.
+    /// </exception>
+    public async Task<ErrandStatusResponse> GetErrandStatusAsync(
+        string errandKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(errandKey))
+        {
+            throw new ArgumentException("errandKey must not be null or empty.", nameof(errandKey));
+        }
+
+        var path = $"/errand/{Uri.EscapeDataString(errandKey)}/status";
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(_baseUrl, path));
+        httpRequest.Headers.Accept.ParseAdd("application/json");
+
+        using var response = await _http.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await TryReadErrorBodyAsync(response, cancellationToken).ConfigureAwait(false);
+            throw new NativeApiException(response.StatusCode, errorBody?.Reason, errorBody);
+        }
+
+        var parsed = await response.Content
+            .ReadFromJsonAsync<ErrandStatusResponse>(s_jsonOptions, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (parsed is null)
+        {
+            throw new NativeApiException(response.StatusCode, "EmptyResponseBody", null);
+        }
+
+        return parsed;
+    }
+
     private async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
         string path,
         TRequest request,

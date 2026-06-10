@@ -33,7 +33,7 @@ public class RotatingConnectClientTests
     public async Task RefreshAsync_RotatesAndPersistsNewPair()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2" }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
         var store = new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" });
         var wrapper = new RotatingConnectClient(NewClient(handler), store);
 
@@ -62,7 +62,7 @@ public class RotatingConnectClientTests
     public async Task RefreshAsync_CoalescesConcurrentCalls()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2" }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
         var wrapper = new RotatingConnectClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
@@ -80,8 +80,8 @@ public class RotatingConnectClientTests
     public async Task RefreshAsync_ReleasesInFlightSlotOnSuccess()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2" }""");
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a3", "refreshToken": "r3" }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a3", "refreshToken": "r3", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
         var wrapper = new RotatingConnectClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
@@ -100,7 +100,7 @@ public class RotatingConnectClientTests
     {
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.Unauthorized, """{ "reason": "RefreshTokenFamilyCompromised" }""");
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2" }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
         var wrapper = new RotatingConnectClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));

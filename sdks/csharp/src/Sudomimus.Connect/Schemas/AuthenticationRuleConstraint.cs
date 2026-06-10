@@ -5,7 +5,8 @@ namespace Sudomimus.Connect;
 /// <summary>Authentication-rule method discriminator values.</summary>
 public static class AuthenticationMethod
 {
-    public const string Passkey = "PASSKEY";
+    public const string PasskeyUsernameless = "PASSKEY_USERNAMELESS";
+    public const string PasskeyReasoned = "PASSKEY_REASONED";
     public const string EmailVerification = "EMAIL_VERIFICATION";
     public const string SteamTicket = "STEAM_TICKET";
     public const string SteamOpenId = "STEAM_OPENID";

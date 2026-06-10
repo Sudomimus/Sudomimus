@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <PackageId>Sudomimus.Native</PackageId>
-    <Version>1.1.0</Version>
-    <Description>HTTP client for the Sudomimus Native API — exchanges Steam Web API auth tickets for application access and refresh tokens. Generic .NET package usable from any C# runtime (consoles, Godot, Unity, ASP.NET).</Description>
+    <Version>1.2.0</Version>
+    <Description>HTTP client for the Sudomimus Native API — exchanges Steam Web API auth tickets or access-key credentials for application access and refresh tokens, surfaces the per-claim consent view, and carries the errand recovery handoff for claim-gated logins. Generic .NET package usable from any C# runtime (consoles, Godot, Unity, ASP.NET).</Description>
     <PackageTags>sudomimus;steam;auth;godot</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

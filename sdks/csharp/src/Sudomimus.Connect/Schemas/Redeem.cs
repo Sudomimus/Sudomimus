@@ -24,4 +24,12 @@ public sealed record RedeemResponse
 
     [JsonPropertyName("accessToken")]
     public required string AccessToken { get; init; }
+
+    /// <summary>
+    /// Per-claim view explaining why each shareable claim is or is not present
+    /// in the minted token (the application's policy joined with the user's
+    /// standing decision).
+    /// </summary>
+    [JsonPropertyName("claims")]
+    public required ClaimsStateView Claims { get; init; }
 }

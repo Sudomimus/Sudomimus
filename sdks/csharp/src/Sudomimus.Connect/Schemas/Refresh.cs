@@ -21,4 +21,12 @@ public sealed record RefreshResponse
     /// </summary>
     [JsonPropertyName("refreshToken")]
     public required string RefreshToken { get; init; }
+
+    /// <summary>
+    /// Per-claim view explaining why each shareable claim is or is not present
+    /// in the minted token. Read it after a refresh to detect a policy
+    /// escalation (a claim that became REQUIRED but is not yet satisfied).
+    /// </summary>
+    [JsonPropertyName("claims")]
+    public required ClaimsStateView Claims { get; init; }
 }

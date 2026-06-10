@@ -46,11 +46,21 @@ public sealed class ModelContractTests
         { "connect", "RevokeAllRequest", typeof(Connect.RevokeAllRequest) },
         { "connect", "RevokeAllResponse", typeof(Connect.RevokeAllResponse) },
 
+        // ---- Connect: claims view (carried on redeem / refresh) ----
+        { "connect", "ClaimRequirementStateView", typeof(Connect.ClaimRequirementStateView) },
+        { "connect", "ClaimsStateView", typeof(Connect.ClaimsStateView) },
+
         // ---- Native: direct-issue DTOs ----
         { "native", "DirectIssueAccessKeyRequest", typeof(Native.DirectIssueAccessKeyRequest) },
         { "native", "DirectIssueAccessKeyResponse", typeof(Native.DirectIssueAccessKeyResponse) },
         { "native", "DirectIssueSteamTicketRequest", typeof(Native.DirectIssueSteamTicketRequest) },
         { "native", "DirectIssueSteamTicketResponse", typeof(Native.DirectIssueSteamTicketResponse) },
+
+        // ---- Native: claims view + errand handoff ----
+        { "native", "ClaimRequirementStateView", typeof(Native.ClaimRequirementStateView) },
+        { "native", "ClaimsStateView", typeof(Native.ClaimsStateView) },
+        { "native", "ErrandHandoff", typeof(Native.ErrandHandoff) },
+        { "native", "ErrandStatusResponse", typeof(Native.ErrandStatusResponse) },
     };
 
     [Theory]
@@ -94,6 +104,11 @@ public sealed class ModelContractTests
     {
         { "connect", "AuthenticationRuleConstraint", "method", typeof(Connect.AuthenticationMethod) },
         { "connect", "IntrospectResponse", "status", typeof(Connect.IntrospectStatus) },
+        { "connect", "ClaimRequirementStateView", "requirement", typeof(Connect.ClaimRequirement) },
+        { "connect", "ClaimRequirementStateView", "state", typeof(Connect.ClaimGrantState) },
+        { "native", "ClaimRequirementStateView", "requirement", typeof(Native.ClaimRequirement) },
+        { "native", "ClaimRequirementStateView", "state", typeof(Native.ClaimGrantState) },
+        { "native", "ErrandStatusResponse", "status", typeof(Native.ErrandStatus) },
     };
 
     [Theory]
