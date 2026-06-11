@@ -56,7 +56,6 @@ export interface paths {
          *     revoked, expired, wrong secret) collapse into a single opaque
          *     `AccessKeyDirectDenied` 401 reason to avoid leaking identifier
          *     existence.
-         *
          */
         post: operations["directIssueAccessKey"];
         delete?: never;
@@ -104,9 +103,43 @@ export interface paths {
          *     resolved identity is stored as a `STEAM_ID64` Authentication row
          *     — `STEAM_TICKET` and `STEAM_OPENID` share a single identity row
          *     per SteamID64, differing only in how the SteamID64 was proven.
-         *
          */
         post: operations["directIssueSteamTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/errand/{errandKey}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll the status of an errand handoff.
+         * @description Lightweight polling endpoint for the errand handoff returned by a
+         *     claim-gate 403: bearer-by-key, no other authentication, a pure
+         *     single-row read with no side effects — unlike retrying direct-issue,
+         *     which is the full credential round-trip. Poll every ~2 seconds while
+         *     the user completes the browser side-trip, or skip polling and let
+         *     the user signal completion in your own UI.
+         *
+         *     An accidental direct-issue retry will not split your polling state:
+         *     while the current ticket has at least 15 minutes left and the task
+         *     scope is unchanged, the retry returns the SAME `errandKey`; a fresh
+         *     ticket is minted only near expiry or after a scope change.
+         *
+         *     Unknown, malformed, and expired keys are deliberately
+         *     indistinguishable: all report `EXPIRED`, so the endpoint cannot be
+         *     used to probe key validity. `COMPLETED` means every task finished —
+         *     retry the direct-issue request once to obtain tokens.
+         */
+        get: operations["errandStatus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -125,24 +158,28 @@ export interface components {
         DirectIssueAccessKeyRequest: {
             /** @description Public anchor identifying the integrating application. */
             applicationAnchor: string;
-            /** @description UUID v4 string identifying the access-key credential.
+            /**
+             * @description UUID v4 string identifying the access-key credential.
              *     Format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
-             *      */
+             */
             accessKeyIdentifier: string;
-            /** @description 64-char lowercase hex string (32 random bytes) returned exactly
+            /**
+             * @description 64-char lowercase hex string (32 random bytes) returned exactly
              *     once when the access key was issued. Never logged or persisted
              *     in plaintext server-side after creation.
-             *      */
+             */
             accessKeySecret: string;
         };
         DirectIssueAccessKeyResponse: {
+            claims: components["schemas"]["ClaimsStateView"];
             applicationAnchor: string;
-            /** @description Short-lived access token (JWT). Body shape matches Connect's
+            /**
+             * @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
              *     The `firstName` / `lastName` / `emailAddress` claims are
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
-             *      */
+             */
             accessToken: string;
             /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key. */
             refreshToken: string;
@@ -150,11 +187,12 @@ export interface components {
         DirectIssueSteamTicketRequest: {
             /** @description Public anchor identifying the integrating application. */
             applicationAnchor: string;
-            /** @description Hex-encoded Steam Web API auth ticket bytes returned from
+            /**
+             * @description Hex-encoded Steam Web API auth ticket bytes returned from
              *     `ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case
              *     insensitive — the server lowercases before hashing for replay
              *     protection, but forwards the original bytes to Steam.
-             *      */
+             */
             steamTicketHex: string;
             /**
              * Format: int64
@@ -162,27 +200,87 @@ export interface components {
              *     allow-listed by the application's `STEAM_TICKET` authentication
              *     rule. Tickets are bound to their issuing App ID server-side;
              *     passing a different value will fail Steam verification.
-             *
              */
             steamAppId: number;
         };
         DirectIssueSteamTicketResponse: {
+            claims: components["schemas"]["ClaimsStateView"];
             applicationAnchor: string;
-            /** @description Short-lived access token (JWT). Body shape matches Connect's
+            /**
+             * @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
              *     The `firstName` / `lastName` / `emailAddress` claims are
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
-             *      */
+             */
             accessToken: string;
             /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket. */
             refreshToken: string;
         };
-        /** @description Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
+        /**
+         * @description One shareable claim: what the application requests (`requirement`)
+         *     joined with the user's standing decision (`state`). `UNKNOWN` means
+         *     the user was never asked; `DENIED` means the user explicitly
+         *     declined.
+         */
+        ClaimRequirementStateView: {
+            /** @enum {string} */
+            requirement: "OFF" | "OPTIONAL" | "REQUIRED";
+            /** @enum {string} */
+            state: "UNKNOWN" | "GRANTED" | "DENIED";
+        };
+        /**
+         * @description Per-claim view across the three shareable claims, carried on both
+         *     the 200 (why is a claim absent from the minted token) and the
+         *     claim-gate 403 (what is still owed).
+         */
+        ClaimsStateView: {
+            email: components["schemas"]["ClaimRequirementStateView"];
+            firstName: components["schemas"]["ClaimRequirementStateView"];
+            lastName: components["schemas"]["ClaimRequirementStateView"];
+        };
+        /**
+         * @description The browser side-trip that unblocks a claim-gated direct-issue:
+         *     a short-lived (30 minutes), single-use bearer URL where the user
+         *     authenticates (when account data is being written), completes any
+         *     missing data, and grants consent. The stored task list is server-
+         *     side only — open the URL and let the page drive. Repeated blocked
+         *     calls re-hand the same live handoff (same `errandKey`, original
+         *     `expiresAt`) while it has at least 15 minutes left and the owed
+         *     task scope is unchanged.
+         */
+        ErrandHandoff: {
+            /** @description Bearer key (`ernd_…`); also the status-poll path key. */
+            errandKey: string;
+            /**
+             * Format: uri
+             * @description Open this in the user's system browser.
+             */
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        /**
+         * @description 403 body. For the claim-gate reasons (`ClaimConsentRequired`,
+         *     `RequiredClaimDataMissing`) the `claims` view and the `errand`
+         *     handoff are present; for every other reason only `reason` is set.
+         */
+        DirectIssueDeniedError: {
+            /** @description Stable machine-readable reason code. */
+            reason: string;
+            claims?: components["schemas"]["ClaimsStateView"];
+            errand?: components["schemas"]["ErrandHandoff"];
+        };
+        ErrandStatusResponse: {
+            /** @enum {string} */
+            status: "PENDING" | "COMPLETED" | "EXPIRED";
+        };
+        /**
+         * @description Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
          *     for known failure modes. When the reason symbol's description begins with
          *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
          *     signal — both `reason` and the body itself are absent in that case.
-         *      */
+         */
         Error: {
             /** @description Stable machine-readable reason code. */
             reason?: string;
@@ -238,10 +336,11 @@ export interface operations {
                     "application/json": components["schemas"]["DirectIssueAccessKeyResponse"];
                 };
             };
-            /** @description Malformed request body. The `reason` distinguishes
+            /**
+             * @description Malformed request body. The `reason` distinguishes
              *     `Invalid accessKeyIdentifier` (must be a UUID v4) and
              *     `Invalid accessKeySecret` (must be 64 lowercase hex chars).
-             *      */
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -250,10 +349,11 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The access-key credential was rejected. The `reason` is
+            /**
+             * @description The access-key credential was rejected. The `reason` is
              *     uniformly `AccessKeyDirectDenied` regardless of root cause
              *     (not found, app mismatch, revoked, expired, wrong secret).
-             *      */
+             */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -262,7 +362,8 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The attempt was refused. The response `reason` distinguishes:
+            /**
+             * @description The attempt was refused. The response `reason` distinguishes:
              *
              *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — the
              *       application's three-layer rules rejected this attempt
@@ -272,16 +373,30 @@ export interface operations {
              *     - `AccountDisabled` — the resolved account is disabled.
              *     - `AccountDeleted` — the resolved account has been erased.
              *     - `ClaimConsentRequired` — the application requires a claim the
-             *       user has not granted through an interactive browser login;
-             *       direct-issue cannot prompt, so it can only consume a grant
-             *       established earlier.
-             *      */
+             *       user has not yet granted; direct-issue cannot prompt.
+             *     - `RequiredClaimDataMissing` — every required claim is granted,
+             *       but the account lacks the underlying data (e.g. no email on a
+             *       Steam-created account).
+             *
+             *     For the two claim-gate reasons the body additionally carries a
+             *     per-claim `claims` view (UNKNOWN distinguishes "never asked"
+             *     from DENIED "declined") and an `errand` handoff — a short-lived
+             *     browser URL where the user can authenticate, complete the
+             *     missing data, and grant consent. Open `errand.url` in the
+             *     system browser, poll `GET /errand/{errandKey}/status` (or wait
+             *     for the user), then retry this request once.
+             *
+             *     Repeated blocked calls reuse the live ticket: while it has at
+             *     least 15 minutes left and the owed task scope is unchanged, the
+             *     same `errandKey` (with its original `expiresAt`) is returned
+             *     again, so retries cannot split the handoff state.
+             */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["DirectIssueDeniedError"];
                 };
             };
             /** @description Application anchor not found. */
@@ -293,9 +408,10 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The access key's account record is missing — an internal
+            /**
+             * @description The access key's account record is missing — an internal
              *     state inconsistency. Reason `AccessKeyCredentialAccountMissing`.
-             *      */
+             */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -355,7 +471,8 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The attempt was refused. The response `reason` distinguishes:
+            /**
+             * @description The attempt was refused. The response `reason` distinguishes:
              *
              *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — the
              *       application's three-layer rules rejected this attempt
@@ -365,16 +482,30 @@ export interface operations {
              *     - `AccountDisabled` — the resolved account is disabled.
              *     - `AccountDeleted` — the resolved account has been erased.
              *     - `ClaimConsentRequired` — the application requires a claim the
-             *       user has not granted through an interactive browser login;
-             *       direct-issue cannot prompt, so it can only consume a grant
-             *       established earlier.
-             *      */
+             *       user has not yet granted; direct-issue cannot prompt.
+             *     - `RequiredClaimDataMissing` — every required claim is granted,
+             *       but the account lacks the underlying data (e.g. no email on a
+             *       Steam-created account).
+             *
+             *     For the two claim-gate reasons the body additionally carries a
+             *     per-claim `claims` view (UNKNOWN distinguishes "never asked"
+             *     from DENIED "declined") and an `errand` handoff — a short-lived
+             *     browser URL where the user can authenticate, complete the
+             *     missing data, and grant consent. Open `errand.url` in the
+             *     system browser, poll `GET /errand/{errandKey}/status` (or wait
+             *     for the user), then retry this request once.
+             *
+             *     Repeated blocked calls reuse the live ticket: while it has at
+             *     least 15 minutes left and the owed task scope is unchanged, the
+             *     same `errandKey` (with its original `expiresAt`) is returned
+             *     again, so retries cannot split the handoff state.
+             */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["DirectIssueDeniedError"];
                 };
             };
             /** @description Application anchor not found. */
@@ -386,10 +517,11 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Replay protection conflict — this Steam ticket has already been
+            /**
+             * @description Replay protection conflict — this Steam ticket has already been
              *     redeemed within the replay window. Acquire a fresh ticket via
              *     `GetAuthTicketForWebApi` and retry.
-             *      */
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -405,6 +537,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    errandStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `errand.errandKey` value from the 403 body. */
+                errandKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current errand status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrandStatusResponse"];
                 };
             };
             /** @description Error response. */

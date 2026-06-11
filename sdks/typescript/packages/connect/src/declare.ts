@@ -19,6 +19,8 @@ export type StatusPollPendingResponse = components["schemas"]["StatusPollPending
 export type StatusPollRealizedResponse = components["schemas"]["StatusPollRealizedResponse"];
 export type RedeemRequest = components["schemas"]["RedeemRequest"];
 export type RedeemResponse = components["schemas"]["RedeemResponse"];
+export type ClaimsStateView = components["schemas"]["ClaimsStateView"];
+export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementStateView"];
 export type RefreshRequest = components["schemas"]["RefreshRequest"];
 export type RefreshResponse = components["schemas"]["RefreshResponse"];
 export type InfoRequest = components["schemas"]["InfoRequest"];
@@ -31,7 +33,8 @@ export type RevokeAllRequest = components["schemas"]["RevokeAllRequest"];
 export type RevokeAllResponse = components["schemas"]["RevokeAllResponse"];
 
 export type AuthenticationRuleConstraint = components["schemas"]["AuthenticationRuleConstraint"];
-export type AuthenticationRulePasskeyPayload = components["schemas"]["AuthenticationRulePasskeyPayload"];
+export type AuthenticationRulePasskeyUsernamelessPayload = components["schemas"]["AuthenticationRulePasskeyUsernamelessPayload"];
+export type AuthenticationRulePasskeyReasonedPayload = components["schemas"]["AuthenticationRulePasskeyReasonedPayload"];
 export type AuthenticationRuleEmailVerificationPayload = components["schemas"]["AuthenticationRuleEmailVerificationPayload"];
 export type AuthenticationRuleSteamTicketPayload = components["schemas"]["AuthenticationRuleSteamTicketPayload"];
 export type AuthenticationRuleSteamOpenIdPayload = components["schemas"]["AuthenticationRuleSteamOpenIdPayload"];
@@ -39,6 +42,8 @@ export type AuthenticationRuleAccessKeyDirectPayload = components["schemas"]["Au
 export type AuthenticationRuleGoogleOAuthPayload = components["schemas"]["AuthenticationRuleGoogleOAuthPayload"];
 export type AuthenticationRuleGitHubOAuthPayload = components["schemas"]["AuthenticationRuleGitHubOAuthPayload"];
 export type AuthenticationRuleDiscordOAuthPayload = components["schemas"]["AuthenticationRuleDiscordOAuthPayload"];
+export type AuthenticationRuleBattleNetOAuthPayload = components["schemas"]["AuthenticationRuleBattleNetOAuthPayload"];
+export type AuthenticationRuleXOAuthPayload = components["schemas"]["AuthenticationRuleXOAuthPayload"];
 
 export type RealizeRuleConstraint = components["schemas"]["RealizeRuleConstraint"];
 export type RealizeRuleEmailPayload = components["schemas"]["RealizeRuleEmailPayload"];
@@ -57,12 +62,13 @@ export type ConnectErrorBody = components["schemas"]["Error"];
 
 /**
  * Runtime-accessible string-literal constants for the new enums. Kept as
- * `as const` objects so consumers can write `AUTHENTICATION_METHOD.PASSKEY`
+ * `as const` objects so consumers can write `AUTHENTICATION_METHOD.PASSKEY_USERNAMELESS`
  * while still narrowing to the union literal types generated from the
  * OpenAPI spec.
  */
 export const AUTHENTICATION_METHOD = {
-    PASSKEY: "PASSKEY",
+    PASSKEY_USERNAMELESS: "PASSKEY_USERNAMELESS",
+    PASSKEY_REASONED: "PASSKEY_REASONED",
     EMAIL_VERIFICATION: "EMAIL_VERIFICATION",
     STEAM_TICKET: "STEAM_TICKET",
     STEAM_OPENID: "STEAM_OPENID",
@@ -70,6 +76,8 @@ export const AUTHENTICATION_METHOD = {
     GOOGLE_OAUTH: "GOOGLE_OAUTH",
     GITHUB_OAUTH: "GITHUB_OAUTH",
     DISCORD_OAUTH: "DISCORD_OAUTH",
+    BATTLENET_OAUTH: "BATTLENET_OAUTH",
+    X_OAUTH: "X_OAUTH",
 } as const;
 export type AuthenticationMethod = AuthenticationRuleConstraint["method"];
 

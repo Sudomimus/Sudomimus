@@ -14,7 +14,19 @@ export type DirectIssueSteamTicketRequest = components["schemas"]["DirectIssueSt
 export type DirectIssueSteamTicketResponse = components["schemas"]["DirectIssueSteamTicketResponse"];
 export type DirectIssueAccessKeyRequest = components["schemas"]["DirectIssueAccessKeyRequest"];
 export type DirectIssueAccessKeyResponse = components["schemas"]["DirectIssueAccessKeyResponse"];
-export type NativeErrorBody = components["schemas"]["Error"];
+export type ClaimsStateView = components["schemas"]["ClaimsStateView"];
+export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementStateView"];
+export type ErrandHandoff = components["schemas"]["ErrandHandoff"];
+export type ErrandStatusResponse = components["schemas"]["ErrandStatusResponse"];
+export type DirectIssueDeniedError = components["schemas"]["DirectIssueDeniedError"];
+
+/**
+ * Error body for a failed direct-issue. Claim-gate 403s
+ * (`ClaimConsentRequired` / `RequiredClaimDataMissing`) additionally carry the
+ * `claims` view and the `errand` browser handoff; every other failure carries
+ * only `reason`.
+ */
+export type NativeErrorBody = components["schemas"]["DirectIssueDeniedError"];
 
 export interface NativeClientOptions {
     baseUrl: string;

@@ -28,7 +28,7 @@ describe("Connect schema-derived types", () => {
         const request: EstablishRequest = {
             applicationAnchor: "anchor-1",
             authenticationConstraints: [
-                { method: AUTHENTICATION_METHOD.PASSKEY, payload: {} },
+                { method: AUTHENTICATION_METHOD.PASSKEY_USERNAMELESS, payload: {} },
             ],
             realizeConstraints: [
                 {
@@ -50,7 +50,8 @@ describe("Connect schema-derived types", () => {
 
     it("exposes the new enum constants with the right literal values", () => {
 
-        expect(AUTHENTICATION_METHOD.PASSKEY).toBe("PASSKEY");
+        expect(AUTHENTICATION_METHOD.PASSKEY_USERNAMELESS).toBe("PASSKEY_USERNAMELESS");
+        expect(AUTHENTICATION_METHOD.PASSKEY_REASONED).toBe("PASSKEY_REASONED");
         expect(AUTHENTICATION_METHOD.EMAIL_VERIFICATION).toBe("EMAIL_VERIFICATION");
         expect(REALIZE_CONSTRAINT_TYPE.EMAIL).toBe("EMAIL");
         expect(RETURN_METHOD.CALLBACK).toBe("CALLBACK");

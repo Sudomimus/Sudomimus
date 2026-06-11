@@ -65,6 +65,11 @@ describe("NativeClient", () => {
                 applicationAnchor: "anchor-1",
                 accessToken: "a-jwt",
                 refreshToken: "r-jwt",
+                claims: {
+                    email: { requirement: "OFF", state: "UNKNOWN" },
+                    firstName: { requirement: "OFF", state: "UNKNOWN" },
+                    lastName: { requirement: "OFF", state: "UNKNOWN" },
+                },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
             const client = new NativeClient({
@@ -102,6 +107,11 @@ describe("NativeClient", () => {
                 applicationAnchor: "anchor-1",
                 accessToken: "a-jwt",
                 refreshToken: "r-jwt",
+                claims: {
+                    email: { requirement: "OFF", state: "UNKNOWN" },
+                    firstName: { requirement: "OFF", state: "UNKNOWN" },
+                    lastName: { requirement: "OFF", state: "UNKNOWN" },
+                },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
             const client = new NativeClient({
@@ -173,6 +183,64 @@ describe("NativeClient", () => {
                 name: "NativeApiError",
                 status: 403,
                 reason: "Layer1Denied",
+            });
+        });
+    });
+
+    describe("errandStatus", () => {
+
+        it("GETs /errand/{errandKey}/status and returns the status", async () => {
+
+            const fetchMock = makeFetch([{ ok: true, status: 200, body: { status: "COMPLETED" } }]);
+            const client = new NativeClient({
+                baseUrl: "https://native.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const result = await client.errandStatus("ernd_courier-route-abcdef012345-seal");
+
+            expect(result.status).toBe("COMPLETED");
+            const [url, init] = fetchMock.mock.calls[0];
+            expect(url).toBe("https://native.example.com/errand/ernd_courier-route-abcdef012345-seal/status");
+            expect(init.method).toBe("GET");
+        });
+
+        it("exposes the claims view and errand handoff on a claim-gate 403", async () => {
+
+            const fetchMock = makeFetch([{
+                ok: false,
+                status: 403,
+                body: {
+                    reason: "ClaimConsentRequired",
+                    claims: {
+                        email: { requirement: "REQUIRED", state: "UNKNOWN" },
+                        firstName: { requirement: "OFF", state: "UNKNOWN" },
+                        lastName: { requirement: "OFF", state: "UNKNOWN" },
+                    },
+                    errand: {
+                        errandKey: "ernd_courier-route-abcdef012345-seal",
+                        url: "https://via.sudomimus.com/errand?key=ernd_courier-route-abcdef012345-seal",
+                        expiresAt: "2026-06-10T12:30:00.000Z",
+                    },
+                },
+            }]);
+            const client = new NativeClient({
+                baseUrl: "https://native.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            await expect(client.directIssueAccessKey({
+                applicationAnchor: "anchor-1",
+                accessKeyIdentifier: VALID_ACCESS_KEY_IDENTIFIER,
+                accessKeySecret: VALID_ACCESS_KEY_SECRET,
+            })).rejects.toMatchObject({
+                name: "NativeApiError",
+                status: 403,
+                reason: "ClaimConsentRequired",
+                body: {
+                    errand: { errandKey: "ernd_courier-route-abcdef012345-seal" },
+                    claims: { email: { state: "UNKNOWN" } },
+                },
             });
         });
     });

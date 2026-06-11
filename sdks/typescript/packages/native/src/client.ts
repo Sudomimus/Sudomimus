@@ -10,6 +10,7 @@ import type {
     DirectIssueAccessKeyResponse,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
+    ErrandStatusResponse,
     NativeClientOptions,
     NativeErrorBody,
 } from "./declare";
@@ -68,6 +69,28 @@ export class NativeClient {
             "/direct-issue/access-key",
             request,
         );
+    }
+
+    /**
+     * Poll the status of an errand handed back on a claim-gate 403 (the
+     * `errand` field of the error body). A pure, side-effect-free read — safe
+     * to call every couple of seconds while the user completes the browser
+     * side-trip. Unknown, malformed, and expired keys all report `EXPIRED`
+     * (the endpoint is not a key-validity oracle). On `COMPLETED`, retry the
+     * original direct-issue request once.
+     */
+    public async errandStatus(
+        errandKey: string,
+    ): Promise<ErrandStatusResponse> {
+
+        const path: string = `/errand/${encodeURIComponent(errandKey)}/status`;
+        const response: Response = await this._fetch(`${this._baseUrl}${path}`, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+        return this._handle<ErrandStatusResponse>(response);
     }
 
     private async _post<TReq, TRes>(

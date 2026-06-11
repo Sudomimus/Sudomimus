@@ -1,7 +1,7 @@
 {
     "name": "@sudomimus/native",
-    "version": "1.1.2",
-    "description": "Sudomimus Native SDK — direct-issue (Steam ticket, access key).",
+    "version": "1.2.0",
+    "description": "Sudomimus Native SDK — direct-issue (Steam ticket, access key), per-claim consent view, and errand recovery polling.",
     "license": "MIT",
     "repository": {
         "type": "git",

@@ -45,7 +45,6 @@ export interface paths {
          *     inquiry imposes no per-inquiry narrowing on that layer. When present
          *     the array MUST be non-empty — an empty array is explicitly rejected
          *     with HTTP 400.
-         *
          */
         post: operations["establish"];
         delete?: never;
@@ -113,7 +112,6 @@ export interface paths {
          *     applies when a concurrent rotation race is lost — per BCP §4.14.2
          *     a perfectly-timed retry is indistinguishable from an attacker
          *     racing the legitimate caller, so both paths count as compromise.
-         *
          */
         post: operations["refresh"];
         delete?: never;
@@ -160,7 +158,6 @@ export interface paths {
          *     against the issuing application's public key, so no client-auth JWT is
          *     required. The access token's own expiry is NOT enforced here; the answer
          *     describes the underlying session, not the access token's freshness.
-         *
          */
         post: operations["introspect"];
         delete?: never;
@@ -187,7 +184,6 @@ export interface paths {
          *     The operation is idempotent: a token that is already revoked or expired
          *     reports `revoked: true`, and a token that cannot be resolved reports
          *     `revoked: false` without revealing whether it ever existed.
-         *
          */
         post: operations["logout"];
         delete?: never;
@@ -213,7 +209,6 @@ export interface paths {
          *     can authorize — so it requires a client-auth JWT, exactly like
          *     /establish. Revocation is scoped to the calling application; sessions of
          *     the same account under other applications are unaffected.
-         *
          */
         post: operations["revokeAll"];
         delete?: never;
@@ -234,22 +229,25 @@ export interface components {
         EstablishRequest: {
             /** @description Public anchor identifying the integrating application. */
             applicationAnchor: string;
-            /** @description Optional per-inquiry narrowing of the application's
+            /**
+             * @description Optional per-inquiry narrowing of the application's
              *     authentication-rule layer. Absent means no narrowing. If present,
              *     the array MUST be non-empty; empty arrays are rejected with 400.
-             *      */
+             */
             authenticationConstraints?: components["schemas"]["AuthenticationRuleConstraint"][];
-            /** @description Optional per-inquiry narrowing of the application's realize-rule
+            /**
+             * @description Optional per-inquiry narrowing of the application's realize-rule
              *     layer. Absent means no narrowing. If present, the array MUST be
              *     non-empty; empty arrays are rejected with 400.
-             *      */
+             */
             realizeConstraints?: components["schemas"]["RealizeRuleConstraint"][];
-            /** @description Optional per-inquiry return-method declaration. Doubles as the
+            /**
+             * @description Optional per-inquiry return-method declaration. Doubles as the
              *     concrete delivery info for CALLBACK (carries the callback URL).
              *     Absent means no per-inquiry narrowing (CALLBACK is unreachable
              *     for this inquiry because no URL is anchored). If present, the
              *     array MUST be non-empty; empty arrays are rejected with 400.
-             *      */
+             */
             returnMethods?: components["schemas"]["ReturnMethodDeclaration"][];
         };
         EstablishResponse: {
@@ -285,37 +283,66 @@ export interface components {
             hiddenKey: string;
             confirmationKey: string;
         };
+        /**
+         * @description One shareable claim: what the application requests (`requirement`)
+         *     joined with the user's standing decision (`state`). `UNKNOWN` means
+         *     the user was never asked; `DENIED` means the user explicitly
+         *     declined.
+         */
+        ClaimRequirementStateView: {
+            /** @enum {string} */
+            requirement: "OFF" | "OPTIONAL" | "REQUIRED";
+            /** @enum {string} */
+            state: "UNKNOWN" | "GRANTED" | "DENIED";
+        };
+        /**
+         * @description Per-claim view across the three shareable claims — why a claim is
+         *     or is not present in the minted token (policy OFF, never asked,
+         *     declined, or granted).
+         */
+        ClaimsStateView: {
+            email: components["schemas"]["ClaimRequirementStateView"];
+            firstName: components["schemas"]["ClaimRequirementStateView"];
+            lastName: components["schemas"]["ClaimRequirementStateView"];
+        };
         RedeemResponse: {
+            claims: components["schemas"]["ClaimsStateView"];
             applicationAnchor: string;
-            /** @description Long-lived refresh token (JWT). Decode its body to
+            /**
+             * @description Long-lived refresh token (JWT). Decode its body to
              *     `RefreshTokenBody` (see schema). The refresh token leaves the
              *     system, so its body carries the sector `subject`, never the
              *     internal account identifier.
-             *      */
+             */
             refreshToken: string;
-            /** @description Short-lived access token (JWT). Decode its body to
+            /**
+             * @description Short-lived access token (JWT). Decode its body to
              *     `AccessTokenBody` (see schema) — the application-visible user
              *     key is the `subject` (sector subject) claim.
-             *      */
+             */
             accessToken: string;
         };
         RefreshRequest: {
             refreshToken: string;
         };
         RefreshResponse: {
-            /** @description Short-lived access token (JWT). Decode its body to
+            claims: components["schemas"]["ClaimsStateView"];
+            /**
+             * @description Short-lived access token (JWT). Decode its body to
              *     `AccessTokenBody` (see schema) — the application-visible user
              *     key is the `subject` (sector subject) claim.
-             *      */
+             */
             accessToken: string;
-            /** @description Newly issued refresh token (JWT); body is `RefreshTokenBody`.
+            /**
+             * @description Newly issued refresh token (JWT); body is `RefreshTokenBody`.
              *     The presented refresh token is invalidated atomically as part
              *     of the same call; re-presenting it is treated as compromise
              *     under OAuth 2.1 BCP §4.14.2 strict rotation.
-             *      */
+             */
             refreshToken: string;
         };
-        /** @description Decoded body (payload) of a Sudomimus access token. The standard
+        /**
+         * @description Decoded body (payload) of a Sudomimus access token. The standard
          *     JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
          *     `sub`) live in the JWT *header*; this object is the body. The
          *     application keys its users on `subject`. The `firstName`,
@@ -323,42 +350,46 @@ export interface components {
          *     sharing): each is minted only when the application's claim policy
          *     permits it AND the user has granted that claim, so any of them may
          *     be absent.
-         *      */
+         */
         AccessTokenBody: {
-            /** @description The application-visible user identifier — the per-(account,
+            /**
+             * @description The application-visible user identifier — the per-(account,
              *     sector) **sector subject**, also the OIDC `sub`. This is the
              *     value an application keys its users on; the raw internal
              *     account identifier never appears in a token. User-rotatable.
              *     Opaque: never parse or format-validate it.
-             *      */
+             */
             subject: string;
-            /** @description Given name. Minted only when the application's claim policy
+            /**
+             * @description Given name. Minted only when the application's claim policy
              *     permits it AND the user has granted the claim; may be absent
              *     even when the account has a value stored.
-             *      */
+             */
             firstName?: string;
-            /** @description Family name. Same consent gating as `firstName`.
-             *      */
+            /** @description Family name. Same consent gating as `firstName`. */
             lastName?: string;
-            /** @description Verified email associated with this login. Consent-gated like
+            /**
+             * @description Verified email associated with this login. Consent-gated like
              *     `firstName` / `lastName` (minted only when policy permits AND
              *     the user granted the EMAIL claim). When included: the exact
              *     email typed for email-OTP logins, otherwise the account's
              *     primary email. Always omitted for accounts with no verified
              *     email (e.g. Steam-only or AccessKey-only).
-             *      */
+             */
             emailAddress?: string;
         };
-        /** @description Decoded body (payload) of a Sudomimus refresh token. Carries the
+        /**
+         * @description Decoded body (payload) of a Sudomimus refresh token. Carries the
          *     sector `subject` (the same pairwise identifier as the access-token
          *     body) because the refresh token leaves the system and must never
          *     expose the internal account identifier. Informational only —
          *     `/refresh` resolves the token by its `jti`, not by reading the body.
-         *      */
+         */
         RefreshTokenBody: {
-            /** @description The application-visible **sector subject**. Opaque: never
+            /**
+             * @description The application-visible **sector subject**. Opaque: never
              *     parse or format-validate it.
-             *      */
+             */
             subject: string;
         };
         InfoRequest: {
@@ -381,7 +412,6 @@ export interface components {
             /**
              * @description Revocation state of the session behind the access token. `not_found`
              *     covers an unknown session or one belonging to a different application.
-             *
              * @enum {string}
              */
             status: "active" | "revoked" | "expired" | "not_found";
@@ -409,78 +439,88 @@ export interface components {
              * @description Which authentication method this constraint narrows to.
              * @enum {string}
              */
-            method: "PASSKEY" | "EMAIL_VERIFICATION" | "STEAM_TICKET" | "STEAM_OPENID" | "ACCESS_KEY_DIRECT" | "GOOGLE_OAUTH" | "GITHUB_OAUTH" | "DISCORD_OAUTH" | "BATTLENET_OAUTH" | "X_OAUTH";
-            payload: components["schemas"]["AuthenticationRulePasskeyPayload"] | components["schemas"]["AuthenticationRuleEmailVerificationPayload"] | components["schemas"]["AuthenticationRuleSteamTicketPayload"] | components["schemas"]["AuthenticationRuleSteamOpenIdPayload"] | components["schemas"]["AuthenticationRuleAccessKeyDirectPayload"] | components["schemas"]["AuthenticationRuleGoogleOAuthPayload"] | components["schemas"]["AuthenticationRuleGitHubOAuthPayload"] | components["schemas"]["AuthenticationRuleDiscordOAuthPayload"] | components["schemas"]["AuthenticationRuleBattleNetOAuthPayload"] | components["schemas"]["AuthenticationRuleXOAuthPayload"];
+            method: "PASSKEY_USERNAMELESS" | "PASSKEY_REASONED" | "EMAIL_VERIFICATION" | "STEAM_TICKET" | "STEAM_OPENID" | "ACCESS_KEY_DIRECT" | "GOOGLE_OAUTH" | "GITHUB_OAUTH" | "DISCORD_OAUTH" | "BATTLENET_OAUTH" | "X_OAUTH";
+            payload: components["schemas"]["AuthenticationRulePasskeyUsernamelessPayload"] | components["schemas"]["AuthenticationRulePasskeyReasonedPayload"] | components["schemas"]["AuthenticationRuleEmailVerificationPayload"] | components["schemas"]["AuthenticationRuleSteamTicketPayload"] | components["schemas"]["AuthenticationRuleSteamOpenIdPayload"] | components["schemas"]["AuthenticationRuleAccessKeyDirectPayload"] | components["schemas"]["AuthenticationRuleGoogleOAuthPayload"] | components["schemas"]["AuthenticationRuleGitHubOAuthPayload"] | components["schemas"]["AuthenticationRuleDiscordOAuthPayload"] | components["schemas"]["AuthenticationRuleBattleNetOAuthPayload"] | components["schemas"]["AuthenticationRuleXOAuthPayload"];
             /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
             accessTokenTtlSeconds?: number;
             /** @description Per-constraint override for refresh token lifetime. Resolved at realize time. */
             refreshTokenTtlSeconds?: number;
         };
-        /** @description Passkey-method payload. `allowUsernameless` opts the application
-         *     in to discoverable-credential ("usernameless") passkey login,
-         *     where the user authenticates without first entering an email.
-         *     Absent or `false` keeps the email-first flow; only the entry
-         *     path is affected — realize authorization is still decided
-         *     entirely by Layer 2.
-         *      */
-        AuthenticationRulePasskeyPayload: {
-            allowUsernameless?: boolean;
-        };
+        /**
+         * @description Empty payload — narrows to usernameless (discoverable-credential)
+         *     passkey login, the "Sign in with a passkey" entry shown before any
+         *     email is entered. Realize authorization is still decided by Layer 2.
+         */
+        AuthenticationRulePasskeyUsernamelessPayload: Record<string, never>;
+        /**
+         * @description Empty payload — narrows to email-first ("reasoned") passkey login,
+         *     the passkey option offered after the user enters their email.
+         *     Realize authorization is still decided by Layer 2.
+         */
+        AuthenticationRulePasskeyReasonedPayload: Record<string, never>;
         /** @description Empty payload — email-verification constraints carry no further parameters. */
         AuthenticationRuleEmailVerificationPayload: Record<string, never>;
-        /** @description Steam-native-ticket payload. Gates native-api's
+        /**
+         * @description Steam-native-ticket payload. Gates native-api's
          *     `/direct-issue/steam-ticket` flow. `allowedSteamAppIds` is the
          *     non-empty list of Steam App IDs whose tickets are accepted.
-         *      */
+         */
         AuthenticationRuleSteamTicketPayload: {
             allowedSteamAppIds: number[];
         };
-        /** @description Steam OpenID 2.0 carries no app-id concept (that is
+        /**
+         * @description Steam OpenID 2.0 carries no app-id concept (that is
          *     native-ticket-specific). Any Steam account is accepted as long
          *     as the application's rule set allows STEAM_OPENID at all.
-         *      */
+         */
         AuthenticationRuleSteamOpenIdPayload: Record<string, never>;
-        /** @description Gates native-api's `/direct-issue/access-key` flow. Credentials
+        /**
+         * @description Gates native-api's `/direct-issue/access-key` flow. Credentials
          *     live in the dedicated `AccessKeyCredential` table; no row of
          *     this method ever appears in the `Authentication` table.
-         *      */
+         */
         AuthenticationRuleAccessKeyDirectPayload: Record<string, never>;
-        /** @description Phase 1: any Google account is accepted as long as the
+        /**
+         * @description Phase 1: any Google account is accepted as long as the
          *     application's rule set allows GOOGLE_OAUTH at all. A later
          *     phase will add `allowedHostedDomains: string[]` for Google
          *     Workspace gating.
-         *      */
+         */
         AuthenticationRuleGoogleOAuthPayload: Record<string, never>;
-        /** @description Empty `allowedGitHubOrgs` array means no org gating — any
+        /**
+         * @description Empty `allowedGitHubOrgs` array means no org gating — any
          *     GitHub account is accepted. Non-empty means the user must be a
          *     member of at least one listed organization (case-insensitive
          *     match on the org `login`). The `read:org` OAuth scope is only
          *     requested when at least one matching rule carries a non-empty
          *     allowlist; applications without org gating keep the minimal
          *     `read:user user:email` consent screen.
-         *      */
+         */
         AuthenticationRuleGitHubOAuthPayload: {
             allowedGitHubOrgs: string[];
         };
-        /** @description Phase 1: any Discord account is accepted as long as the
+        /**
+         * @description Phase 1: any Discord account is accepted as long as the
          *     application's rule set allows DISCORD_OAUTH at all. Phase 1.5
          *     will add `allowedDiscordGuilds: string[]` for guild (server)
          *     gating, which will additionally request the `guilds` OAuth
          *     scope and fetch `GET /users/@me/guilds`.
-         *      */
+         */
         AuthenticationRuleDiscordOAuthPayload: Record<string, never>;
-        /** @description Battle.net (Blizzard) has no per-application gating concept, so any
+        /**
+         * @description Battle.net (Blizzard) has no per-application gating concept, so any
          *     Battle.net account is accepted as long as the application's rule set
          *     allows BATTLENET_OAUTH at all. Empty payload. Battle.net is an
          *     email-less provider, so Layer-2 EMAIL rules fail closed against a
          *     Battle.net-only account.
-         *      */
+         */
         AuthenticationRuleBattleNetOAuthPayload: Record<string, never>;
-        /** @description X (formerly Twitter) has no per-application gating concept, so any
+        /**
+         * @description X (formerly Twitter) has no per-application gating concept, so any
          *     X account is accepted as long as the application's rule set allows
          *     X_OAUTH at all. Empty payload. X is an email-less provider, so
          *     Layer-2 EMAIL rules fail closed against an X-only account.
-         *      */
+         */
         AuthenticationRuleXOAuthPayload: Record<string, never>;
         RealizeRuleConstraint: {
             /**
@@ -495,38 +535,42 @@ export interface components {
             refreshTokenTtlSeconds?: number;
         };
         RealizeRuleEmailPayload: {
-            /** @description List of email addresses or glob patterns the realized identity
+            /**
+             * @description List of email addresses or glob patterns the realized identity
              *     must match. Glob patterns are bounded by server-side limits to
              *     prevent regex backtracking attacks.
-             *      */
+             */
             allowedEmails: string[];
         };
-        /** @description Per-realize-time check against the realized account's SteamID64.
+        /**
+         * @description Per-realize-time check against the realized account's SteamID64.
          *     Each entry is either the literal `"*"` (wildcard, allow any
          *     Steam identity) or a decimal SteamID64 string.
-         *      */
+         */
         RealizeRuleSteamIdPayload: {
             allowedSteamIds: string[];
         };
-        /** @description Exact match on the realizing account's **account alias** — the
+        /**
+         * @description Exact match on the realizing account's **account alias** — the
          *     user-visible, application-invisible, rotatable handle the user
          *     reads in the With portal and shares out-of-band with whoever
          *     configures the rule. No wildcard — because the account does not
          *     yet exist during fresh registration, this constraint matches
          *     nothing for new sign-ups. The alias is opaque: it is compared by
          *     exact-string equality and never parsed or format-validated.
-         *      */
+         */
         RealizeRuleAccountAliasPayload: {
             allowedAccountAliases: string[];
         };
-        /** @description Exact match on the realizing account's **sector subject** for the
+        /**
+         * @description Exact match on the realizing account's **sector subject** for the
          *     realizing application's sector — the application-visible token
          *     `sub` the owner already sees in their own logs. No wildcard.
          *     Rotating the subject locks the user out (it becomes a brand-new,
          *     not-yet-allow-listed identity) rather than letting them bypass the
          *     rule. The subject is opaque: compared by exact-string equality and
          *     never parsed or format-validated.
-         *      */
+         */
         RealizeRuleSectorSubjectPayload: {
             allowedSectorSubjects: string[];
         };
@@ -538,9 +582,10 @@ export interface components {
              */
             type: "CALLBACK";
             payload: {
-                /** @description Concrete callback URL for this inquiry. The host MUST match
+                /**
+                 * @description Concrete callback URL for this inquiry. The host MUST match
                  *     one of the application's allowed callback domains.
-                 *      */
+                 */
                 callbackUrl: string;
             };
         };
@@ -559,11 +604,12 @@ export interface components {
              * @enum {string}
              */
             type: "REVEAL";
-            /** @description Empty payload. Tokens are surfaced directly in the UI at
+            /**
+             * @description Empty payload. Tokens are surfaced directly in the UI at
              *     realize time and the inquiry is marked redeemed immediately;
              *     any subsequent `/redeem` for the same inquiry fails with
              *     `InquiryAlreadyRedeemed`.
-             *      */
+             */
             payload: Record<string, never>;
         };
         ReturnMethodDirectIssue: {
@@ -572,11 +618,12 @@ export interface components {
              * @enum {string}
              */
             type: "DIRECT_ISSUE";
-            /** @description Empty payload. Opts the application in to native-api's
+            /**
+             * @description Empty payload. Opts the application in to native-api's
              *     direct-issue flows (`/direct-issue/steam-ticket`,
              *     `/direct-issue/access-key`). Per-inquiry payload is empty
              *     because direct-issue does not flow through `/establish`.
-             *      */
+             */
             payload: Record<string, never>;
         };
         ReturnMethodOidc: {
@@ -585,18 +632,20 @@ export interface components {
              * @enum {string}
              */
             type: "OIDC";
-            /** @description Accepted on the wire for symmetry, but in practice OIDC is
+            /**
+             * @description Accepted on the wire for symmetry, but in practice OIDC is
              *     not declared per-inquiry — the OIDC API drives its own
              *     inquiry against Connect via CALLBACK-to-self. The matching
              *     per-inquiry payload is therefore empty.
-             *      */
+             */
             payload: Record<string, never>;
         };
-        /** @description Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
+        /**
+         * @description Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
          *     for known failure modes. When the reason symbol's description begins with
          *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
          *     signal — both `reason` and the body itself are absent in that case.
-         *      */
+         */
         Error: {
             /** @description Stable machine-readable reason code. */
             reason?: string;
@@ -661,9 +710,10 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Application has been disabled via the admin kill switch.
+            /**
+             * @description Application has been disabled via the admin kill switch.
              *     Reason `ApplicationDisabled`.
-             *      */
+             */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -738,7 +788,8 @@ export interface operations {
                     "application/json": components["schemas"]["RedeemResponse"];
                 };
             };
-            /** @description The inquiry could not be redeemed. The `reason` distinguishes:
+            /**
+             * @description The inquiry could not be redeemed. The `reason` distinguishes:
              *
              *     - `InquiryNotFound` — the `(exposureKey, hiddenKey,
              *       confirmationKey)` triple does not resolve to a realized
@@ -751,7 +802,7 @@ export interface operations {
              *       consumed (single-use guard via conditional write; also
              *       fires after a REVEAL realize that surfaces the tokens
              *       in-line and immediately marks the inquiry redeemed).
-             *      */
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -760,7 +811,8 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The attempt was refused. The `reason` distinguishes:
+            /**
+             * @description The attempt was refused. The `reason` distinguishes:
              *
              *     - `ApplicationDisabled` — the application has been disabled
              *       via the admin kill switch.
@@ -770,7 +822,7 @@ export interface operations {
              *       (email / first name / last name) the user has not granted;
              *       the standing grant must be (re)established through an
              *       interactive browser login before tokens can be issued.
-             *      */
+             */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -812,9 +864,10 @@ export interface operations {
                     "application/json": components["schemas"]["RefreshResponse"];
                 };
             };
-            /** @description Reason `AccountNotFound` — the account behind the refresh token
+            /**
+             * @description Reason `AccountNotFound` — the account behind the refresh token
              *     could not be resolved.
-             *      */
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -823,7 +876,8 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Refresh token rejected. The `reason` distinguishes:
+            /**
+             * @description Refresh token rejected. The `reason` distinguishes:
              *
              *     - `RefreshTokenNotFound` — token cannot be resolved (unknown
              *       `jti`, wrong signature, or otherwise invalid).
@@ -836,7 +890,7 @@ export interface operations {
              *     - `RefreshTokenRotationRaceLost` — a concurrent rotation won
              *       the conditional write. Per OAuth 2.1 BCP §4.14.2 this is
              *       also treated as compromise and the family is revoked.
-             *      */
+             */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -845,7 +899,8 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description The attempt was refused. The `reason` distinguishes:
+            /**
+             * @description The attempt was refused. The `reason` distinguishes:
              *
              *     - `AccountDisabled` — the account behind the refresh token is
              *       disabled.
@@ -854,7 +909,7 @@ export interface operations {
              *       satisfied by a standing grant (e.g. the user revoked it); the
              *       grant must be re-established through an interactive browser
              *       login.
-             *      */
+             */
             403: {
                 headers: {
                     [name: string]: unknown;
