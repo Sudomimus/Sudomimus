@@ -84,6 +84,22 @@ for a plain .NET example with the same logical flows.
   `401 AccessKeyDirectDenied` — by design, to avoid leaking identifier
   existence.
 
+## Claim-gated logins (errands)
+
+Both tabs run through `NativeAuthenticator`. If the application requires a claim
+the player hasn't granted (or the account lacks the data, e.g. a Steam-first
+account with no email), the Native API returns an **errand** handoff. The
+example opens that URL in the player's browser with `OS.ShellOpen` and the two
+tabs differ by what the credential allows:
+
+| Tab | Mode | Behaviour on a claim gate |
+|---|---|---|
+| **Access Key** | automatic | The reusable credential lets the SDK open the browser, poll, and **retry on its own**. The status label tracks progress (`Finish setup in your browser…`) via the `Progress` hook. |
+| **Steam** | manual | A Steam ticket is single-use, so the SDK opens the browser and hands the errand back. The label asks the player to finish in the browser and **click Login with Steam again** (which acquires a fresh ticket). |
+
+On success the result label also shows the per-claim view (policy/state for
+`email` / `firstName` / `lastName`).
+
 ## Notes
 
 - The `Steam` autoload's `getAuthTicketForWebApi` and the

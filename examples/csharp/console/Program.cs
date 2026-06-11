@@ -6,16 +6,21 @@
 //   * steam-ticket — exchange a Steam Web API auth ticket for tokens.
 //   * access-key   — exchange a long-lived access-key credential for tokens.
 //
-// Both paths converge: the example parses the returned access token via
-// Sudomimus.Token and prints the resulting user. After verifying the user,
-// the example seeds a RotatingConnectClient + InMemoryTokenStore from the
-// returned pair and demonstrates one /refresh rotation followed by a
-// /logout — exercising the new 1.0 token-storage and rotation primitives
-// even though the original credential came from the Native API.
+// Login runs through NativeAuthenticator in its automatic (polling) mode: if
+// the application requires a claim the user has not granted (or the account
+// lacks the data), the Native API returns an errand handoff. The authenticator
+// opens that URL in the system browser, polls until the user finishes, and
+// retries — so a claim-gated first login completes instead of dead-ending.
+//
+// Both paths converge: the example prints the per-claim view, parses the
+// returned access token via Sudomimus.Token to show the user, then seeds a
+// RotatingConnectClient + InMemoryTokenStore from the returned pair and
+// demonstrates one /refresh rotation followed by a /logout.
 //
 // A real game uses steam-ticket; CI / server-to-server / automation uses
 // access-key.
 
+using System.Diagnostics;
 using Sudomimus.Connect;
 using Sudomimus.Native;
 using Sudomimus.Token;
@@ -30,9 +35,13 @@ Console.Write("applicationAnchor: ");
 var anchor = (Console.ReadLine() ?? string.Empty).Trim();
 
 var nativeClient = new NativeClient();
-string accessToken;
-string refreshToken;
+var authenticator = new NativeAuthenticator(nativeClient, new NativeAuthenticatorOptions
+{
+    OpenUrl = OpenBrowser,
+    Progress = new Progress<ErrandProgress>(p => Console.WriteLine($"  [errand] {p.Phase}")),
+});
 
+DirectIssueResult login;
 try
 {
     switch (method)
@@ -47,20 +56,26 @@ try
                 return 1;
             }
 
-            Console.Write("steamTicketHex (single line): ");
-            var ticketHex = (Console.ReadLine() ?? string.Empty).Trim();
-
             Console.WriteLine();
             Console.WriteLine("Calling /direct-issue/steam-ticket ...");
 
-            var steamResponse = await nativeClient.DirectIssueSteamTicketAsync(new DirectIssueSteamTicketRequest
+            // The factory is invoked once per attempt; an errand retry needs a
+            // FRESH ticket, since Steam tickets are single-use and replay-protected.
+            var steamAttempt = 0;
+            login = await authenticator.AuthenticateSteamTicketAsync(_ =>
             {
-                ApplicationAnchor = anchor,
-                SteamTicketHex = ticketHex,
-                SteamAppId = appId,
+                steamAttempt++;
+                Console.Write(steamAttempt == 1
+                    ? "steamTicketHex (single line): "
+                    : "Acquire a FRESH Steam ticket and paste steamTicketHex: ");
+                var ticketHex = (Console.ReadLine() ?? string.Empty).Trim();
+                return Task.FromResult(new DirectIssueSteamTicketRequest
+                {
+                    ApplicationAnchor = anchor,
+                    SteamTicketHex = ticketHex,
+                    SteamAppId = appId,
+                });
             });
-            accessToken = steamResponse.AccessToken;
-            refreshToken = steamResponse.RefreshToken;
             break;
         }
 
@@ -76,14 +91,12 @@ try
             Console.WriteLine();
             Console.WriteLine("Calling /direct-issue/access-key ...");
 
-            var keyResponse = await nativeClient.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
+            login = await authenticator.AuthenticateAccessKeyAsync(new DirectIssueAccessKeyRequest
             {
                 ApplicationAnchor = anchor,
                 AccessKeyIdentifier = keyId,
                 AccessKeySecret = keySecret,
             });
-            accessToken = keyResponse.AccessToken;
-            refreshToken = keyResponse.RefreshToken;
             break;
         }
 
@@ -97,6 +110,14 @@ catch (NativeApiException ex)
     Console.Error.WriteLine($"Native API rejected the request: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}");
     return 2;
 }
+catch (ErrandPollTimeoutException)
+{
+    Console.Error.WriteLine("Timed out waiting for the browser errand to complete. Re-run and finish the browser step.");
+    return 2;
+}
+
+var accessToken = login.AccessToken;
+var refreshToken = login.RefreshToken;
 
 Console.WriteLine();
 Console.WriteLine("Optional: paste the application's PEM public key to verify");
@@ -147,6 +168,11 @@ if (!string.IsNullOrEmpty(parsed.Body.LastName))
     Console.WriteLine($"  lastName:          {parsed.Body.LastName}");
 }
 
+// The claims view explains why each shareable claim is or is not in the token
+// (policy joined with the user's decision) — present even when the claim itself
+// is absent from the token body above.
+PrintClaims(login.Claims);
+
 // Demonstrate refresh-token rotation. The ConnectClient does not need
 // clientAuth here — /refresh and /logout authorize themselves with the
 // refresh token. InMemoryTokenStore is fine for a short-lived CLI; a
@@ -176,3 +202,36 @@ await rotating.LogoutAsync();
 Console.WriteLine("✓ Session revoked, store cleared.");
 
 return 0;
+
+// Fully qualified: both Sudomimus.Native and Sudomimus.Connect define a
+// ClaimsStateView (each mirrors its own service's wire surface), and this file
+// imports both. The direct-issue result carries the Native one.
+static void PrintClaims(Sudomimus.Native.ClaimsStateView claims)
+{
+    Console.WriteLine("  claims:");
+    PrintClaim("email", claims.Email);
+    PrintClaim("firstName", claims.FirstName);
+    PrintClaim("lastName", claims.LastName);
+
+    static void PrintClaim(string name, Sudomimus.Native.ClaimRequirementStateView claim)
+        => Console.WriteLine($"    {name,-10} requirement={claim.Requirement,-8} state={claim.State}");
+}
+
+static Task OpenBrowser(Uri uri, CancellationToken cancellationToken)
+{
+    try
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = uri.ToString(),
+            UseShellExecute = true,
+        });
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"  Could not open a browser automatically ({ex.Message}). Open this URL manually:");
+        Console.Error.WriteLine($"    {uri}");
+    }
+
+    return Task.CompletedTask;
+}

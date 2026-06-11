@@ -52,13 +52,35 @@ You'll be prompted in order:
 4. (Optional) the application's public PEM key, ended by
    `-----END PUBLIC KEY-----`. Press Enter on the first line to skip.
 
-On success the example prints the decoded access-token claims:
+On success the example prints the decoded access-token user plus the per-claim
+view (policy + the user's decision, so you can see why a claim is or isn't in
+the token):
 
 ```
 ✓ Login successful.
-  subject: subject-...
+  subject:           subject-...
   firstName:         <name or SteamID64>
+  claims:
+    email      requirement=REQUIRED state=GRANTED
+    firstName  requirement=OFF      state=UNKNOWN
+    lastName   requirement=OFF      state=UNKNOWN
 ```
+
+## Claim-gated logins (errands)
+
+Login runs through `NativeAuthenticator` in automatic mode. If the application
+requires a claim the user hasn't granted (or the account lacks the data — e.g.
+a Steam-first account with no email), the Native API returns an **errand**
+handoff instead of a bare `403`. The example then:
+
+1. opens the errand URL in your **system browser** (`Process.Start`),
+2. prints `[errand] BrowserOpened` / `Polling` progress while you complete it,
+3. polls the errand status and **retries** once you finish — so the login
+   completes rather than dead-ending.
+
+For the **steam-ticket** method you'll be re-prompted for a *fresh* ticket on
+the retry (Steam tickets are single-use). For **access-key** the same credential
+is reused automatically.
 
 ## Failure modes
 

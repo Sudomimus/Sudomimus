@@ -46,6 +46,9 @@ public partial class LoginNode : Control
     private uint _pendingTicketHandle;
     private RotatingConnectClient? _rotating;
 
+    private NativeClient _native = null!;
+    private NativeAuthenticator _authenticator = null!;
+
     public override void _Ready()
     {
         _anchorInput = GetNode<LineEdit>("VBox/AnchorInput");
@@ -65,6 +68,23 @@ public partial class LoginNode : Control
         _refreshButton.Pressed += OnRefreshPressed;
         _logoutButton.Pressed += OnLogoutPressed;
         _steam.Connect("get_ticket_for_web_api_response", new Callable(this, nameof(OnTicketReady)));
+
+        _native = new NativeClient();
+        _authenticator = new NativeAuthenticator(_native, new NativeAuthenticatorOptions
+        {
+            // Open the errand URL in the player's default browser. OS.ShellOpen
+            // is the host-specific opener the SDK deliberately cannot assume.
+            OpenUrl = (uri, _) =>
+            {
+                OS.ShellOpen(uri.ToString());
+                return Task.CompletedTask;
+            },
+            // Progress fires from a background thread (Godot installs no
+            // SynchronizationContext), so marshal label updates onto the main
+            // thread with SetDeferred.
+            Progress = new Progress<ErrandProgress>(p =>
+                _statusLabel.SetDeferred("text", ErrandStatusText(p.Phase))),
+        });
 
         // Initialize Steamworks. GodotSteam's `steamInit()` returns a
         // dictionary; for an MVP we trust it and rely on Steam-side
@@ -117,14 +137,28 @@ public partial class LoginNode : Control
 
         try
         {
-            var client = new NativeClient();
-            var tokens = await client.DirectIssueSteamTicketAsync(new DirectIssueSteamTicketRequest
+            // Manual mode: one attempt with this freshly-acquired ticket. On a
+            // claim gate the SDK opens the errand in the browser and hands it
+            // back — a Steam ticket is single-use, so the natural retry is for
+            // the player to finish in the browser and click Login with Steam
+            // again (which acquires a fresh ticket).
+            var outcome = await _authenticator.TryAuthenticateSteamTicketAsync(_ => Task.FromResult(
+                new DirectIssueSteamTicketRequest
+                {
+                    ApplicationAnchor = _anchorInput.Text.Trim(),
+                    SteamTicketHex = ticketHex,
+                    SteamAppId = SteamAppId,
+                }));
+
+            switch (outcome)
             {
-                ApplicationAnchor = _anchorInput.Text.Trim(),
-                SteamTicketHex = ticketHex,
-                SteamAppId = SteamAppId,
-            });
-            await OnLoginSucceeded(tokens.AccessToken, tokens.RefreshToken);
+                case DirectIssueOutcome.Authenticated authenticated:
+                    await OnLoginSucceeded(authenticated.Result);
+                    break;
+                case DirectIssueOutcome.ErrandRequired:
+                    _statusLabel.Text = "Finish setup in your browser, then click Login with Steam again.";
+                    break;
+            }
         }
         catch (NativeApiException ex)
         {
@@ -156,18 +190,25 @@ public partial class LoginNode : Control
 
         try
         {
-            var client = new NativeClient();
-            var tokens = await client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
+            // Automatic mode: an access-key credential is reusable, so the SDK
+            // can open the errand in the browser, poll, and retry on its own —
+            // the Progress hook drives the status label while the player
+            // completes the browser step.
+            var login = await _authenticator.AuthenticateAccessKeyAsync(new DirectIssueAccessKeyRequest
             {
                 ApplicationAnchor = anchor,
                 AccessKeyIdentifier = keyId,
                 AccessKeySecret = keySecret,
             });
-            await OnLoginSucceeded(tokens.AccessToken, tokens.RefreshToken);
+            await OnLoginSucceeded(login);
         }
         catch (NativeApiException ex)
         {
             _statusLabel.Text = $"Native API error: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}";
+        }
+        catch (ErrandPollTimeoutException)
+        {
+            _statusLabel.Text = "Timed out waiting for browser setup. Try again.";
         }
         finally
         {
@@ -236,22 +277,24 @@ public partial class LoginNode : Control
 
     // -------- Shared post-login display --------------------------------
 
-    private async Task OnLoginSucceeded(string accessToken, string refreshToken)
+    private async Task OnLoginSucceeded(DirectIssueResult login)
     {
-        DisplayLoggedInUser(accessToken);
+        DisplayLoggedInUser(login.AccessToken, login.Claims);
 
         // /refresh and /logout do not need clientAuth — the refresh token
         // authorizes both. One ConnectClient + RotatingConnectClient per
         // session is the natural shape here.
         var connect = new ConnectClient(ConnectBaseUrl);
         _rotating = new RotatingConnectClient(connect, new InMemoryTokenStore());
-        await _rotating.SeedAsync(new TokenPair { AccessToken = accessToken, RefreshToken = refreshToken });
+        await _rotating.SeedAsync(new TokenPair { AccessToken = login.AccessToken, RefreshToken = login.RefreshToken });
 
         _refreshButton.Disabled = false;
         _logoutButton.Disabled = false;
     }
 
-    private void DisplayLoggedInUser(string accessToken)
+    // Native and Connect each define a ClaimsStateView (one per service's wire
+    // surface) and both namespaces are imported, so the type is qualified.
+    private void DisplayLoggedInUser(string accessToken, Sudomimus.Native.ClaimsStateView? claims = null)
     {
         try
         {
@@ -260,15 +303,36 @@ public partial class LoginNode : Control
             // verify them with Sudomimus.Token's TokenVerifier.
             var parsed = TokenParser.ParseAccessToken(accessToken);
             _statusLabel.Text = "✓ Login successful.";
-            _resultLabel.Text =
+            var text =
                 $"subject:           {parsed.Body.Subject}\n" +
                 $"firstName:         {parsed.Body.FirstName}";
+            if (claims is not null)
+            {
+                text +=
+                    $"\nclaims.email:      {claims.Email.Requirement}/{claims.Email.State}" +
+                    $"\nclaims.firstName:  {claims.FirstName.Requirement}/{claims.FirstName.State}" +
+                    $"\nclaims.lastName:   {claims.LastName.Requirement}/{claims.LastName.State}";
+            }
+            _resultLabel.Text = text;
         }
         catch (TokenException ex)
         {
             _statusLabel.Text = $"Token parse failed: {ex.Code} — {ex.Message}";
         }
     }
+
+    // Friendly status text for each errand recovery phase, shown while the
+    // player completes the browser side-trip (automatic mode).
+    private static string ErrandStatusText(ErrandPhase phase) => phase switch
+    {
+        ErrandPhase.Attempting => "Signing in...",
+        ErrandPhase.BrowserOpened => "Finish setup in your browser...",
+        ErrandPhase.Polling => "Waiting for you to finish in the browser...",
+        ErrandPhase.Retrying => "Browser step done — finishing sign-in...",
+        ErrandPhase.Expired => "Browser step expired, retrying...",
+        ErrandPhase.Succeeded => "✓ Login successful.",
+        _ => "Working...",
+    };
 
     /// <summary>
     /// GodotSteam emits the ticket payload differently across releases —
