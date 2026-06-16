@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._generated.models import Error
+from ._generated.models import DirectIssueDeniedError, Error
 
 
 class NativeApiError(Exception):
@@ -14,7 +14,12 @@ class NativeApiError(Exception):
     For ``PRIVATE`` reasons the body is empty and :attr:`reason` is ``None``.
     """
 
-    def __init__(self, status: int, reason: str | None, body: Error | None) -> None:
+    def __init__(
+        self,
+        status: int,
+        reason: str | None,
+        body: DirectIssueDeniedError | Error | None,
+    ) -> None:
         message = f"Native API error {status}: {reason}" if reason else f"Native API error {status}"
         super().__init__(message)
         self.status = status

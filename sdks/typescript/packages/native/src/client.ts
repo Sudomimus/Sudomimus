@@ -6,6 +6,8 @@
  */
 
 import type {
+    CreateErrandRequest,
+    CreateErrandResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
     DirectIssueSteamTicketRequest,
@@ -67,6 +69,19 @@ export class NativeClient {
 
         return this._post<DirectIssueAccessKeyRequest, DirectIssueAccessKeyResponse>(
             "/direct-issue/access-key",
+            request,
+        );
+    }
+
+    /**
+     * Proactively mint an errand for a user you already authenticated.
+     */
+    public async createErrand(
+        request: CreateErrandRequest,
+    ): Promise<CreateErrandResponse> {
+
+        return this._post<CreateErrandRequest, CreateErrandResponse>(
+            "/errand",
             request,
         );
     }

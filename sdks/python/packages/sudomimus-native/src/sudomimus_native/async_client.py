@@ -8,10 +8,13 @@ import httpx
 from pydantic import BaseModel
 
 from ._generated.models import (
+    CreateErrandRequest,
+    CreateErrandResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
+    ErrandStatusResponse,
 )
 from .client import _JSON_HEADERS, _handle, _ResponseT
 from .constants import PRODUCTION_BASE_URL
@@ -67,6 +70,26 @@ class AsyncNativeClient:
         return await self._post(
             "/direct-issue/access-key", request, DirectIssueAccessKeyResponse
         )
+
+    async def create_errand(
+        self,
+        request: CreateErrandRequest,
+    ) -> CreateErrandResponse:
+        """Proactively mint an errand for a user you already authenticated."""
+        return await self._post(
+            "/errand", request, CreateErrandResponse
+        )
+
+    async def errand_status(
+        self,
+        errand_key: str,
+    ) -> ErrandStatusResponse:
+        """Poll the status of an errand."""
+        response = await self._client.get(
+            f"{self._base_url}/errand/{errand_key}/status",
+            headers={"Accept": "application/json"},
+        )
+        return _handle(response, ErrandStatusResponse)
 
     async def _post(
         self,

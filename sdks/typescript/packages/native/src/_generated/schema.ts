@@ -111,6 +111,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/errand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Proactively mint an errand for a user you already authenticated.
+         * @description Ask, on the application's own behalf, for an errand side-trip so the
+         *     user can manage what they share — the on-demand counterpart to the
+         *     claim-gate 403. Use it when direct-issue would succeed but you want to
+         *     invite the user to grant OPTIONAL claims that native issuance can never
+         *     prompt for, or to let a Steam-only user add an email they choose to
+         *     share.
+         *
+         *     Authenticated by an access token you already hold for the user (from an
+         *     earlier direct-issue or Connect redeem). It is verified and its expiry is
+         *     enforced, then reverse-resolved to the account — so present a fresh one.
+         *     The access token only identifies the user; it never authorizes the
+         *     sharing. Every minted ticket therefore forces an in-browser
+         *     re-authentication before any task runs, so a leaked token cannot alter a
+         *     user's grants.
+         *
+         *     When the account already satisfies the application's claim policy the
+         *     response carries `errand: null` — nothing to do, just direct-issue.
+         *     Otherwise open `errand.url` and poll `/errand/{errandKey}/status`
+         *     exactly as for the 403 handoff.
+         */
+        post: operations["createErrand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/errand/{errandKey}/status": {
         parameters: {
             query?: never;
@@ -224,8 +262,14 @@ export interface components {
          *     declined.
          */
         ClaimRequirementStateView: {
-            /** @enum {string} */
-            requirement: "OFF" | "OPTIONAL" | "REQUIRED";
+            /**
+             * @description The developer's policy for the claim. `SYNTHETIC` guarantees the
+             *     claim is present but permits a generated placeholder (a stand-in
+             *     name, a proxy email) when the user has not shared real data —
+             *     unlike `REQUIRED` it never blocks issuance or raises an errand.
+             * @enum {string}
+             */
+            requirement: "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC";
             /** @enum {string} */
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
@@ -270,6 +314,24 @@ export interface components {
             reason: string;
             claims?: components["schemas"]["ClaimsStateView"];
             errand?: components["schemas"]["ErrandHandoff"];
+        };
+        CreateErrandRequest: {
+            /**
+             * @description An access token (JWT) the application already holds for the user.
+             *     Verified server-side with its expiry enforced, then reverse-resolved
+             *     from its `subject` (sector subject) claim to the account — so present
+             *     a currently-valid token, not an expired one.
+             */
+            accessToken: string;
+        };
+        CreateErrandResponse: {
+            /**
+             * @description The browser side-trip to open, or `null` when the account already
+             *     satisfies the application's claim policy (nothing to consent to or
+             *     complete) — in that case just direct-issue.
+             */
+            errand: components["schemas"]["ErrandHandoff"] | null;
+            claims: components["schemas"]["ClaimsStateView"];
         };
         ErrandStatusResponse: {
             /** @enum {string} */
@@ -532,6 +594,60 @@ export interface operations {
             };
             /** @description Steam's verification endpoint was unreachable or returned an unparseable response. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createErrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateErrandRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description Either the errand handoff to open, or `errand: null` when nothing is
+             *     owed. `claims` always reports the per-claim state.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateErrandResponse"];
+                };
+            };
+            /** @description The access token is missing, malformed, expired, or no longer resolves to an account. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The application or the account is disabled. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -290,8 +290,14 @@ export interface components {
          *     declined.
          */
         ClaimRequirementStateView: {
-            /** @enum {string} */
-            requirement: "OFF" | "OPTIONAL" | "REQUIRED";
+            /**
+             * @description The developer's policy for the claim. `SYNTHETIC` guarantees the
+             *     claim is present but permits a generated placeholder (a stand-in
+             *     name, a proxy email) when the user has not shared real data —
+             *     unlike `REQUIRED` it never blocks issuance or raises an errand.
+             * @enum {string}
+             */
+            requirement: "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC";
             /** @enum {string} */
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
@@ -349,7 +355,9 @@ export interface components {
          *     `lastName`, and `emailAddress` claims are consent-gated (claim
          *     sharing): each is minted only when the application's claim policy
          *     permits it AND the user has granted that claim, so any of them may
-         *     be absent.
+         *     be absent. The exception is a `SYNTHETIC` claim policy: that field is
+         *     instead always present, carrying a generated placeholder (a stand-in
+         *     name, a proxy email) whenever the user has not shared real data.
          */
         AccessTokenBody: {
             /**
@@ -363,18 +371,23 @@ export interface components {
             /**
              * @description Given name. Minted only when the application's claim policy
              *     permits it AND the user has granted the claim; may be absent
-             *     even when the account has a value stored.
+             *     even when the account has a value stored. Under a `SYNTHETIC`
+             *     policy it is always present, possibly a placeholder name.
              */
             firstName?: string;
             /** @description Family name. Same consent gating as `firstName`. */
             lastName?: string;
             /**
-             * @description Verified email associated with this login. Consent-gated like
+             * @description Email associated with this login. Consent-gated like
              *     `firstName` / `lastName` (minted only when policy permits AND
-             *     the user granted the EMAIL claim). When included: the exact
-             *     email typed for email-OTP logins, otherwise the account's
-             *     primary email. Always omitted for accounts with no verified
-             *     email (e.g. Steam-only or AccessKey-only).
+             *     the user granted the EMAIL claim). When a real value is included:
+             *     the exact email typed for email-OTP logins, otherwise the
+             *     account's primary email; omitted for accounts with no verified
+             *     email (e.g. Steam-only or AccessKey-only). The exception is a
+             *     `SYNTHETIC` email policy: the field is then always present — a
+             *     real verified email when shared, otherwise a
+             *     `…@proxy.sudomimus.email` proxy address (best-effort forwarding,
+             *     not guaranteed; not a verified mailbox).
              */
             emailAddress?: string;
         };

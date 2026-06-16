@@ -58,7 +58,58 @@ class RedeemRequest(BaseModel):
     confirmationKey: str
 
 
+class Requirement(StrEnum):
+    """
+    The developer's policy for the claim. `SYNTHETIC` guarantees the
+    claim is present but permits a generated placeholder (a stand-in
+    name, a proxy email) when the user has not shared real data —
+    unlike `REQUIRED` it never blocks issuance or raises an errand.
+
+    """
+
+    OFF = "OFF"
+    OPTIONAL = "OPTIONAL"
+    REQUIRED = "REQUIRED"
+    SYNTHETIC = "SYNTHETIC"
+
+
+class State(StrEnum):
+    UNKNOWN = "UNKNOWN"
+    GRANTED = "GRANTED"
+    DENIED = "DENIED"
+
+
+class ClaimRequirementStateView(BaseModel):
+    """
+    One shareable claim: what the application requests (`requirement`)
+    joined with the user's standing decision (`state`). `UNKNOWN` means
+    the user was never asked; `DENIED` means the user explicitly
+    declined.
+
+    """
+
+    requirement: Requirement = Field(
+        ...,
+        description="The developer's policy for the claim. `SYNTHETIC` guarantees the\nclaim is present but permits a generated placeholder (a stand-in\nname, a proxy email) when the user has not shared real data —\nunlike `REQUIRED` it never blocks issuance or raises an errand.\n",
+    )
+    state: State
+
+
+class ClaimsStateView(BaseModel):
+    """
+    Per-claim view across the three shareable claims — why a claim is
+    or is not present in the minted token (policy OFF, never asked,
+    declined, or granted).
+
+    """
+
+    email: ClaimRequirementStateView
+    firstName: ClaimRequirementStateView
+    lastName: ClaimRequirementStateView
+
+
 class RedeemResponse(BaseModel):
+    claims: ClaimsStateView
     applicationAnchor: str
     refreshToken: str = Field(
         ...,
@@ -75,6 +126,7 @@ class RefreshRequest(BaseModel):
 
 
 class RefreshResponse(BaseModel):
+    claims: ClaimsStateView
     accessToken: str = Field(
         ...,
         description="Short-lived access token (JWT). Decode its body to\n`AccessTokenBody` (see schema) — the application-visible user\nkey is the `subject` (sector subject) claim.\n",
@@ -94,7 +146,9 @@ class AccessTokenBody(BaseModel):
     `lastName`, and `emailAddress` claims are consent-gated (claim
     sharing): each is minted only when the application's claim policy
     permits it AND the user has granted that claim, so any of them may
-    be absent.
+    be absent. The exception is a `SYNTHETIC` claim policy: that field is
+    instead always present, carrying a generated placeholder (a stand-in
+    name, a proxy email) whenever the user has not shared real data.
 
     """
 
@@ -104,14 +158,14 @@ class AccessTokenBody(BaseModel):
     )
     firstName: str | None = Field(
         None,
-        description="Given name. Minted only when the application's claim policy\npermits it AND the user has granted the claim; may be absent\neven when the account has a value stored.\n",
+        description="Given name. Minted only when the application's claim policy\npermits it AND the user has granted the claim; may be absent\neven when the account has a value stored. Under a `SYNTHETIC`\npolicy it is always present, possibly a placeholder name.\n",
     )
     lastName: str | None = Field(
         None, description="Family name. Same consent gating as `firstName`.\n"
     )
     emailAddress: str | None = Field(
         None,
-        description="Verified email associated with this login. Consent-gated like\n`firstName` / `lastName` (minted only when policy permits AND\nthe user granted the EMAIL claim). When included: the exact\nemail typed for email-OTP logins, otherwise the account's\nprimary email. Always omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only).\n",
+        description="Email associated with this login. Consent-gated like\n`firstName` / `lastName` (minted only when policy permits AND\nthe user granted the EMAIL claim). When a real value is included:\nthe exact email typed for email-OTP logins, otherwise the\naccount's primary email; omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only). The exception is a\n`SYNTHETIC` email policy: the field is then always present — a\nreal verified email when shared, otherwise a\n`…@proxy.sudomimus.email` proxy address (best-effort forwarding,\nnot guaranteed; not a verified mailbox).\n",
     )
 
 
@@ -210,7 +264,8 @@ class Method(StrEnum):
     Which authentication method this constraint narrows to.
     """
 
-    PASSKEY = "PASSKEY"
+    PASSKEY_USERNAMELESS = "PASSKEY_USERNAMELESS"
+    PASSKEY_REASONED = "PASSKEY_REASONED"
     EMAIL_VERIFICATION = "EMAIL_VERIFICATION"
     STEAM_TICKET = "STEAM_TICKET"
     STEAM_OPENID = "STEAM_OPENID"
@@ -222,21 +277,30 @@ class Method(StrEnum):
     X_OAUTH = "X_OAUTH"
 
 
-class AuthenticationRulePasskeyPayload(BaseModel):
+class AuthenticationRulePasskeyUsernamelessPayload(BaseModel):
     """
-    Passkey-method payload. `allowUsernameless` opts the application
-    in to discoverable-credential ("usernameless") passkey login,
-    where the user authenticates without first entering an email.
-    Absent or `false` keeps the email-first flow; only the entry
-    path is affected — realize authorization is still decided
-    entirely by Layer 2.
+    Empty payload — narrows to usernameless (discoverable-credential)
+    passkey login, the "Sign in with a passkey" entry shown before any
+    email is entered. Realize authorization is still decided by Layer 2.
 
     """
 
     model_config = ConfigDict(
         extra="forbid",
     )
-    allowUsernameless: bool | None = None
+
+
+class AuthenticationRulePasskeyReasonedPayload(BaseModel):
+    """
+    Empty payload — narrows to email-first ("reasoned") passkey login,
+    the passkey option offered after the user enters their email.
+    Realize authorization is still decided by Layer 2.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
 
 
 class AuthenticationRuleEmailVerificationPayload(BaseModel):
@@ -533,7 +597,8 @@ class AuthenticationRuleConstraint(BaseModel):
         ..., description="Which authentication method this constraint narrows to."
     )
     payload: (
-        AuthenticationRulePasskeyPayload
+        AuthenticationRulePasskeyUsernamelessPayload
+        | AuthenticationRulePasskeyReasonedPayload
         | AuthenticationRuleEmailVerificationPayload
         | AuthenticationRuleSteamTicketPayload
         | AuthenticationRuleSteamOpenIdPayload

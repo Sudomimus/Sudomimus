@@ -187,6 +187,46 @@ describe("NativeClient", () => {
         });
     });
 
+    describe("createErrand", () => {
+
+        it("POSTs /errand with the JSON body and returns the response", async () => {
+
+            const expected = {
+                errand: {
+                    errandKey: "ernd_courier-route-abcdef012345-seal",
+                    url: "https://via.sudomimus.com/errand?key=ernd_courier-route-abcdef012345-seal",
+                    expiresAt: "2026-06-10T12:30:00.000Z",
+                },
+                claims: {
+                    email: { requirement: "REQUIRED", state: "UNKNOWN" },
+                    firstName: { requirement: "OFF", state: "UNKNOWN" },
+                    lastName: { requirement: "OFF", state: "UNKNOWN" },
+                },
+            };
+            const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+            const client = new NativeClient({
+                baseUrl: "https://native.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            const result = await client.createErrand({
+                accessToken: "a-jwt",
+            });
+
+            expect(result).toEqual(expected);
+            const [url, init] = fetchMock.mock.calls[0];
+            expect(url).toBe("https://native.example.com/errand");
+            expect(init.method).toBe("POST");
+            expect(init.headers).toEqual({
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            });
+            expect(JSON.parse(init.body as string)).toEqual({
+                accessToken: "a-jwt",
+            });
+        });
+    });
+
     describe("errandStatus", () => {
 
         it("GETs /errand/{errandKey}/status and returns the status", async () => {

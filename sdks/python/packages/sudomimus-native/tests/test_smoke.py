@@ -11,6 +11,7 @@ import pytest
 from sudomimus_native import (
     PRODUCTION_BASE_URL,
     AsyncNativeClient,
+    CreateErrandRequest,
     DirectIssueAccessKeyRequest,
     DirectIssueSteamTicketRequest,
     NativeApiError,
@@ -31,6 +32,11 @@ def _token_response(request: httpx.Request) -> httpx.Response:
             "applicationAnchor": "my-app",
             "accessToken": "a.b.c",
             "refreshToken": "d.e.f",
+            "claims": {
+                "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+            },
         },
     )
 
@@ -178,3 +184,93 @@ def test_async_direct_issue_access_key() -> None:
             return result.accessToken
 
     assert asyncio.run(run()) == "a.b.c"
+
+
+def test_create_errand() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "errand": {
+                    "errandKey": "ernd_xyz",
+                    "url": "https://via.example.com",
+                    "expiresAt": "2026-06-15T21:00:00Z",
+                },
+                "claims": {
+                    "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
+                    "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                },
+            },
+        )
+
+    with _client(handler) as client:
+        result = client.create_errand(CreateErrandRequest(accessToken="a.b.c"))
+
+    assert captured["url"].endswith("/errand")
+    assert captured["body"] == {"accessToken": "a.b.c"}
+    assert result.errand is not None
+    assert result.errand.errandKey == "ernd_xyz"
+    assert result.claims.email.requirement == "REQUIRED"
+
+
+def test_errand_status() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"status": "COMPLETED"})
+
+    with _client(handler) as client:
+        result = client.errand_status("ernd_xyz")
+
+    assert captured["url"].endswith("/errand/ernd_xyz/status")
+    assert result.status == "COMPLETED"
+
+
+def test_async_create_errand() -> None:
+    async def run() -> str:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "errand": {
+                        "errandKey": "ernd_xyz",
+                        "url": "https://via.example.com",
+                        "expiresAt": "2026-06-15T21:00:00Z",
+                    },
+                    "claims": {
+                        "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
+                        "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    },
+                },
+            )
+
+        async with AsyncNativeClient(
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        ) as client:
+            result = await client.create_errand(CreateErrandRequest(accessToken="a.b.c"))
+            assert result.errand is not None
+            return result.errand.errandKey
+
+    assert asyncio.run(run()) == "ernd_xyz"
+
+
+def test_async_errand_status() -> None:
+    async def run() -> str:
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"status": "COMPLETED"})
+
+        async with AsyncNativeClient(
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        ) as client:
+            result = await client.errand_status("ernd_xyz")
+            return result.status
+
+    assert asyncio.run(run()) == "COMPLETED"
+

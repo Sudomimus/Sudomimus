@@ -19,6 +19,8 @@ export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementS
 export type ErrandHandoff = components["schemas"]["ErrandHandoff"];
 export type ErrandStatusResponse = components["schemas"]["ErrandStatusResponse"];
 export type DirectIssueDeniedError = components["schemas"]["DirectIssueDeniedError"];
+export type CreateErrandRequest = components["schemas"]["CreateErrandRequest"];
+export type CreateErrandResponse = components["schemas"]["CreateErrandResponse"];
 
 /**
  * Error body for a failed direct-issue. Claim-gate 403s

@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from enum import StrEnum
+
+from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -26,18 +28,6 @@ class DirectIssueAccessKeyRequest(BaseModel):
     )
 
 
-class DirectIssueAccessKeyResponse(BaseModel):
-    applicationAnchor: str
-    accessToken: str = Field(
-        ...,
-        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
-    )
-    refreshToken: str = Field(
-        ...,
-        description="Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key.",
-    )
-
-
 class DirectIssueSteamTicketRequest(BaseModel):
     applicationAnchor: str = Field(
         ..., description="Public anchor identifying the integrating application."
@@ -53,16 +43,112 @@ class DirectIssueSteamTicketRequest(BaseModel):
     )
 
 
-class DirectIssueSteamTicketResponse(BaseModel):
-    applicationAnchor: str
+class Requirement(StrEnum):
+    """
+    The developer's policy for the claim. `SYNTHETIC` guarantees the
+    claim is present but permits a generated placeholder (a stand-in
+    name, a proxy email) when the user has not shared real data —
+    unlike `REQUIRED` it never blocks issuance or raises an errand.
+
+    """
+
+    OFF = "OFF"
+    OPTIONAL = "OPTIONAL"
+    REQUIRED = "REQUIRED"
+    SYNTHETIC = "SYNTHETIC"
+
+
+class State(StrEnum):
+    UNKNOWN = "UNKNOWN"
+    GRANTED = "GRANTED"
+    DENIED = "DENIED"
+
+
+class ClaimRequirementStateView(BaseModel):
+    """
+    One shareable claim: what the application requests (`requirement`)
+    joined with the user's standing decision (`state`). `UNKNOWN` means
+    the user was never asked; `DENIED` means the user explicitly
+    declined.
+
+    """
+
+    requirement: Requirement = Field(
+        ...,
+        description="The developer's policy for the claim. `SYNTHETIC` guarantees the\nclaim is present but permits a generated placeholder (a stand-in\nname, a proxy email) when the user has not shared real data —\nunlike `REQUIRED` it never blocks issuance or raises an errand.\n",
+    )
+    state: State
+
+
+class ClaimsStateView(BaseModel):
+    """
+    Per-claim view across the three shareable claims, carried on both
+    the 200 (why is a claim absent from the minted token) and the
+    claim-gate 403 (what is still owed).
+
+    """
+
+    email: ClaimRequirementStateView
+    firstName: ClaimRequirementStateView
+    lastName: ClaimRequirementStateView
+
+
+class ErrandHandoff(BaseModel):
+    """
+    The browser side-trip that unblocks a claim-gated direct-issue:
+    a short-lived (30 minutes), single-use bearer URL where the user
+    authenticates (when account data is being written), completes any
+    missing data, and grants consent. The stored task list is server-
+    side only — open the URL and let the page drive. Repeated blocked
+    calls re-hand the same live handoff (same `errandKey`, original
+    `expiresAt`) while it has at least 15 minutes left and the owed
+    task scope is unchanged.
+
+    """
+
+    errandKey: str = Field(
+        ..., description="Bearer key (`ernd_…`); also the status-poll path key."
+    )
+    url: AnyUrl = Field(..., description="Open this in the user's system browser.")
+    expiresAt: AwareDatetime
+
+
+class DirectIssueDeniedError(BaseModel):
+    """
+    403 body. For the claim-gate reasons (`ClaimConsentRequired`,
+    `RequiredClaimDataMissing`) the `claims` view and the `errand`
+    handoff are present; for every other reason only `reason` is set.
+
+    """
+
+    reason: str = Field(..., description="Stable machine-readable reason code.")
+    claims: ClaimsStateView | None = None
+    errand: ErrandHandoff | None = None
+
+
+class CreateErrandRequest(BaseModel):
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+        description="An access token (JWT) the application already holds for the user.\nVerified server-side with its expiry enforced, then reverse-resolved\nfrom its `subject` (sector subject) claim to the account — so present\na currently-valid token, not an expired one.\n",
     )
-    refreshToken: str = Field(
+
+
+class CreateErrandResponse(BaseModel):
+    errand: ErrandHandoff | None = Field(
         ...,
-        description="Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket.",
+        description="The browser side-trip to open, or `null` when the account already\nsatisfies the application's claim policy (nothing to consent to or\ncomplete) — in that case just direct-issue.\n",
     )
+    claims: ClaimsStateView
+
+
+class Status(StrEnum):
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    EXPIRED = "EXPIRED"
+
+
+class ErrandStatusResponse(BaseModel):
+    status: Status
 
 
 class Error(BaseModel):
@@ -75,3 +161,29 @@ class Error(BaseModel):
     """
 
     reason: str | None = Field(None, description="Stable machine-readable reason code.")
+
+
+class DirectIssueAccessKeyResponse(BaseModel):
+    claims: ClaimsStateView
+    applicationAnchor: str
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+    )
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key.",
+    )
+
+
+class DirectIssueSteamTicketResponse(BaseModel):
+    claims: ClaimsStateView
+    applicationAnchor: str
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+    )
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket.",
+    )

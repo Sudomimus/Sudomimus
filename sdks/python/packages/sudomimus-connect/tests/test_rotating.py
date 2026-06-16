@@ -98,7 +98,18 @@ def test_rotating_seed_then_refresh_updates_store() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         captured["path"] = request.url.path
         captured["body"] = request.content.decode("utf-8")
-        return httpx.Response(200, json={"accessToken": "a2", "refreshToken": "r2"})
+        return httpx.Response(
+            200,
+            json={
+                "accessToken": "a2",
+                "refreshToken": "r2",
+                "claims": {
+                    "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                },
+            },
+        )
 
     rotating = RotatingConnectClient(_sync_client(handler), InMemoryTokenStore())
     rotating.seed(TokenPair(access_token="a1", refresh_token="r1"))
@@ -164,7 +175,18 @@ def test_rotating_concurrent_refresh_coalesces() -> None:
         # the result of (in-flight de-dup); the handler runs exactly once.
         gate.wait(timeout=2.0)
         call_count["n"] += 1
-        return httpx.Response(200, json={"accessToken": "a2", "refreshToken": "r2"})
+        return httpx.Response(
+            200,
+            json={
+                "accessToken": "a2",
+                "refreshToken": "r2",
+                "claims": {
+                    "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                },
+            },
+        )
 
     rotating = RotatingConnectClient(_sync_client(handler), InMemoryTokenStore())
     rotating.seed(TokenPair(access_token="a1", refresh_token="r1"))
@@ -200,7 +222,18 @@ def test_rotating_concurrent_refresh_coalesces() -> None:
 
 def test_async_rotating_seed_then_refresh_updates_store() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"accessToken": "a2", "refreshToken": "r2"})
+        return httpx.Response(
+            200,
+            json={
+                "accessToken": "a2",
+                "refreshToken": "r2",
+                "claims": {
+                    "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                },
+            },
+        )
 
     async def run() -> tuple[str, TokenPair | None]:
         async with _async_client(handler) as client:
@@ -235,7 +268,18 @@ def test_async_rotating_concurrent_refresh_coalesces() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         call_count["n"] += 1
-        return httpx.Response(200, json={"accessToken": "a2", "refreshToken": "r2"})
+        return httpx.Response(
+            200,
+            json={
+                "accessToken": "a2",
+                "refreshToken": "r2",
+                "claims": {
+                    "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                },
+            },
+        )
 
     async def run() -> list[str]:
         async with _async_client(handler) as client:

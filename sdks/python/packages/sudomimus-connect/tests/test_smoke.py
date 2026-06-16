@@ -130,6 +130,11 @@ def test_redeem_happy_path() -> None:
                 "applicationAnchor": "my-app",
                 "refreshToken": "r.t",
                 "accessToken": "a.t",
+                "claims": {
+                    "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                },
             },
         )
 
@@ -358,7 +363,16 @@ def test_async_redeem_and_info() -> None:
             )
         return httpx.Response(
             200,
-            json={"applicationAnchor": "my-app", "refreshToken": "r.t", "accessToken": "a.t"},
+            json={
+                "applicationAnchor": "my-app",
+                "refreshToken": "r.t",
+                "accessToken": "a.t",
+                "claims": {
+                    "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                },
+            },
         )
 
     async def run() -> tuple[str, str]:
@@ -452,7 +466,18 @@ def test_async_health_status_poll_refresh_introspect() -> None:
         if path == "/status-poll":
             return httpx.Response(200, json={"status": "PENDING"})
         if path == "/refresh":
-            return httpx.Response(200, json={"accessToken": "a2", "refreshToken": "r2"})
+            return httpx.Response(
+                200,
+                json={
+                    "accessToken": "a2",
+                    "refreshToken": "r2",
+                    "claims": {
+                        "email": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    },
+                },
+            )
         if path == "/introspect":
             return httpx.Response(200, json={"status": "active", "recommendedRecheckSeconds": 15})
         return httpx.Response(404)

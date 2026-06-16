@@ -8,10 +8,19 @@ single round trip.
 from __future__ import annotations
 
 from ._generated.models import (
+    ClaimRequirementStateView,
+    ClaimsStateView,
+    CreateErrandRequest,
+    CreateErrandResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
+    ErrandHandoff,
+    ErrandStatusResponse,
+    Requirement,
+    State,
+    Status,
 )
 from ._generated.models import Error as NativeError
 from .async_client import AsyncNativeClient
@@ -23,11 +32,20 @@ __all__ = [
     "PRODUCTION_BASE_URL",
     "STEAM_TICKET_IDENTITY",
     "AsyncNativeClient",
+    "ClaimsStateView",
+    "ClaimRequirementStateView",
+    "CreateErrandRequest",
+    "CreateErrandResponse",
     "DirectIssueAccessKeyRequest",
     "DirectIssueAccessKeyResponse",
     "DirectIssueSteamTicketRequest",
     "DirectIssueSteamTicketResponse",
+    "ErrandHandoff",
+    "ErrandStatusResponse",
     "NativeApiError",
     "NativeClient",
     "NativeError",
+    "Requirement",
+    "State",
+    "Status",
 ]

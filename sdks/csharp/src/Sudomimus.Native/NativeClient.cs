@@ -115,6 +115,23 @@ public sealed class NativeClient
     }
 
     /// <summary>
+    /// Proactively mint an errand for a user you already authenticated.
+    /// </summary>
+    /// <exception cref="NativeApiException">
+    /// The Native API returned a non-success HTTP status.
+    /// </exception>
+    public Task<CreateErrandResponse> CreateErrandAsync(
+        CreateErrandRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return PostJsonAsync<CreateErrandRequest, CreateErrandResponse>(
+            "/errand",
+            request,
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Poll the status of an errand handed back on a claim-gate 403
     /// (<see cref="NativeApiException.Errand"/>). A pure, side-effect-free read
     /// — safe to call every couple of seconds while the user completes the

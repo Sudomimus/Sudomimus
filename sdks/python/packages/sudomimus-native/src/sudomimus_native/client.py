@@ -9,10 +9,14 @@ import httpx
 from pydantic import BaseModel
 
 from ._generated.models import (
+    CreateErrandRequest,
+    CreateErrandResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
+    DirectIssueDeniedError,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
+    ErrandStatusResponse,
     Error,
 )
 from .constants import PRODUCTION_BASE_URL
@@ -78,6 +82,26 @@ class NativeClient:
             "/direct-issue/access-key", request, DirectIssueAccessKeyResponse
         )
 
+    def create_errand(
+        self,
+        request: CreateErrandRequest,
+    ) -> CreateErrandResponse:
+        """Proactively mint an errand for a user you already authenticated."""
+        return self._post(
+            "/errand", request, CreateErrandResponse
+        )
+
+    def errand_status(
+        self,
+        errand_key: str,
+    ) -> ErrandStatusResponse:
+        """Poll the status of an errand."""
+        response = self._client.get(
+            f"{self._base_url}/errand/{errand_key}/status",
+            headers={"Accept": "application/json"},
+        )
+        return _handle(response, ErrandStatusResponse)
+
     def _post(
         self,
         path: str,
@@ -100,10 +124,13 @@ def _handle(response: httpx.Response, response_model: type[_ResponseT]) -> _Resp
     raise NativeApiError(response.status_code, error.reason if error else None, error)
 
 
-def _try_read_error(response: httpx.Response) -> Error | None:
+def _try_read_error(response: httpx.Response) -> DirectIssueDeniedError | Error | None:
     if not response.content:
         return None
     try:
-        return Error.model_validate_json(response.content)
-    except ValueError:
-        return None
+        return DirectIssueDeniedError.model_validate_json(response.content)
+    except Exception:
+        try:
+            return Error.model_validate_json(response.content)
+        except Exception:
+            return None

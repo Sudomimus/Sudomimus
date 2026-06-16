@@ -319,4 +319,45 @@ public class NativeClientTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => client.GetErrandStatusAsync(""));
     }
+
+    [Fact]
+    public async Task CreateErrandAsync_PostsExpectedRequestAndParsesResponse()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.OK, """
+            {
+                "errand": {
+                    "errandKey": "ernd_courier-route-abcdef012345-seal",
+                    "url": "https://via.sudomimus.com/errand?key=ernd_courier-route-abcdef012345-seal",
+                    "expiresAt": "2026-06-10T12:30:00.000Z"
+                },
+                "claims": {
+                    "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
+                    "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                }
+            }
+            """);
+        using var http = new HttpClient(handler);
+        var client = new NativeClient("https://native.example.com", http);
+
+        var response = await client.CreateErrandAsync(new CreateErrandRequest
+        {
+            AccessToken = "a-jwt",
+        });
+
+        Assert.NotNull(response.Errand);
+        Assert.Equal("ernd_courier-route-abcdef012345-seal", response.Errand.ErrandKey);
+        Assert.Equal(ClaimRequirement.Required, response.Claims.Email.Requirement);
+
+        var sentRequest = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Post, sentRequest.Method);
+        Assert.Equal(
+            "https://native.example.com/errand",
+            sentRequest.RequestUri!.ToString());
+
+        Assert.NotNull(sentRequest.Body);
+        using var parsed = JsonDocument.Parse(sentRequest.Body!);
+        Assert.Equal("a-jwt", parsed.RootElement.GetProperty("accessToken").GetString());
+    }
 }
