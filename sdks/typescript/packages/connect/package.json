@@ -1,6 +1,6 @@
 {
     "name": "@sudomimus/connect",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Sudomimus Connect SDK — token exchange (Establish, Redeem, Refresh) with per-claim consent views on redeem/refresh.",
     "license": "MIT",
     "repository": {

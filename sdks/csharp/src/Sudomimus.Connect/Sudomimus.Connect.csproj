@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Sudomimus.Connect</PackageId>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <Description>HTTP client for the Sudomimus Connect API — establish authentication inquiries, poll status, redeem tokens, refresh, introspect, and revoke sessions. Redeem/refresh responses carry the per-claim consent view. Mirrors the @sudomimus/connect TypeScript SDK.</Description>
     <PackageTags>sudomimus;auth;connect;jwt</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
