@@ -7,6 +7,9 @@ requires-python = ">=3.11"
 [tool.uv.workspace]
 members = ["packages/*"]
 
+[tool.uv]
+exclude-newer = "1 week"
+
 [tool.uv.sources]
 sudomimus-connect = { workspace = true }
 sudomimus-native = { workspace = true }

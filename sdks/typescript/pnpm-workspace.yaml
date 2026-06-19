@@ -18,6 +18,4 @@ catalog:
   turbo: 2.9.16
   typescript: 6.0.3
 
-minimumReleaseAgeExclude:
-  - "@sudoo/jwt@3.6.0"
-  - "@sudoo/token@1.7.0"
+minimumReleaseAge: 10080
