@@ -74,7 +74,7 @@ CI verifies the generated files match the spec via `git diff --exit-code`.
 
 - [ ] Spec changes regenerated and committed
 - [ ] `pnpm lint && pnpm compile && pnpm test` passes in `sdks/typescript`
-- [ ] `uv run ruff check && uv run mypy packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src && uv run pytest` passes in `sdks/python`
+- [ ] `uv run ruff check && uv run mypy packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src && uv run pytest` passes in `sdks/python`
 - [ ] `dotnet build sdks/csharp/Sudomimus.slnx -c Release && dotnet test sdks/csharp/Sudomimus.slnx -c Release` passes (or use `make compile-csharp test-csharp`)
 - [ ] README updated if public API changed
 - [ ] Status table in root `README.md` updated if package status changed

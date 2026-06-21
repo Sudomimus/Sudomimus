@@ -1,7 +1,7 @@
 TS_SDK := sdks/typescript
 CSHARP_SDK := sdks/csharp
 PYTHON_SDK := sdks/python
-PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src
+PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src
 GO_SDK := sdks/go
 JAVA_SDK := sdks/java
 NUGET_SOURCE := https://api.nuget.org/v3/index.json
@@ -84,7 +84,25 @@ lint-native:
 test-native:
 	pnpm -C $(TS_SDK) --filter=@sudomimus/native run test
 
-# ---------- Python SDKs (sudomimus-token + sudomimus-native + sudomimus-connect) ----------
+# ---------- @sudomimus/device ----------
+
+.PHONY: generate-device
+generate-device:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/device run generate
+
+.PHONY: compile-device
+compile-device:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/device run compile
+
+.PHONY: lint-device
+lint-device:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/device run lint
+
+.PHONY: test-device
+test-device:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/device run test
+
+# ---------- Python SDKs (sudomimus-token + sudomimus-native + sudomimus-connect + sudomimus-device) ----------
 # All -py targets operate on sdks/python/ (uv workspace).
 
 .PHONY: install-py
@@ -113,6 +131,7 @@ coverage-py:
 		--cov=sudomimus_token \
 		--cov=sudomimus_native \
 		--cov=sudomimus_connect \
+		--cov=sudomimus_device \
 		--cov-report=term-missing
 
 # ---------- Publish (npm) ----------
@@ -124,6 +143,10 @@ publish-dry-run-token:
 .PHONY: publish-dry-run-connect
 publish-dry-run-connect:
 	pnpm -C $(TS_SDK) run publish-dry-run:connect
+
+.PHONY: publish-dry-run-device
+publish-dry-run-device:
+	pnpm -C $(TS_SDK) run publish-dry-run:device
 
 .PHONY: publish-dry-run-native
 publish-dry-run-native:
@@ -137,13 +160,17 @@ publish-token:
 publish-connect:
 	pnpm -C $(TS_SDK) run publish:connect
 
+.PHONY: publish-device
+publish-device:
+	pnpm -C $(TS_SDK) run publish:device
+
 .PHONY: publish-native
 publish-native:
 	pnpm -C $(TS_SDK) run publish:native
 
 # ---------- Publish (PyPI) ----------
 # `make build-py` produces wheels + sdists for every Python package into
-# sdks/python/dist/. The per-package publish-{token,native,connect}-py
+# sdks/python/dist/. The per-package publish-{token,native,connect,device}-py
 # targets push that one package to PyPI via `uv publish`. Set
 # UV_PUBLISH_TOKEN (PyPI API token, e.g. `pypi-XXXX…`) before pushing.
 # Dry-run targets only build + list the artifacts so you can inspect them.
@@ -159,6 +186,7 @@ build-py: clean-build-py
 	cd $(PYTHON_SDK) && uv build --package sudomimus-token --out-dir dist
 	cd $(PYTHON_SDK) && uv build --package sudomimus-native --out-dir dist
 	cd $(PYTHON_SDK) && uv build --package sudomimus-connect --out-dir dist
+	cd $(PYTHON_SDK) && uv build --package sudomimus-device --out-dir dist
 
 .PHONY: build-token-py
 build-token-py: clean-build-py
@@ -171,6 +199,10 @@ build-native-py: clean-build-py
 .PHONY: build-connect-py
 build-connect-py: clean-build-py
 	cd $(PYTHON_SDK) && uv build --package sudomimus-connect --out-dir dist
+
+.PHONY: build-device-py
+build-device-py: clean-build-py
+	cd $(PYTHON_SDK) && uv build --package sudomimus-device --out-dir dist
 
 .PHONY: publish-dry-run-token-py
 publish-dry-run-token-py: build-token-py
@@ -190,6 +222,12 @@ publish-dry-run-connect-py: build-connect-py
 	@echo ""
 	@echo "Inspect the artifacts above. To publish: make publish-connect-py"
 
+.PHONY: publish-dry-run-device-py
+publish-dry-run-device-py: build-device-py
+	@ls -la $(PYTHON_DIST_DIR)/sudomimus_device-*
+	@echo ""
+	@echo "Inspect the artifacts above. To publish: make publish-device-py"
+
 .PHONY: publish-token-py
 publish-token-py: build-token-py
 	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
@@ -204,6 +242,11 @@ publish-native-py: build-native-py
 publish-connect-py: build-connect-py
 	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
 	cd $(PYTHON_SDK) && uv publish dist/sudomimus_connect-*
+
+.PHONY: publish-device-py
+publish-device-py: build-device-py
+	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
+	cd $(PYTHON_SDK) && uv publish dist/sudomimus_device-*
 
 # ---------- C# SDK (Sudomimus.Connect + Sudomimus.Native + Sudomimus.Token) ----------
 # All -cs targets operate on sdks/csharp/. NuGet pushes require
