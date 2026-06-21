@@ -10,6 +10,7 @@ resolution-markers = [
 [manifest]
 members = [
     "sudomimus-connect",
+    "sudomimus-device",
     "sudomimus-native",
     "sudomimus-sdks-python",
     "sudomimus-token",
@@ -1050,6 +1051,23 @@ requires-dist = [
 ]
 
 [[package]]
+name = "sudomimus-device"
+version = "1.0.0"
+source = { editable = "packages/sudomimus-device" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sudomimus-connect" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "pydantic", specifier = ">=2.7" },
+    { name = "sudomimus-connect", editable = "packages/sudomimus-connect" },
+]
+
+[[package]]
 name = "sudomimus-native"
 version = "0.0.1"
 source = { editable = "packages/sudomimus-native" }
@@ -1077,6 +1095,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "sudomimus-connect" },
+    { name = "sudomimus-device" },
     { name = "sudomimus-native" },
     { name = "sudomimus-token" },
 ]
@@ -1091,6 +1110,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=5.0" },
     { name = "ruff", specifier = ">=0.8" },
     { name = "sudomimus-connect", editable = "packages/sudomimus-connect" },
+    { name = "sudomimus-device", editable = "packages/sudomimus-device" },
     { name = "sudomimus-native", editable = "packages/sudomimus-native" },
     { name = "sudomimus-token", editable = "packages/sudomimus-token" },
 ]

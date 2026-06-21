@@ -11,9 +11,11 @@
         "coverage": "turbo run coverage",
         "publish:token": "pnpm --filter @sudomimus/token run release:publish",
         "publish:connect": "pnpm --filter @sudomimus/connect run release:publish",
+        "publish:device": "pnpm --filter @sudomimus/device run release:publish",
         "publish:native": "pnpm --filter @sudomimus/native run release:publish",
         "publish-dry-run:token": "pnpm --filter @sudomimus/token run release:dry-run",
         "publish-dry-run:connect": "pnpm --filter @sudomimus/connect run release:dry-run",
+        "publish-dry-run:device": "pnpm --filter @sudomimus/device run release:dry-run",
         "publish-dry-run:native": "pnpm --filter @sudomimus/native run release:dry-run"
     },
     "devDependencies": {

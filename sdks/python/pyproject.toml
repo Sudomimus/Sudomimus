@@ -12,6 +12,7 @@ exclude-newer = "1 week"
 
 [tool.uv.sources]
 sudomimus-connect = { workspace = true }
+sudomimus-device = { workspace = true }
 sudomimus-native = { workspace = true }
 sudomimus-token = { workspace = true }
 
@@ -23,6 +24,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.8",
     "sudomimus-connect",
+    "sudomimus-device",
     "sudomimus-native",
     "sudomimus-token",
 ]
@@ -45,7 +47,7 @@ addopts = ["--import-mode=importlib"]
 
 [tool.coverage.run]
 branch = true
-source = ["sudomimus_token", "sudomimus_native", "sudomimus_connect"]
+source = ["sudomimus_token", "sudomimus_native", "sudomimus_connect", "sudomimus_device"]
 omit = ["*/_generated/*"]
 
 [tool.coverage.report]

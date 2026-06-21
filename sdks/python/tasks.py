@@ -16,6 +16,7 @@ SPECS_DIR = WORKSPACE_ROOT.parent.parent / "specs"
 
 TARGETS = [
     ("connect", "sudomimus-connect", "sudomimus_connect"),
+    ("device", "sudomimus-device", "sudomimus_device"),
     ("native", "sudomimus-native", "sudomimus_native"),
 ]
 

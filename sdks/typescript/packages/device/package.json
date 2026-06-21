@@ -1,0 +1,49 @@
+{
+    "name": "@sudomimus/device",
+    "version": "1.0.0",
+    "description": "Sudomimus Device SDK — public-client device authorization with manual or automatic polling.",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sudomimus/sudomimus.git",
+        "directory": "sdks/typescript/packages/device"
+    },
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "generate": "openapi-typescript ../../../../specs/device.yaml -o src/_generated/schema.ts",
+        "compile": "tsc --project typescript/tsconfig.compile.json",
+        "lint": "eslint src",
+        "test": "jest",
+        "coverage": "jest --coverage",
+        "release": "pnpm generate && pnpm lint && pnpm test && pnpm compile",
+        "release:dry-run": "pnpm release && pnpm pack --pack-destination /tmp && pnpm publish --dry-run --no-git-checks --access=public",
+        "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
+    },
+    "dependencies": {
+        "@sudomimus/connect": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/jest": "catalog:",
+        "@types/node": "catalog:",
+        "jest": "catalog:",
+        "openapi-typescript": "catalog:",
+        "ts-jest": "catalog:",
+        "typescript": "catalog:"
+    }
+}
