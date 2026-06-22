@@ -7,7 +7,8 @@ Java SDKs for the [Sudomimus](https://sudomimus.com) authentication and authoriz
 | Module | Maven coordinates | Purpose | Status |
 | --- | --- | --- | --- |
 | [`token`](token) | `com.sudomimus:sudomimus-token` | Parse and verify Sudomimus access / refresh JWTs | alpha |
-| `connect` | `com.sudomimus:sudomimus-connect` | Token exchange (Establish / Redeem / Refresh / …) | planned |
+| `connect` | `com.sudomimus:sudomimus-connect` | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | planned |
+| `session` | `com.sudomimus:sudomimus-session` | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | planned |
 | `native` | `com.sudomimus:sudomimus-native` | Direct-issue (Steam ticket / access key) | planned |
 
 ## Develop
