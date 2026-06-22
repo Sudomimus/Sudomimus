@@ -48,7 +48,7 @@ The platform fixed this on the wire (see core-monorepo `docs/authentication/erra
 
 ### 1.1 `claims` on every token-issuing response
 
-`200` bodies from `/direct-issue/*` (and `connect /redeem`, `/refresh`) now carry:
+`200` bodies from `/direct-issue/*`, Connect `/redeem`, and Session `/refresh` now carry:
 
 ```jsonc
 "claims": {
@@ -95,7 +95,7 @@ GET /errand/{errandKey}/status  →  { "status": "PENDING" | "COMPLETED" | "EXPI
 
 ### 1.4 Errand recovery is also the native fix for refresh-time claim escalation
 
-If a developer escalates a claim policy `OPTIONAL → REQUIRED` mid-session, `connect /refresh` starts returning `403 ClaimConsentRequired` (no errand is minted there). The native recovery is identical: **re-run direct-issue and follow the errand handoff.** This is why the errand orchestrator (below) should be reachable from the refresh-failure path, not only first login.
+If a developer escalates a claim policy `OPTIONAL → REQUIRED` mid-session, Session `/refresh` starts returning `403 ClaimConsentRequired` (no errand is minted there). The native recovery is identical: **re-run direct-issue and follow the errand handoff.** This is why the errand orchestrator (below) should be reachable from the refresh-failure path, not only first login.
 
 ---
 
@@ -109,7 +109,7 @@ If a developer escalates a claim policy `OPTIONAL → REQUIRED` mid-session, `co
 | claim-gate `403` has `claims` + `errand` | `NativeErrorBody` = `{ reason }` only | **`claims` + `errand` dropped** — the recovery path is invisible |
 | `GET /errand/{errandKey}/status` | — | **No client method** |
 | `reason` is a stable enum (`ClaimConsentRequired`, `Layer2Denied`, …) | `Reason` is a raw `string?` | No typed surface; consumers hard-code magic strings |
-| `connect /redeem`,`/refresh` `200` have `claims` | `RedeemResponse`/`RefreshResponse` = no `claims` | **`claims` dropped** (companion change) |
+| Connect `/redeem` and Session `/refresh` `200` have `claims` | `RedeemResponse`/`RefreshResponse` = no `claims` | **`claims` dropped** (companion change) |
 | `native.yaml` | `0.3.0` — no `claims`, `403` schema is `{ reason }`, no errand path | **Spec is behind the implementation** |
 
 The error pipeline already deserializes `NativeErrorBody` from the `403` body (`NativeClient.TryReadErrorBodyAsync`), so the `errand`/`claims` fields are *physically present in the HTTP response the SDK receives* — they are simply discarded because the model has no fields for them. This makes the fix low-risk: we are widening a DTO that is already being parsed.
@@ -120,7 +120,7 @@ The error pipeline already deserializes `NativeErrorBody` from the `403` body (`
 
 Project-Square (`Bricolage`, Godot/C#) wraps the SDK in `AuthManager` (an autoload singleton). Relevant facts from `game/src/System/AuthManager.cs`:
 
-- **Only access-key login is implemented.** `StartAccessKeyLogin` calls `DirectIssueAccessKeyAsync`, seeds a `RotatingConnectClient`, parses the access token into a `PlayerIdentity { Subject, FirstName, LastName, EmailAddress }`.
+- **Only access-key login is implemented.** `StartAccessKeyLogin` calls `DirectIssueAccessKeyAsync`, seeds a `RotatingSessionClient`, parses the access token into a `PlayerIdentity { Subject, FirstName, LastName, EmailAddress }`.
 - **The claim gate is a dead-end.** On any `NativeApiException` it does:
 
   ```csharp
@@ -368,7 +368,7 @@ DirectIssueResult login = await auth.AuthenticateAsync(async ct =>
         resp.Claims);
 }, ct);
 
-await rotating.SeedAsync(login.Tokens);   // hand off to Sudomimus.Connect as today
+await rotating.SeedAsync(login.Tokens);   // hand off to Sudomimus.Session as today
 ```
 
 Usage — access key (no fresh-credential subtlety, same shape):
@@ -381,7 +381,7 @@ DirectIssueResult login = await auth.AuthenticateAsync(async ct => {
 }, ct);
 ```
 
-> **Package boundary.** `TokenPair` currently lives in `Sudomimus.Connect`. To keep `Sudomimus.Native` dependency-free, either (a) introduce a tiny shared `Sudomimus.Abstractions` package holding `TokenPair` + the claims types and have both depend on it, or (b) have `DirectIssueResult` expose raw `AccessToken`/`RefreshToken` strings and let the caller build the `Connect.TokenPair`. **Recommendation: (b)** for this minor release (zero new packages, zero new cross-deps); revisit (a) if a future release wants `NativeAuthenticator` to seed a `RotatingConnectClient` directly.
+> **Package boundary.** `TokenPair` now lives in `Sudomimus.Session`. To keep `Sudomimus.Native` dependency-free, either (a) introduce a tiny shared `Sudomimus.Abstractions` package holding `TokenPair` + the claims types and have both depend on it, or (b) have `DirectIssueResult` expose raw `AccessToken`/`RefreshToken` strings and let the caller build the `Session.TokenPair`. **Recommendation: (b)** for this minor release (zero new packages, zero new cross-deps); revisit (a) if a future release wants `NativeAuthenticator` to seed a `RotatingSessionClient` directly.
 
 ### 5.7 Claims convenience surface
 
@@ -413,7 +413,7 @@ This is what lets Bricolage render "Share your email to enable cloud saves" off 
 
 - `Sudomimus.Native`: **`1.1.0 → 1.2.0`** (additive; new types + methods + the authenticator; no breaking changes).
 - `specs/native.yaml`: **`0.3.0 → 0.4.0`** — add `claims` to the two `200` schemas, add `claims`+`errand` to the `403` `Error` schema (or a dedicated `ClaimGateError`), and add the `GET /errand/{errandKey}/status` path + `ErrandStatusResponse` schema. The `Sudomimus.Contract.Tests` suite then enforces parity.
-- Companion (separate PR, `Sudomimus.Connect` minor bump): add nullable `Claims` to `RedeemResponse` and `RefreshResponse`. Useful so apps can detect claim escalation after `/refresh` and route into `NativeAuthenticator` (§1.4).
+- Companion session split: `Sudomimus.Connect.RedeemResponse` and `Sudomimus.Session.RefreshResponse` carry nullable `Claims`. Useful so apps can detect claim escalation after `/refresh` and route into `NativeAuthenticator` (§1.4).
 
 ---
 
@@ -515,7 +515,7 @@ sequenceDiagram
 
 - On-demand consent minting for **pure-OPTIONAL** apps on the native path (the platform itself doesn't auto-prompt these yet; Oversight staff-mint is the only path). The SDK can't conjure an errand the server won't mint.
 - Deep-link **return** to the native app after the browser errand (platform v1 has no return hook; the app resumes via polling / user signal).
-- Errand handling on `connect /redeem` / `/refresh` and on OIDC `/token` (the platform mints no errand there; native recovery is re-running direct-issue).
+- Errand handling on Connect `/redeem`, Session `/refresh`, and OIDC `/token` (the platform mints no errand there; native recovery is re-running direct-issue).
 
 ---
 
@@ -534,8 +534,8 @@ Phases 1–2 are the SDK; 3–4 are packaging/rollout. Project-Square adoption (
 
 ## 10. Open questions
 
-1. **Shared types package?** Defer `Sudomimus.Abstractions` (`TokenPair` + claims) to a later release, or introduce it now so `NativeAuthenticator` can seed a `RotatingConnectClient` end-to-end? (Recommendation: defer.)
-2. **Should the authenticator own the `RotatingConnectClient` seeding** (a `NativeSession` façade spanning Native+Connect), or stay token-string-pure and let the app seed? (Recommendation: stay pure for `1.2.0`; evaluate a `Session` façade once both SDKs carry `claims`.)
+1. **Shared types package?** Defer `Sudomimus.Abstractions` (`TokenPair` + claims) to a later release, or introduce it now so `NativeAuthenticator` can seed a `RotatingSessionClient` end-to-end? (Recommendation: defer.)
+2. **Should the authenticator own the `RotatingSessionClient` seeding** (a façade spanning Native+Session), or stay token-string-pure and let the app seed? (Recommendation: stay pure for `1.2.0`; evaluate a higher-level session façade once both SDKs carry `claims`.)
 3. **`ExpiresAt` as `DateTimeOffset`** (proposed) vs. raw `string`. Parsing is convenient but couples to ISO-8601 exactness; the server emits `Date.toISOString()` so `DateTimeOffset` is safe. (Recommendation: `DateTimeOffset`.)
 4. **Enum unknown-value tolerance.** If the platform later adds a claim or status value, a strict `JsonStringEnumConverter` throws. Add a tolerant converter (unknown → a sentinel) for forward-compat? (Recommendation: yes for `ErrandStatus`/claims enums — treat unknown `status` as `Pending`-safe or surface a sentinel.)
 ```

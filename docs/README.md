@@ -8,17 +8,20 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 
 | Language | Package | Purpose | Status |
 | --- | --- | --- | --- |
-| TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info / Introspect / Logout / RevokeAll) | alpha |
+| TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
 | TypeScript | [`@sudomimus/device`](sdks/typescript/packages/device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | alpha |
 | TypeScript | [`@sudomimus/token`](sdks/typescript/packages/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Direct-issue (Steam ticket / access key) | alpha |
-| Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info / Introspect / Logout / RevokeAll) | alpha |
+| TypeScript | [`@sudomimus/session`](sdks/typescript/packages/session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
+| Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
 | Python | [`sudomimus-device`](sdks/python/packages/sudomimus-device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | alpha |
 | Python | [`sudomimus-token`](sdks/python/packages/sudomimus-token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Direct-issue (Steam ticket / access key) | alpha |
-| C# / .NET | [`Sudomimus.Connect`](sdks/csharp/src/Sudomimus.Connect) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info / Introspect / Logout / RevokeAll) | alpha |
+| Python | [`sudomimus-session`](sdks/python/packages/sudomimus-session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
+| C# / .NET | [`Sudomimus.Connect`](sdks/csharp/src/Sudomimus.Connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
 | C# / .NET | [`Sudomimus.Token`](sdks/csharp/src/Sudomimus.Token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | C# / .NET | [`Sudomimus.Native`](sdks/csharp/src/Sudomimus.Native) | Direct-issue (Steam ticket / access key) | alpha |
+| C# / .NET | [`Sudomimus.Session`](sdks/csharp/src/Sudomimus.Session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
 | Go | [`github.com/sudomimus/sudomimus-go/token`](sdks/go/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | Java | [`com.sudomimus:sudomimus-token`](sdks/java/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 
