@@ -14,19 +14,19 @@
 //
 // Both paths converge: the example prints the per-claim view, parses the
 // returned access token via Sudomimus.Token to show the user, then seeds a
-// RotatingConnectClient + InMemoryTokenStore from the returned pair and
+// RotatingSessionClient + InMemoryTokenStore from the returned pair and
 // demonstrates one /refresh rotation followed by a /logout.
 //
 // A real game uses steam-ticket; CI / server-to-server / automation uses
 // access-key.
 
 using System.Diagnostics;
-using Sudomimus.Connect;
 using Sudomimus.Native;
+using Sudomimus.Session;
 using Sudomimus.Token;
 
 const string PemEndLine = "-----END PUBLIC KEY-----";
-const string ConnectBaseUrl = "https://connect-api.sudomimus.com";
+const string SessionBaseUrl = "https://session-api.sudomimus.com";
 
 Console.Write("Auth method (steam-ticket / access-key): ");
 var method = (Console.ReadLine() ?? string.Empty).Trim().ToLowerInvariant();
@@ -173,16 +173,16 @@ if (!string.IsNullOrEmpty(parsed.Body.LastName))
 // is absent from the token body above.
 PrintClaims(login.Claims);
 
-// Demonstrate refresh-token rotation. The ConnectClient does not need
+// Demonstrate refresh-token rotation. The SessionClient does not need
 // clientAuth here — /refresh and /logout authorize themselves with the
 // refresh token. InMemoryTokenStore is fine for a short-lived CLI; a
 // real game would persist the pair to disk (encrypted) so the user
 // stays logged in across launches.
 Console.WriteLine();
-Console.WriteLine("Seeding RotatingConnectClient and calling /refresh ...");
+Console.WriteLine("Seeding RotatingSessionClient and calling /refresh ...");
 
-var connectClient = new ConnectClient(ConnectBaseUrl);
-var rotating = new RotatingConnectClient(connectClient, new InMemoryTokenStore());
+var sessionClient = new SessionClient(SessionBaseUrl);
+var rotating = new RotatingSessionClient(sessionClient, new InMemoryTokenStore());
 await rotating.SeedAsync(new TokenPair { AccessToken = accessToken, RefreshToken = refreshToken });
 
 try
@@ -190,7 +190,7 @@ try
     var rotatedAccessToken = await rotating.RefreshAsync();
     Console.WriteLine($"✓ Rotated. accessToken changed={!string.Equals(rotatedAccessToken, accessToken, StringComparison.Ordinal)}");
 }
-catch (ConnectApiException ex)
+catch (SessionApiException ex)
 {
     Console.Error.WriteLine($"Refresh failed: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}");
     return 4;

@@ -2,6 +2,7 @@
 
 Plain .NET 8 console app that drives the Sudomimus Native login flow using
 the [`Sudomimus.Native`](../../../sdks/csharp/src/Sudomimus.Native) and
+[`Sudomimus.Session`](../../../sdks/csharp/src/Sudomimus.Session) and
 [`Sudomimus.Token`](../../../sdks/csharp/src/Sudomimus.Token) SDKs.
 
 The example supports **both Native API direct-issue paths**:
@@ -57,6 +58,9 @@ view (policy + the user's decision, so you can see why a claim is or isn't in
 the token):
 
 ```
+
+It then seeds `RotatingSessionClient`, calls Session `/refresh` once, and
+logs out through Session `/logout`.
 ✓ Login successful.
   subject:           subject-...
   firstName:         <name or SteamID64>

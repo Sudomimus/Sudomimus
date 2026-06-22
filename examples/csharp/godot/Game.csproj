@@ -13,9 +13,11 @@
          would replace these with NuGet PackageReferences:
            <PackageReference Include="Sudomimus.Connect" Version="1.0.0" />
            <PackageReference Include="Sudomimus.Native"  Version="1.0.0" />
+           <PackageReference Include="Sudomimus.Session" Version="1.0.0" />
            <PackageReference Include="Sudomimus.Token"   Version="1.0.0" /> -->
     <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Connect\Sudomimus.Connect.csproj" />
     <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Native\Sudomimus.Native.csproj" />
+    <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Session\Sudomimus.Session.csproj" />
     <ProjectReference Include="..\..\..\sdks\csharp\src\Sudomimus.Token\Sudomimus.Token.csproj" />
   </ItemGroup>
 

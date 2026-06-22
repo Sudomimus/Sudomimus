@@ -1,7 +1,7 @@
 TS_SDK := sdks/typescript
 CSHARP_SDK := sdks/csharp
 PYTHON_SDK := sdks/python
-PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src
+PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src packages/sudomimus-session/src
 GO_SDK := sdks/go
 JAVA_SDK := sdks/java
 NUGET_SOURCE := https://api.nuget.org/v3/index.json
@@ -102,7 +102,25 @@ lint-device:
 test-device:
 	pnpm -C $(TS_SDK) --filter=@sudomimus/device run test
 
-# ---------- Python SDKs (sudomimus-token + sudomimus-native + sudomimus-connect + sudomimus-device) ----------
+# ---------- @sudomimus/session ----------
+
+.PHONY: generate-session
+generate-session:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/session run generate
+
+.PHONY: compile-session
+compile-session:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/session run compile
+
+.PHONY: lint-session
+lint-session:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/session run lint
+
+.PHONY: test-session
+test-session:
+	pnpm -C $(TS_SDK) --filter=@sudomimus/session run test
+
+# ---------- Python SDKs (token + native + connect + device + session) ----------
 # All -py targets operate on sdks/python/ (uv workspace).
 
 .PHONY: install-py
@@ -132,6 +150,7 @@ coverage-py:
 		--cov=sudomimus_native \
 		--cov=sudomimus_connect \
 		--cov=sudomimus_device \
+		--cov=sudomimus_session \
 		--cov-report=term-missing
 
 # ---------- Publish (npm) ----------
@@ -152,6 +171,10 @@ publish-dry-run-device:
 publish-dry-run-native:
 	pnpm -C $(TS_SDK) run publish-dry-run:native
 
+.PHONY: publish-dry-run-session
+publish-dry-run-session:
+	pnpm -C $(TS_SDK) run publish-dry-run:session
+
 .PHONY: publish-token
 publish-token:
 	pnpm -C $(TS_SDK) run publish:token
@@ -168,9 +191,13 @@ publish-device:
 publish-native:
 	pnpm -C $(TS_SDK) run publish:native
 
+.PHONY: publish-session
+publish-session:
+	pnpm -C $(TS_SDK) run publish:session
+
 # ---------- Publish (PyPI) ----------
 # `make build-py` produces wheels + sdists for every Python package into
-# sdks/python/dist/. The per-package publish-{token,native,connect,device}-py
+# sdks/python/dist/. The per-package publish-{token,native,connect,device,session}-py
 # targets push that one package to PyPI via `uv publish`. Set
 # UV_PUBLISH_TOKEN (PyPI API token, e.g. `pypi-XXXX…`) before pushing.
 # Dry-run targets only build + list the artifacts so you can inspect them.
@@ -187,6 +214,7 @@ build-py: clean-build-py
 	cd $(PYTHON_SDK) && uv build --package sudomimus-native --out-dir dist
 	cd $(PYTHON_SDK) && uv build --package sudomimus-connect --out-dir dist
 	cd $(PYTHON_SDK) && uv build --package sudomimus-device --out-dir dist
+	cd $(PYTHON_SDK) && uv build --package sudomimus-session --out-dir dist
 
 .PHONY: build-token-py
 build-token-py: clean-build-py
@@ -203,6 +231,10 @@ build-connect-py: clean-build-py
 .PHONY: build-device-py
 build-device-py: clean-build-py
 	cd $(PYTHON_SDK) && uv build --package sudomimus-device --out-dir dist
+
+.PHONY: build-session-py
+build-session-py: clean-build-py
+	cd $(PYTHON_SDK) && uv build --package sudomimus-session --out-dir dist
 
 .PHONY: publish-dry-run-token-py
 publish-dry-run-token-py: build-token-py
@@ -228,6 +260,12 @@ publish-dry-run-device-py: build-device-py
 	@echo ""
 	@echo "Inspect the artifacts above. To publish: make publish-device-py"
 
+.PHONY: publish-dry-run-session-py
+publish-dry-run-session-py: build-session-py
+	@ls -la $(PYTHON_DIST_DIR)/sudomimus_session-*
+	@echo ""
+	@echo "Inspect the artifacts above. To publish: make publish-session-py"
+
 .PHONY: publish-token-py
 publish-token-py: build-token-py
 	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
@@ -248,7 +286,12 @@ publish-device-py: build-device-py
 	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
 	cd $(PYTHON_SDK) && uv publish dist/sudomimus_device-*
 
-# ---------- C# SDK (Sudomimus.Connect + Sudomimus.Native + Sudomimus.Token) ----------
+.PHONY: publish-session-py
+publish-session-py: build-session-py
+	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
+	cd $(PYTHON_SDK) && uv publish dist/sudomimus_session-*
+
+# ---------- C# SDK (Sudomimus.Connect + Sudomimus.Native + Sudomimus.Session + Sudomimus.Token) ----------
 # All -cs targets operate on sdks/csharp/. NuGet pushes require
 # NUGET_API_KEY to be set (see docs/csharp-nuget-publish.md).
 
@@ -323,6 +366,25 @@ pack-native-cs:
 	rm -f $(NUGET_PACK_DIR)/Sudomimus.Native.*.nupkg $(NUGET_PACK_DIR)/Sudomimus.Native.*.snupkg
 	dotnet pack $(CSHARP_SDK)/src/Sudomimus.Native/Sudomimus.Native.csproj -c Release -o $(NUGET_PACK_DIR)
 
+# ---------- Sudomimus.Session (C#) ----------
+
+.PHONY: compile-session-cs
+compile-session-cs:
+	dotnet build $(CSHARP_SDK)/src/Sudomimus.Session/Sudomimus.Session.csproj -c Release
+
+.PHONY: lint-session-cs
+lint-session-cs:
+	dotnet format $(CSHARP_SDK)/src/Sudomimus.Session/Sudomimus.Session.csproj --verify-no-changes
+
+.PHONY: test-session-cs
+test-session-cs:
+	dotnet test $(CSHARP_SDK)/tests/Sudomimus.Session.Tests/Sudomimus.Session.Tests.csproj -c Release
+
+.PHONY: pack-session-cs
+pack-session-cs:
+	rm -f $(NUGET_PACK_DIR)/Sudomimus.Session.*.nupkg $(NUGET_PACK_DIR)/Sudomimus.Session.*.snupkg
+	dotnet pack $(CSHARP_SDK)/src/Sudomimus.Session/Sudomimus.Session.csproj -c Release -o $(NUGET_PACK_DIR)
+
 # ---------- C# Publish (NuGet) ----------
 # Dry-run targets just pack the .nupkg into $(NUGET_PACK_DIR) so you can
 # inspect it before pushing. Push targets require NUGET_API_KEY.
@@ -351,6 +413,20 @@ publish-dry-run-native-cs: pack-native-cs
 publish-native-cs: pack-native-cs
 	@test -n "$(NUGET_API_KEY)" || (echo "ERROR: NUGET_API_KEY env var not set" && exit 1)
 	dotnet nuget push "$(NUGET_PACK_DIR)/Sudomimus.Native.*.nupkg" \
+		--api-key $(NUGET_API_KEY) \
+		--source $(NUGET_SOURCE) \
+		--skip-duplicate
+
+.PHONY: publish-dry-run-session-cs
+publish-dry-run-session-cs: pack-session-cs
+	@ls -la $(NUGET_PACK_DIR)/Sudomimus.Session.*.nupkg
+	@echo ""
+	@echo "Inspect the .nupkg above. To publish: make publish-session-cs"
+
+.PHONY: publish-session-cs
+publish-session-cs: pack-session-cs
+	@test -n "$(NUGET_API_KEY)" || (echo "ERROR: NUGET_API_KEY env var not set" && exit 1)
+	dotnet nuget push "$(NUGET_PACK_DIR)/Sudomimus.Session.*.nupkg" \
 		--api-key $(NUGET_API_KEY) \
 		--source $(NUGET_SOURCE) \
 		--skip-duplicate

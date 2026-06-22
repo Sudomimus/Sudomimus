@@ -1,9 +1,10 @@
 # Sudomimus Connect — Python example
 
 Minimal CLI demonstrating the full login flow with the
-[`sudomimus-connect`](../../sdks/python/packages/sudomimus-connect) SDK,
-including the 1.0 token-storage and rotation primitives
-(`RotatingConnectClient` + `InMemoryTokenStore`).
+[`sudomimus-connect`](../../sdks/python/packages/sudomimus-connect) and
+[`sudomimus-session`](../../sdks/python/packages/sudomimus-session) SDKs,
+including session token-storage and rotation primitives
+(`RotatingSessionClient` + `InMemoryTokenStore`).
 
 The script asks for an `applicationAnchor` and the application's client-auth
 private key PEM, then drives establish → status-poll → redeem → verify →
@@ -46,21 +47,21 @@ The script then:
   ✓ Login successful. subject=subject-...
   ```
 
-- Seeds a `RotatingConnectClient` with the returned pair and calls
+- Seeds a `RotatingSessionClient` with the returned pair and calls
   `/refresh` once. The new access token is reported as `changed=True`.
 - Calls `/logout` via the rotating client (revokes the refresh token
   server-side and clears the local store).
 
 ## How rotation works in this example
 
-`RotatingConnectClient` + `InMemoryTokenStore` enforce the OAuth 2.1 BCP
+`RotatingSessionClient` + `InMemoryTokenStore` enforce the OAuth 2.1 BCP
 §4.14.2 strict refresh-token rotation contract: every successful
 `refresh()` reads the current refresh token from the store, calls
-`/refresh`, and atomically replaces the stored pair with the rotated one
-before returning. Concurrent calls on the same instance coalesce onto a
-single in-flight request.
+Session `/refresh`, and atomically replaces the stored pair with the
+rotated one before returning. Concurrent calls on the same instance
+coalesce onto a single in-flight request.
 
 For a multi-process server, swap `InMemoryTokenStore` for a Redis- or
-DB-backed implementation of the `TokenStore` Protocol — and wrap
+DB-backed implementation of the `TokenStore` Protocol, and wrap
 `load → /refresh → save` in a cross-process lock so rotations on one
 process are visible to the others.

@@ -11,15 +11,15 @@
 //
 // Both paths parse the returned access token with Sudomimus.Token (without
 // signature verification — see README), show the resulting user, and seed
-// a RotatingConnectClient + InMemoryTokenStore from the returned pair so
+// a RotatingSessionClient + InMemoryTokenStore from the returned pair so
 // the "Refresh token" and "Logout" buttons can demonstrate the OAuth 2.1
 // strict-rotation primitives. A real game would persist the pair to disk
 // (encrypted) instead of an InMemoryTokenStore so the player stays logged
 // in across launches.
 
 using Godot;
-using Sudomimus.Connect;
 using Sudomimus.Native;
+using Sudomimus.Session;
 using Sudomimus.Token;
 
 namespace Sudomimus.Examples.Godot;
@@ -30,7 +30,7 @@ public partial class LoginNode : Control
     // real App ID when wiring up against a production Sudomimus app.
     private const long SteamAppId = 480;
 
-    private const string ConnectBaseUrl = "https://connect-api.sudomimus.com";
+    private const string SessionBaseUrl = "https://session-api.sudomimus.com";
 
     private LineEdit _anchorInput = null!;
     private Button _steamLoginButton = null!;
@@ -44,7 +44,7 @@ public partial class LoginNode : Control
     private Node _steam = null!;
 
     private uint _pendingTicketHandle;
-    private RotatingConnectClient? _rotating;
+    private RotatingSessionClient? _rotating;
 
     private NativeClient _native = null!;
     private NativeAuthenticator _authenticator = null!;
@@ -237,7 +237,7 @@ public partial class LoginNode : Control
             _refreshButton.Disabled = false;
             _logoutButton.Disabled = false;
         }
-        catch (ConnectApiException ex)
+        catch (SessionApiException ex)
         {
             // RefreshTokenFamilyCompromised / RefreshTokenRotationRaceLost
             // — the server has revoked the family. Drop the rotating client
@@ -264,7 +264,7 @@ public partial class LoginNode : Control
             await _rotating.LogoutAsync();
             _statusLabel.Text = "✓ Logged out. Refresh token revoked.";
         }
-        catch (ConnectApiException ex)
+        catch (SessionApiException ex)
         {
             _statusLabel.Text = $"Logout server-side failed ({(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}); store cleared locally.";
         }
@@ -282,10 +282,10 @@ public partial class LoginNode : Control
         DisplayLoggedInUser(login.AccessToken, login.Claims);
 
         // /refresh and /logout do not need clientAuth — the refresh token
-        // authorizes both. One ConnectClient + RotatingConnectClient per
+        // authorizes both. One SessionClient + RotatingSessionClient per
         // session is the natural shape here.
-        var connect = new ConnectClient(ConnectBaseUrl);
-        _rotating = new RotatingConnectClient(connect, new InMemoryTokenStore());
+        var session = new SessionClient(SessionBaseUrl);
+        _rotating = new RotatingSessionClient(session, new InMemoryTokenStore());
         await _rotating.SeedAsync(new TokenPair { AccessToken = login.AccessToken, RefreshToken = login.RefreshToken });
 
         _refreshButton.Disabled = false;

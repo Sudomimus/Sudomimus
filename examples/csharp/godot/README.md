@@ -4,6 +4,7 @@ Minimal Godot 4.3+ project that drives both Sudomimus Native direct-issue
 login flows from a single scene. Uses [GodotSteam](https://godotsteam.com)
 for Steam ticket acquisition and the generic
 [`Sudomimus.Native`](../../../sdks/csharp/src/Sudomimus.Native) +
+[`Sudomimus.Session`](../../../sdks/csharp/src/Sudomimus.Session) +
 [`Sudomimus.Token`](../../../sdks/csharp/src/Sudomimus.Token) packages for
 the rest.
 
@@ -98,7 +99,9 @@ tabs differ by what the credential allows:
 | **Steam** | manual | A Steam ticket is single-use, so the SDK opens the browser and hands the errand back. The label asks the player to finish in the browser and **click Login with Steam again** (which acquires a fresh ticket). |
 
 On success the result label also shows the per-claim view (policy/state for
-`email` / `firstName` / `lastName`).
+`email` / `firstName` / `lastName`). The example seeds a
+`RotatingSessionClient` from the issued pair and uses Session `/refresh` for
+later access-token rotation.
 
 ## Notes
 

@@ -9,7 +9,7 @@ Interactive CLI login that mirrors the Node example:
   5. Poll /status-poll until REALIZED.
   6. POST /redeem and verify the issued access token.
   7. Print the subject (sector subject) as the "login succeeded" signal.
-  8. Seed a RotatingConnectClient + InMemoryTokenStore from the pair, demo
+  8. Seed a RotatingSessionClient + InMemoryTokenStore from the pair, demo
      one /refresh rotation (the SDK persists the rotated pair into the
      store atomically — OAuth 2.1 BCP §4.14.2 strict mode).
   9. /logout via the rotating client, which best-effort revokes the
@@ -25,16 +25,20 @@ from sudomimus_connect import (
     ConnectClient,
     ConnectClientAuthWithKey,
     EstablishRequest,
-    InMemoryTokenStore,
     RedeemRequest,
     ReturnMethodDeclaration,
     ReturnMethodStatusPoll,
-    RotatingConnectClient,
     StatusPollRequest,
+)
+from sudomimus_session import (
+    InMemoryTokenStore,
+    RotatingSessionClient,
+    SessionClient,
     TokenPair,
 )
 
 CONNECT_BASE_URL = "https://connect-api.sudomimus.com"
+SESSION_BASE_URL = "https://session-api.sudomimus.com"
 LOGIN_UI_BASE = "https://via.sudomimus.com"
 POLL_INTERVAL_SECONDS = 2.0
 PEM_END_LINE = "-----END PRIVATE KEY-----"
@@ -99,7 +103,8 @@ def main() -> int:
         # Demonstrate refresh-token rotation. The store would be backed
         # by a database row, Redis hash, or cookie jar in a real
         # integration — InMemoryTokenStore is fine for a short-lived CLI.
-        rotating = RotatingConnectClient(client, InMemoryTokenStore())
+        session_client = SessionClient(base_url=SESSION_BASE_URL)
+        rotating = RotatingSessionClient(session_client, InMemoryTokenStore())
         rotating.seed(TokenPair(access_token=redeemed.accessToken, refresh_token=redeemed.refreshToken))
 
         print("\nCalling /refresh ...")
@@ -108,7 +113,7 @@ def main() -> int:
 
         # Tear the session back down. Possession of the (current,
         # just-rotated) refresh token authorizes the revocation, so no
-        # client-auth JWT is needed. RotatingConnectClient.logout pulls
+        # client-auth JWT is needed. RotatingSessionClient.logout pulls
         # the refresh token out of the store and clears the store after.
         print("\nCalling /logout ...")
         rotating.logout()

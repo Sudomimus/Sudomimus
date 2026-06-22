@@ -5,10 +5,12 @@ description = "Sudomimus Connect SDK example — Python CLI login flow."
 requires-python = ">=3.11"
 dependencies = [
     "sudomimus-connect",
+    "sudomimus-session",
 ]
 
 [tool.uv.sources]
 sudomimus-connect = { path = "../../sdks/python/packages/sudomimus-connect", editable = true }
+sudomimus-session = { path = "../../sdks/python/packages/sudomimus-session", editable = true }
 
 [build-system]
 requires = ["hatchling"]
