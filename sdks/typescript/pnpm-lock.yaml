@@ -108,9 +108,9 @@ importers:
 
   packages/device:
     dependencies:
-      '@sudomimus/connect':
+      '@sudomimus/session':
         specifier: workspace:*
-        version: link:../connect
+        version: link:../session
     devDependencies:
       '@types/jest':
         specifier: 'catalog:'
@@ -132,6 +132,34 @@ importers:
         version: 6.0.3
 
   packages/native:
+    devDependencies:
+      '@types/jest':
+        specifier: 'catalog:'
+        version: 30.0.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.10.5
+      jest:
+        specifier: 'catalog:'
+        version: 30.4.2(@types/node@22.10.5)(supports-color@10.2.2)
+      openapi-typescript:
+        specifier: 'catalog:'
+        version: 7.13.0(typescript@6.0.3)
+      ts-jest:
+        specifier: 'catalog:'
+        version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2(@types/node@22.10.5))(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  packages/session:
+    dependencies:
+      '@sudomimus/token':
+        specifier: workspace:*
+        version: link:../token
+      '@sudoo/jwt':
+        specifier: 'catalog:'
+        version: 3.6.0(@sudoo/token@1.7.0)
     devDependencies:
       '@types/jest':
         specifier: 'catalog:'

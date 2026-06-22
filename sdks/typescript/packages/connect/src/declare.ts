@@ -21,16 +21,8 @@ export type RedeemRequest = components["schemas"]["RedeemRequest"];
 export type RedeemResponse = components["schemas"]["RedeemResponse"];
 export type ClaimsStateView = components["schemas"]["ClaimsStateView"];
 export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementStateView"];
-export type RefreshRequest = components["schemas"]["RefreshRequest"];
-export type RefreshResponse = components["schemas"]["RefreshResponse"];
 export type InfoRequest = components["schemas"]["InfoRequest"];
 export type InfoResponse = components["schemas"]["InfoResponse"];
-export type IntrospectRequest = components["schemas"]["IntrospectRequest"];
-export type IntrospectResponse = components["schemas"]["IntrospectResponse"];
-export type LogoutRequest = components["schemas"]["LogoutRequest"];
-export type LogoutResponse = components["schemas"]["LogoutResponse"];
-export type RevokeAllRequest = components["schemas"]["RevokeAllRequest"];
-export type RevokeAllResponse = components["schemas"]["RevokeAllResponse"];
 
 export type AuthenticationRuleConstraint = components["schemas"]["AuthenticationRuleConstraint"];
 export type AuthenticationRulePasskeyUsernamelessPayload = components["schemas"]["AuthenticationRulePasskeyUsernamelessPayload"];
@@ -98,14 +90,6 @@ export const RETURN_METHOD = {
 } as const;
 export type ReturnMethod = ReturnMethodDeclaration["type"];
 
-export const INTROSPECT_STATUS = {
-    ACTIVE: "active",
-    REVOKED: "revoked",
-    EXPIRED: "expired",
-    NOT_FOUND: "not_found",
-} as const;
-export type IntrospectStatus = IntrospectResponse["status"];
-
 /**
  * Signature for a BYO (bring-your-own) client-auth JWT signer.
  *
@@ -147,7 +131,7 @@ export type ConnectClientAuthWithSigner = {
 export type ConnectClientAuthConfig = ConnectClientAuthWithKey | ConnectClientAuthWithSigner;
 
 export interface ConnectClientOptions {
-    baseUrl: string;
+    baseUrl?: string;
     fetch?: typeof globalThis.fetch;
     publicKeyFetchLocale?: string;
     clientAuth?: ConnectClientAuthConfig;

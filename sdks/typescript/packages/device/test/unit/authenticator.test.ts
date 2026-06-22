@@ -5,7 +5,7 @@
  * @description Authenticator.test
  */
 
-import { InMemoryTokenStore } from "@sudomimus/connect";
+import { InMemoryTokenStore } from "@sudomimus/session";
 import {
     DeviceAuthenticator,
     DeviceClient,

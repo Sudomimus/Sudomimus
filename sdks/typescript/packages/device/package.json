@@ -36,7 +36,7 @@
         "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
     },
     "dependencies": {
-        "@sudomimus/connect": "workspace:*"
+        "@sudomimus/session": "workspace:*"
     },
     "devDependencies": {
         "@types/jest": "catalog:",

@@ -87,39 +87,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Rotate a refresh token and issue a new access token.
-         * @description Issues a new access token AND a new refresh token, atomically
-         *     invalidating the presented refresh token. The Connect service
-         *     implements OAuth 2.1 BCP §4.14.2 strict refresh-token rotation:
-         *     every successful `/refresh` rotates the refresh token, and any
-         *     subsequent presentation of the parent token (the one just
-         *     consumed) is treated as evidence of compromise.
-         *
-         *     On compromise, the entire refresh-token family that the replayed
-         *     token belongs to is revoked in a single sweep and the caller must
-         *     re-authenticate via the normal Connect inquiry flow
-         *     (`/establish` → `/status-poll` → `/redeem`). The same outcome
-         *     applies when a concurrent rotation race is lost — per BCP §4.14.2
-         *     a perfectly-timed retry is indistinguishable from an attacker
-         *     racing the legitimate caller, so both paths count as compromise.
-         */
-        post: operations["refresh"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/info": {
         parameters: {
             query?: never;
@@ -131,86 +98,6 @@ export interface paths {
         put?: never;
         /** Fetch localized public metadata about an application. */
         post: operations["info"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/introspect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Check whether the session behind an access token is still valid.
-         * @description Returns the revocation status of the refresh token (session) that the
-         *     supplied access token descends from. Intended for strict applications
-         *     that want near-real-time revocation: validate the access token offline
-         *     as usual, then call this endpoint — caching the result for at least
-         *     `recommendedRecheckSeconds` — to decide whether to keep trusting it.
-         *
-         *     The access token is self-authenticating: its signature is verified
-         *     against the issuing application's public key, so no client-auth JWT is
-         *     required. The access token's own expiry is NOT enforced here; the answer
-         *     describes the underlying session, not the access token's freshness.
-         */
-        post: operations["introspect"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke the session behind a refresh token.
-         * @description Revokes the single session identified by the supplied refresh token
-         *     (RFC 7009 style). Possession of a genuine refresh token authorizes the
-         *     revocation, so no client-auth JWT is required.
-         *
-         *     The operation is idempotent: a token that is already revoked or expired
-         *     reports `revoked: true`, and a token that cannot be resolved reports
-         *     `revoked: false` without revealing whether it ever existed.
-         */
-        post: operations["logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/revoke-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke every session of an account for the calling application.
-         * @description Revokes all refresh tokens belonging to the given account that were
-         *     issued for the calling application (log out everywhere). This is an
-         *     application-authority action — not something a single session capability
-         *     can authorize — so it requires a client-auth JWT, exactly like
-         *     /establish. Revocation is scoped to the calling application; sessions of
-         *     the same account under other applications are unaffected.
-         */
-        post: operations["revokeAll"];
         delete?: never;
         options?: never;
         head?: never;
@@ -318,7 +205,7 @@ export interface components {
              * @description Long-lived refresh token (JWT). Decode its body to
              *     `RefreshTokenBody` (see schema). The refresh token leaves the
              *     system, so its body carries the sector `subject`, never the
-             *     internal account identifier.
+             *     underlying account identifier.
              */
             refreshToken: string;
             /**
@@ -327,25 +214,6 @@ export interface components {
              *     key is the `subject` (sector subject) claim.
              */
             accessToken: string;
-        };
-        RefreshRequest: {
-            refreshToken: string;
-        };
-        RefreshResponse: {
-            claims: components["schemas"]["ClaimsStateView"];
-            /**
-             * @description Short-lived access token (JWT). Decode its body to
-             *     `AccessTokenBody` (see schema) — the application-visible user
-             *     key is the `subject` (sector subject) claim.
-             */
-            accessToken: string;
-            /**
-             * @description Newly issued refresh token (JWT); body is `RefreshTokenBody`.
-             *     The presented refresh token is invalidated atomically as part
-             *     of the same call; re-presenting it is treated as compromise
-             *     under OAuth 2.1 BCP §4.14.2 strict rotation.
-             */
-            refreshToken: string;
         };
         /**
          * @description Decoded body (payload) of a Sudomimus access token. The standard
@@ -363,8 +231,8 @@ export interface components {
             /**
              * @description The application-visible user identifier — the per-(account,
              *     sector) **sector subject**, also the OIDC `sub`. This is the
-             *     value an application keys its users on; the raw internal
-             *     account identifier never appears in a token. User-rotatable.
+             *     value an application keys its users on; the underlying account
+             *     identifier never appears in a token. User-rotatable.
              *     Opaque: never parse or format-validate it.
              */
             subject: string;
@@ -395,7 +263,7 @@ export interface components {
          * @description Decoded body (payload) of a Sudomimus refresh token. Carries the
          *     sector `subject` (the same pairwise identifier as the access-token
          *     body) because the refresh token leaves the system and must never
-         *     expose the internal account identifier. Informational only —
+         *     expose the underlying account identifier. Informational only —
          *     `/refresh` resolves the token by its `jti`, not by reading the body.
          */
         RefreshTokenBody: {
@@ -416,36 +284,6 @@ export interface components {
             applicationName: string;
             /** @description PEM-encoded application public key used to verify issued JWTs. */
             applicationPublicKey: string;
-        };
-        IntrospectRequest: {
-            /** @description A Sudomimus-issued access token (JWT). Its signature is verified; its own expiry is not enforced. */
-            accessToken: string;
-        };
-        IntrospectResponse: {
-            /**
-             * @description Revocation state of the session behind the access token. `not_found`
-             *     covers an unknown session or one belonging to a different application.
-             * @enum {string}
-             */
-            status: "active" | "revoked" | "expired" | "not_found";
-            /** @description Suggested minimum number of seconds to cache this result before re-checking. */
-            recommendedRecheckSeconds: number;
-        };
-        LogoutRequest: {
-            /** @description The refresh token (JWT) whose session should be revoked. */
-            refreshToken: string;
-        };
-        LogoutResponse: {
-            /** @description True if the session is now revoked, including sessions that were already revoked or expired. */
-            revoked: boolean;
-        };
-        RevokeAllRequest: {
-            /** @description The sector subject the application sees for the user (the access / id token `sub`). Reverse-mapped server-side to the underlying account, whose sessions are then revoked for the calling application. A subject the application has never been issued (or one from another sector) revokes nothing. */
-            subject: string;
-        };
-        RevokeAllResponse: {
-            /** @description Number of refresh tokens that were revoked. */
-            revokedCount: number;
         };
         AuthenticationRuleConstraint: {
             /**
@@ -724,7 +562,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Application has been disabled via the admin kill switch.
+             * @description Application is disabled.
              *     Reason `ApplicationDisabled`.
              */
             403: {
@@ -827,101 +665,13 @@ export interface operations {
             /**
              * @description The attempt was refused. The `reason` distinguishes:
              *
-             *     - `ApplicationDisabled` — the application has been disabled
-             *       via the admin kill switch.
+             *     - `ApplicationDisabled` — the application is disabled.
              *     - `AccountDisabled` — the realizing account is disabled.
              *     - `AccountDeleted` — the realizing account has been erased.
              *     - `ClaimConsentRequired` — the application requires a claim
              *       (email / first name / last name) the user has not granted;
              *       the standing grant must be (re)established through an
              *       interactive browser login before tokens can be issued.
-             */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    refresh: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RefreshRequest"];
-            };
-        };
-        responses: {
-            /** @description New access token and rotated refresh token issued. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RefreshResponse"];
-                };
-            };
-            /**
-             * @description Reason `AccountNotFound` — the account behind the refresh token
-             *     could not be resolved.
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /**
-             * @description Refresh token rejected. The `reason` distinguishes:
-             *
-             *     - `RefreshTokenNotFound` — token cannot be resolved (unknown
-             *       `jti`, wrong signature, or otherwise invalid).
-             *     - `RefreshTokenSuspended` — the row is administratively
-             *       suspended.
-             *     - `RefreshTokenExpired` — the token is past its `exp`.
-             *     - `RefreshTokenFamilyCompromised` — the presented token had
-             *       already been rotated; the whole family has now been
-             *       revoked.
-             *     - `RefreshTokenRotationRaceLost` — a concurrent rotation won
-             *       the conditional write. Per OAuth 2.1 BCP §4.14.2 this is
-             *       also treated as compromise and the family is revoked.
-             */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /**
-             * @description The attempt was refused. The `reason` distinguishes:
-             *
-             *     - `AccountDisabled` — the account behind the refresh token is
-             *       disabled.
-             *     - `AccountDeleted` — the account has been erased.
-             *     - `ClaimConsentRequired` — a REQUIRED claim is no longer
-             *       satisfied by a standing grant (e.g. the user revoked it); the
-             *       grant must be re-established through an interactive browser
-             *       login.
              */
             403: {
                 headers: {
@@ -962,123 +712,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InfoResponse"];
-                };
-            };
-            /** @description Error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    introspect: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IntrospectRequest"];
-            };
-        };
-        responses: {
-            /** @description Status of the session behind the access token. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IntrospectResponse"];
-                };
-            };
-            /** @description Access token missing, malformed, or with an invalid signature. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    logout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LogoutRequest"];
-            };
-        };
-        responses: {
-            /** @description Revocation outcome. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LogoutResponse"];
-                };
-            };
-            /** @description Error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    revokeAll: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RevokeAllRequest"];
-            };
-        };
-        responses: {
-            /** @description Number of sessions revoked. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RevokeAllResponse"];
-                };
-            };
-            /** @description Client-auth JWT missing, malformed, expired, or invalid. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Error response. */

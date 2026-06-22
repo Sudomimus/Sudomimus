@@ -7,7 +7,7 @@
 
 import { TokenVerifier, type AccessToken, type RefreshToken } from "@sudomimus/token";
 import { signEstablishClientJwt } from "./client-auth";
-import { CLIENT_JWT_AUTH_SCHEME, DEFAULT_PUBLIC_KEY_LOCALE } from "./constants";
+import { CLIENT_JWT_AUTH_SCHEME, DEFAULT_PUBLIC_KEY_LOCALE, PRODUCTION_BASE_URL } from "./constants";
 import type {
     ConnectClientAuthConfig,
     ConnectClientOptions,
@@ -18,16 +18,8 @@ import type {
     HealthResponse,
     InfoRequest,
     InfoResponse,
-    IntrospectRequest,
-    IntrospectResponse,
-    LogoutRequest,
-    LogoutResponse,
     RedeemRequest,
     RedeemResponse,
-    RefreshRequest,
-    RefreshResponse,
-    RevokeAllRequest,
-    RevokeAllResponse,
     StatusPollRequest,
     StatusPollResponse,
 } from "./declare";
@@ -42,9 +34,9 @@ export class ConnectClient {
     private readonly _tokenVerifier: TokenVerifier;
     private readonly _clientAuth: ConnectClientAuthConfig | undefined;
 
-    public constructor(options: ConnectClientOptions) {
+    public constructor(options: ConnectClientOptions = {}) {
 
-        this._baseUrl = options.baseUrl.replace(/\/+$/, "");
+        this._baseUrl = (options.baseUrl ?? PRODUCTION_BASE_URL).replace(/\/+$/, "");
         // Bind to `globalThis` on store. Some runtimes (e.g. Cloudflare
         // Workers) throw "Illegal invocation" when `fetch` is called with a
         // `this` other than `globalThis`, and we invoke it as `this._fetch(...)`
@@ -89,29 +81,9 @@ export class ConnectClient {
         return this._post<RedeemRequest, RedeemResponse>("/redeem", request);
     }
 
-    public async refresh(request: RefreshRequest): Promise<RefreshResponse> {
-
-        return this._post<RefreshRequest, RefreshResponse>("/refresh", request);
-    }
-
     public async info(request: InfoRequest): Promise<InfoResponse> {
 
         return this._post<InfoRequest, InfoResponse>("/info", request);
-    }
-
-    public async introspect(request: IntrospectRequest): Promise<IntrospectResponse> {
-
-        return this._post<IntrospectRequest, IntrospectResponse>("/introspect", request);
-    }
-
-    public async logout(request: LogoutRequest): Promise<LogoutResponse> {
-
-        return this._post<LogoutRequest, LogoutResponse>("/logout", request);
-    }
-
-    public async revokeAll(request: RevokeAllRequest): Promise<RevokeAllResponse> {
-
-        return this._postWithClientAuth<RevokeAllResponse>("revokeAll", "/revoke-all", request);
     }
 
     public async getApplicationPublicKey(

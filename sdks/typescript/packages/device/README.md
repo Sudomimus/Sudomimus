@@ -4,7 +4,7 @@ TypeScript SDK for the Sudomimus Device API: public-client device authorization
 via `/device-authorize` and `/device-token`.
 
 The Device API does not refresh tokens itself. A successful `/device-token`
-returns a normal Sudomimus access/refresh pair; use `@sudomimus/connect` for
+returns a normal Sudomimus access/refresh pair; use `@sudomimus/session` for
 later `/refresh`, `/logout`, `/introspect`, and `/revoke-all`.
 
 ## Manual polling and manual storage
@@ -38,7 +38,7 @@ while (true) {
 ## Automatic polling with Connect-compatible storage
 
 ```ts
-import { ConnectClient, InMemoryTokenStore, RotatingConnectClient } from "@sudomimus/connect";
+import { InMemoryTokenStore, RotatingSessionClient, SessionClient } from "@sudomimus/session";
 import { DeviceAuthenticator, DeviceClient } from "@sudomimus/device";
 
 const store = new InMemoryTokenStore();
@@ -51,8 +51,8 @@ const auth = new DeviceAuthenticator(device, {
 const result = await auth.authorizeAndPoll({ applicationAnchor: "my-app" });
 console.log(result.tokens.accessToken);
 
-// Later refresh/logout through Connect using the same store.
-const connect = new ConnectClient({ baseUrl: "https://connect-api.sudomimus.com" });
-const rotating = new RotatingConnectClient(connect, store);
+// Later refresh/logout through Session using the same store.
+const session = new SessionClient();
+const rotating = new RotatingSessionClient(session, store);
 const accessToken = await rotating.refresh();
 ```

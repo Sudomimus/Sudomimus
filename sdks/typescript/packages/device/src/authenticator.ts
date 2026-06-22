@@ -5,7 +5,7 @@
  * @description High-level device authorization helper
  */
 
-import type { TokenPair, TokenStore } from "@sudomimus/connect";
+import type { TokenPair, TokenStore } from "@sudomimus/session";
 import type { DeviceClient } from "./client";
 import type {
     DeviceAuthorizeRequest,
@@ -40,7 +40,7 @@ export interface DeviceAuthenticatorOptions {
     /**
      * Optional Connect-compatible per-session token store. When provided,
      * successful device authorization writes the issued pair here before
-     * returning. Use the same store with `RotatingConnectClient` for later
+     * returning. Use the same store with `RotatingSessionClient` for later
      * `/refresh` and `/logout`.
      */
     store?: TokenStore;

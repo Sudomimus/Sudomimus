@@ -4,7 +4,7 @@ TypeScript SDK for parsing and verifying [Sudomimus](https://sudomimus.com) acce
 
 This package is for the *consumer* of a token — typically an application backend validating a bearer token on each request. It contains the typed `AccessToken` / `RefreshToken` shapes, pure parsers, a signature/expiration verifier, and a `TokenError` with stable error codes. It has no HTTP client; you provide a `PublicKeyResolver` that returns an application's public key by `applicationAnchor`.
 
-If you also need to *issue* tokens (drive the Establish / Redeem / Refresh flow), use [`@sudomimus/connect`](../connect), which depends on this package and provides a ready-to-use resolver backed by the Connect `/info` endpoint.
+If you also need to *issue* tokens, use [`@sudomimus/connect`](../connect) for establish/redeem and [`@sudomimus/session`](../session) for refresh, introspection, logout, and account-wide session revocation.
 
 ## Install
 

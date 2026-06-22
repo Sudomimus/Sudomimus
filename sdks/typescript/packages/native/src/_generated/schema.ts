@@ -33,9 +33,10 @@ export interface paths {
         /**
          * Exchange an access-key credential for application tokens.
          * @description Trade a long-lived access-key credential (identifier + secret) for
-         *     application access and refresh tokens. Access keys are issued in
-         *     the admin console against a specific account; the credential
-         *     carries optional TTL bounds and an opt-in expiry timestamp.
+         *     application access and refresh tokens. Access keys are
+         *     application-scoped credentials bound to a specific account; the
+         *     credential carries optional TTL bounds and an opt-in expiry
+         *     timestamp.
          *
          *     The server:
          *
@@ -95,9 +96,9 @@ export interface paths {
          *       5. Issues access + refresh JWTs signed with the application's
          *          private key.
          *
-         *     Tokens follow the same shape as those issued through Connect's
-         *     `/redeem`. Verification is the responsibility of the relying party
-         *     (see the `Sudomimus.Token` SDK).
+         *     Tokens follow the same shape as those issued through other ordinary
+         *     application-token issuance paths. Verification is the responsibility
+         *     of the relying party (see the `Sudomimus.Token` SDK).
          *
          *     The Layer-1 method name on the wire is `STEAM_TICKET`, but the
          *     resolved identity is stored as a `STEAM_ID64` Authentication row
@@ -219,7 +220,7 @@ export interface components {
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              */
             accessToken: string;
-            /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` for renewal without re-presenting the access key. */
+            /** @description Long-lived refresh token (JWT). Use Session API `/refresh` for renewal without re-presenting the access key. */
             refreshToken: string;
         };
         DirectIssueSteamTicketRequest: {
@@ -252,7 +253,7 @@ export interface components {
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              */
             accessToken: string;
-            /** @description Long-lived refresh token (JWT). Use Connect's `/refresh` to obtain a new access token without re-acquiring a Steam ticket. */
+            /** @description Long-lived refresh token (JWT). Use Session API `/refresh` to obtain a new access token without re-acquiring a Steam ticket. */
             refreshToken: string;
         };
         /**
@@ -430,8 +431,7 @@ export interface operations {
              *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — the
              *       application's three-layer rules rejected this attempt
              *       (which layer is indicated by the reason code).
-             *     - `ApplicationDisabled` — the application has been disabled
-             *       via the admin kill switch.
+             *     - `ApplicationDisabled` — the application is disabled.
              *     - `AccountDisabled` — the resolved account is disabled.
              *     - `AccountDeleted` — the resolved account has been erased.
              *     - `ClaimConsentRequired` — the application requires a claim the
@@ -471,8 +471,8 @@ export interface operations {
                 };
             };
             /**
-             * @description The access key's account record is missing — an internal
-             *     state inconsistency. Reason `AccessKeyCredentialAccountMissing`.
+             * @description Server error while resolving the credential's account. Reason
+             *     `AccessKeyCredentialAccountMissing`.
              */
             500: {
                 headers: {
@@ -539,8 +539,7 @@ export interface operations {
              *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — the
              *       application's three-layer rules rejected this attempt
              *       (which layer is indicated by the reason code).
-             *     - `ApplicationDisabled` — the application has been disabled
-             *       via the admin kill switch.
+             *     - `ApplicationDisabled` — the application is disabled.
              *     - `AccountDisabled` — the resolved account is disabled.
              *     - `AccountDeleted` — the resolved account has been erased.
              *     - `ClaimConsentRequired` — the application requires a claim the

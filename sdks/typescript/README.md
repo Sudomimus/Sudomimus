@@ -6,10 +6,11 @@ This workspace hosts the TypeScript / JavaScript SDKs published to npm under the
 
 | Package | Spec | Purpose |
 | --- | --- | --- |
-| [`@sudomimus/connect`](packages/connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Token exchange (Establish / StatusPoll / Redeem / Refresh / Info / Introspect / Logout / RevokeAll) |
+| [`@sudomimus/connect`](packages/connect) | [`specs/connect.yaml`](../../specs/connect.yaml) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) |
 | [`@sudomimus/device`](packages/device) | [`specs/device.yaml`](../../specs/device.yaml) | Device authorization for public clients (DeviceAuthorize / DeviceToken) |
 | [`@sudomimus/token`](packages/token) | — | Parse and verify Sudomimus access / refresh JWTs |
 | [`@sudomimus/native`](packages/native) | [`specs/native.yaml`](../../specs/native.yaml) | Direct-issue (Steam ticket / access key) |
+| [`@sudomimus/session`](packages/session) | [`specs/session.yaml`](../../specs/session.yaml) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) |
 
 ## Tooling
 

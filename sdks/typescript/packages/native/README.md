@@ -54,7 +54,7 @@ const tokens = await client.directIssueAccessKey({
 
 ### Renewing tokens
 
-The issued tokens share the shape of those minted by Connect's `/redeem`. Use [`@sudomimus/connect`](../connect)'s `/refresh` to renew the access token without re-presenting a Steam ticket or access key, and [`@sudomimus/token`](../token) to verify the issued JWTs.
+The issued tokens share the shape of those minted by Connect's `/redeem`. Use [`@sudomimus/session`](../session)'s `/refresh` to renew the access token without re-presenting a Steam ticket or access key, and [`@sudomimus/token`](../token) to verify the issued JWTs.
 
 ### Error handling
 

@@ -138,7 +138,7 @@ export interface components {
              */
             accessToken: string;
             /**
-             * @description Long-lived refresh token (JWT). Use Connect `/refresh` to rotate it
+             * @description Long-lived refresh token (JWT). Use Session API `/refresh` to rotate it
              *     and issue later access tokens.
              */
             refreshToken: string;
