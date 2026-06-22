@@ -8,7 +8,7 @@
  *               persist hiddenKey to sessionStorage, redirect to via.sudomimus.com.
  *   - "done":   On the CALLBACK landing (URL has both exposure-key and
  *               confirmation-key), restore hiddenKey, call /redeem, seed a
- *               RotatingConnectClient + InMemoryTokenStore from the pair,
+ *               RotatingSessionClient + InMemoryTokenStore from the pair,
  *               render the logged-in user, and expose Refresh / Logout
  *               buttons that demonstrate the rotation contract.
  *
@@ -21,13 +21,17 @@
 import { useEffect, useRef, useState } from "react";
 import {
     ConnectClient,
-    InMemoryTokenStore,
     RETURN_METHOD,
-    RotatingConnectClient,
 } from "@sudomimus/connect";
+import {
+    InMemoryTokenStore,
+    RotatingSessionClient,
+    SessionClient,
+} from "@sudomimus/session";
 import { createBrowserSigner, decodeAccessTokenBody } from "./browser-signer";
 
 const CONNECT_BASE_URL = "https://connect-api.sudomimus.com";
+const SESSION_BASE_URL = "https://session-api.sudomimus.com";
 const LOGIN_UI_BASE = "https://via.sudomimus.com";
 
 const hiddenKeyStorageKey = (exposureKey: string) => `sudomimus-hk:${exposureKey}`;
@@ -57,7 +61,7 @@ type DoneState =
     | {
         status: "ok";
         user: AccessTokenBody;
-        rotating: RotatingConnectClient;
+        rotating: RotatingSessionClient;
         rotationCount: number;
     }
     | { status: "loggedOut" }
@@ -208,7 +212,8 @@ const DoneView = ({ exposureKey, confirmationKey }: DoneViewProps) => {
                 // /redeem. From here on out, /refresh and /logout go through
                 // the rotating client so the store always reflects the
                 // server's view of which refresh token is current.
-                const rotating = new RotatingConnectClient(client, new InMemoryTokenStore());
+                const sessionClient = new SessionClient({ baseUrl: SESSION_BASE_URL });
+                const rotating = new RotatingSessionClient(sessionClient, new InMemoryTokenStore());
                 await rotating.seed({
                     accessToken: redeemed.accessToken,
                     refreshToken: redeemed.refreshToken,

@@ -2,8 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
-// The @sudomimus/connect SDK statically imports Node's `crypto` module
-// (used by its built-in `signEstablishClientJwt` / `verifyAccessToken`).
+// The @sudomimus/connect and @sudomimus/session SDKs statically import Node's
+// `crypto` module (used by built-in client-auth JWT helpers).
 // In the browser those code paths are unreachable because this example
 // passes a BYO signer (SubtleCrypto-based) and decodes the access token
 // inline, but Vite still has to resolve the `crypto` import. Alias it to

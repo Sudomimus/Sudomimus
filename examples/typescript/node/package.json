@@ -9,7 +9,8 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "@sudomimus/connect": "link:../../../sdks/typescript/packages/connect"
+        "@sudomimus/connect": "link:../../../sdks/typescript/packages/connect",
+        "@sudomimus/session": "link:../../../sdks/typescript/packages/session"
     },
     "devDependencies": {
         "@types/node": "^22.10.5",

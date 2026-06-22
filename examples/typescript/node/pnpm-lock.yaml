@@ -11,6 +11,9 @@ importers:
       '@sudomimus/connect':
         specifier: link:../../../sdks/typescript/packages/connect
         version: link:../../../sdks/typescript/packages/connect
+      '@sudomimus/session':
+        specifier: link:../../../sdks/typescript/packages/session
+        version: link:../../../sdks/typescript/packages/session
     devDependencies:
       '@types/node':
         specifier: ^22.10.5

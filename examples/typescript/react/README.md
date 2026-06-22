@@ -1,7 +1,9 @@
 # Sudomimus Connect — React example
 
 Minimal Vite + React MVP demonstrating the full login flow with the
-[`@sudomimus/connect`](../../../sdks/typescript/packages/connect) SDK,
+[`@sudomimus/connect`](../../../sdks/typescript/packages/connect),
+[`@sudomimus/session`](../../../sdks/typescript/packages/session), and
+[`@sudomimus/token`](../../../sdks/typescript/packages/token) SDKs,
 **entirely in the browser**.
 
 > ⚠️ **DEMO ONLY.** This example asks the user to paste the application's
@@ -11,12 +13,13 @@ Minimal Vite + React MVP demonstrating the full login flow with the
 
 ## Prerequisites
 
-1. **Compile the connect SDK** (this example links to the local source):
+1. **Compile the local SDK packages** (this example links to local source):
 
    ```bash
    cd ../../../sdks/typescript
    pnpm install
    pnpm --filter @sudomimus/connect compile
+   pnpm --filter @sudomimus/session compile
    cd -
    ```
 
@@ -41,7 +44,8 @@ Open <http://localhost:5173>.
 4. You'll be redirected to `via.sudomimus.com` to authenticate (passkey or
    email).
 5. The login UI redirects you back to `http://localhost:5173/?exposure-key=...&confirmation-key=...`.
-6. The page calls `/redeem`, verifies the access token, and renders the
+6. The page calls `/redeem`, decodes the access token, seeds a
+   `RotatingSessionClient`, calls Session `/refresh`, and renders the
    logged-in user (`subject`, `firstName`, `lastName?`).
 
 ## How it works
@@ -50,9 +54,8 @@ Open <http://localhost:5173>.
   attaches it as `Authorization: SudomimusClientJWT <jwt>`.
 - The `hiddenKey` returned by `/establish` is stashed in `sessionStorage`
   keyed by `exposureKey` so it survives the redirect roundtrip.
-- On the callback landing, the same SDK client calls `/redeem` and
-  `verifyAccessToken` (which transparently fetches and caches the
-  application public key via `/info`).
+- On the callback landing, the Connect SDK client calls `/redeem`, then the
+  Session SDK owns `/refresh` and `/logout` using the returned refresh token.
 
 ## Why a BYO signer?
 

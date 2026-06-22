@@ -16,7 +16,7 @@ export const createHash = (): never => unsupported("crypto.createHash");
 export const createSign = (): never => unsupported("crypto.createSign");
 export const createVerify = (): never => unsupported("crypto.createVerify");
 
-// @sudomimus/connect uses crypto.randomUUID() to generate JWT `jti`s. The
+// @sudomimus/connect/session use crypto.randomUUID() to generate JWT `jti`s. The
 // BYO signer in this example uses globalThis.crypto.randomUUID directly, so
 // the SDK helper never reaches this stub — but expose a delegating impl
 // just in case.

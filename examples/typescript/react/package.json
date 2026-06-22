@@ -12,6 +12,7 @@
     },
     "dependencies": {
         "@sudomimus/connect": "link:../../../sdks/typescript/packages/connect",
+        "@sudomimus/session": "link:../../../sdks/typescript/packages/session",
         "react": "^18.3.1",
         "react-dom": "^18.3.1"
     },

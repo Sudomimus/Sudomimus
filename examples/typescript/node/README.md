@@ -1,20 +1,23 @@
 # Sudomimus Connect — Node example
 
 Minimal CLI demonstrating a full login flow with the
-[`@sudomimus/connect`](../../../sdks/typescript/packages/connect) SDK.
+[`@sudomimus/connect`](../../../sdks/typescript/packages/connect),
+[`@sudomimus/session`](../../../sdks/typescript/packages/session), and
+[`@sudomimus/token`](../../../sdks/typescript/packages/token) SDKs.
 
 The script asks for an `applicationAnchor` and the application's client-auth
-private key PEM, then drives establish → status-poll → redeem against the
-Sudomimus production environment.
+private key PEM, then drives establish → status-poll → redeem → refresh →
+logout against the Sudomimus production environment.
 
 ## Prerequisites
 
-1. **Compile the connect SDK** (this example links to the local source):
+1. **Compile the local SDK packages** (this example links to local source):
 
    ```bash
    cd ../../../sdks/typescript
    pnpm install
    pnpm --filter @sudomimus/connect compile
+   pnpm --filter @sudomimus/session compile
    cd -
    ```
 
@@ -46,5 +49,9 @@ The script then:
 - Once `REALIZED`, calls `/redeem`, verifies the access token, and prints:
 
   ```
+
+- Seeds a `RotatingSessionClient` with the returned pair and calls
+  `/refresh` once.
+- Calls Session `/logout` via the rotating client.
   ✓ Login successful. subject=subject-...
   ```

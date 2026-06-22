@@ -9,7 +9,7 @@
  *   5. Poll /status-poll until REALIZED.
  *   6. POST /redeem and verify the issued access token.
  *   7. Print the subject (sector subject) as the "login succeeded" signal.
- *   8. Seed a RotatingConnectClient + InMemoryTokenStore from the pair, demo
+ *   8. Seed a RotatingSessionClient + InMemoryTokenStore from the pair, demo
  *      one /refresh rotation (the SDK persists the rotated pair into the
  *      store atomically — OAuth 2.1 BCP §4.14.2 strict mode).
  *   9. /logout via the rotating client, which best-effort revokes the
@@ -18,14 +18,18 @@
 
 import {
     ConnectClient,
-    InMemoryTokenStore,
     RETURN_METHOD,
-    RotatingConnectClient,
 } from "@sudomimus/connect";
+import {
+    InMemoryTokenStore,
+    RotatingSessionClient,
+    SessionClient,
+} from "@sudomimus/session";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
 const CONNECT_BASE_URL = "https://connect-api.sudomimus.com";
+const SESSION_BASE_URL = "https://session-api.sudomimus.com";
 const LOGIN_UI_BASE = "https://via.sudomimus.com";
 const POLL_INTERVAL_MS = 2000;
 const PEM_END_LINE = "-----END PRIVATE KEY-----";
@@ -91,7 +95,8 @@ console.log(`\n✓ Login successful. subject=${verified.body.subject}`);
 // Demonstrate refresh-token rotation. The store would be backed by a
 // database row, Redis hash, or cookie jar in a real integration —
 // InMemoryTokenStore is fine for a short-lived CLI.
-const rotating = new RotatingConnectClient(client, new InMemoryTokenStore());
+const sessionClient = new SessionClient({ baseUrl: SESSION_BASE_URL });
+const rotating = new RotatingSessionClient(sessionClient, new InMemoryTokenStore());
 await rotating.seed({
     accessToken: redeemed.accessToken,
     refreshToken: redeemed.refreshToken,
@@ -105,7 +110,7 @@ console.log(
 
 // Tear the session back down. Possession of the (current, just-rotated)
 // refresh token authorizes the revocation, so no client-auth JWT is
-// needed. RotatingConnectClient.logout pulls the refresh token out of
+// needed. RotatingSessionClient.logout pulls the refresh token out of
 // the store and clears the store afterwards.
 console.log("\nCalling /logout ...");
 await rotating.logout();
