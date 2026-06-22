@@ -8,7 +8,7 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from sudomimus_connect import AsyncInMemoryTokenStore, InMemoryTokenStore, TokenPair
+from sudomimus_session import AsyncInMemoryTokenStore, InMemoryTokenStore, TokenPair
 from sudomimus_device import (
     PRODUCTION_BASE_URL,
     AsyncDeviceAuthenticator,
@@ -95,7 +95,7 @@ def test_device_authorize() -> None:
 
     assert captured["url"].endswith("/device-authorize")
     assert captured["body"] == {"applicationAnchor": "my-app"}
-    assert result.userCode == "ABCD-1234"
+    assert result.userCode.root == "ABCD-1234"
 
 
 def test_device_token() -> None:

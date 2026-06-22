@@ -137,40 +137,6 @@ public class ClientJwtSignerTests
         Assert.Equal(ClientJwtSigner.Sha256Base64(req.Body!), bodyClaim);
     }
 
-    [Fact]
-    public async Task RevokeAllAsync_UsesByoSignerWhenConfigured()
-    {
-        var capturedRawBody = "";
-        var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "revokedCount": 3 }""");
-
-        var client = new ConnectClient(new ConnectClientOptions
-        {
-            BaseUrl = "https://connect.example.com",
-            HttpClient = new HttpClient(handler),
-            ClientAuth = new ConnectClientAuthWithSigner
-            {
-                ApplicationAnchor = "anchor-1",
-                Signer = (rawBody, ct) =>
-                {
-                    capturedRawBody = rawBody;
-                    return Task.FromResult("external.signed.jwt");
-                },
-            },
-        });
-
-        var resp = await client.RevokeAllAsync(new RevokeAllRequest
-        {
-            Subject = "subject-1",
-        });
-        Assert.Equal(3, resp.RevokedCount);
-
-        var req = Assert.Single(handler.Requests);
-        Assert.Equal("external.signed.jwt", req.AuthParameter);
-        // Signer was called with the exact bytes that went on the wire.
-        Assert.Equal(req.Body, capturedRawBody);
-    }
-
     private static string DecodeBase64Url(string segment)
         => Encoding.UTF8.GetString(DecodeBase64UrlBytes(segment));
 

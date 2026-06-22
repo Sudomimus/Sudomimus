@@ -20,11 +20,7 @@ from sudomimus_connect import (
     ConnectClientAuthWithSigner,
     ConnectConfigError,
     EstablishRequest,
-    IntrospectRequest,
-    LogoutRequest,
     RedeemRequest,
-    RefreshRequest,
-    RevokeAllRequest,
     StatusPollRequest,
     sha256_base64,
 )
@@ -145,61 +141,6 @@ def test_redeem_happy_path() -> None:
     assert result.accessToken == "a.t"
 
 
-def test_introspect_sends_no_client_auth() -> None:
-    captured: dict = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["auth"] = request.headers.get("Authorization")
-        captured["path"] = request.url.path
-        return httpx.Response(200, json={"status": "active", "recommendedRecheckSeconds": 30})
-
-    with _client(handler) as client:
-        result = client.introspect(IntrospectRequest(accessToken="a.t"))
-
-    assert result.status == "active"
-    assert result.recommendedRecheckSeconds == 30
-    assert captured["path"] == "/introspect"
-    assert captured["auth"] is None
-
-
-def test_logout_revokes_session() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == "/logout"
-        return httpx.Response(200, json={"revoked": True})
-
-    with _client(handler) as client:
-        result = client.logout(LogoutRequest(refreshToken="r.t"))
-    assert result.revoked is True
-
-
-def test_revoke_all_requires_client_auth() -> None:
-    with _client(lambda r: httpx.Response(200)) as client, pytest.raises(ConnectConfigError):
-        client.revoke_all(RevokeAllRequest(subject="subject-1"))
-
-
-def test_revoke_all_signs_request_with_matching_body_hash() -> None:
-    private_pem, _ = _keypair()
-    captured: dict = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["auth"] = request.headers["Authorization"]
-        captured["raw"] = request.content.decode("utf-8")
-        captured["path"] = request.url.path
-        return httpx.Response(200, json={"revokedCount": 2})
-
-    auth = ConnectClientAuthWithKey(application_anchor="my-app", private_key_pem=private_pem)
-    with _client(handler, client_auth=auth) as client:
-        result = client.revoke_all(RevokeAllRequest(subject="subject-1"))
-
-    assert result.revokedCount == 2
-    assert captured["path"] == "/revoke-all"
-    scheme, _, jwt = captured["auth"].partition(" ")
-    assert scheme == "SudomimusClientJWT"
-    claims = json.loads(decode_base64url(jwt.split(".")[1]))
-    assert claims["iss"] == "my-app"
-    assert claims["body_sha256"] == sha256_base64(captured["raw"])
-
-
 def test_error_with_reason() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"reason": "ClientJwtInvalid"})
@@ -216,7 +157,7 @@ def test_error_with_empty_body() -> None:
         return httpx.Response(401, content=b"")
 
     with _client(handler) as client, pytest.raises(ConnectApiError) as exc:
-        client.refresh(RefreshRequest(refreshToken="r.t"))
+        client.health()
     assert exc.value.reason is None
 
 
@@ -322,7 +263,7 @@ def test_error_with_unparseable_body() -> None:
         return httpx.Response(500, content=b"<html>internal error</html>")
 
     with _client(handler) as client, pytest.raises(ConnectApiError) as exc:
-        client.refresh(RefreshRequest(refreshToken="r.t"))
+        client.health()
     assert exc.value.status == 500
     assert exc.value.reason is None
 
@@ -414,33 +355,6 @@ def test_async_establish_with_async_signer() -> None:
     assert asyncio.run(run()) == "ek"
 
 
-def test_async_logout_and_revoke_all() -> None:
-    private_pem, _ = _keypair()
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path == "/logout":
-            assert request.headers.get("Authorization") is None
-            return httpx.Response(200, json={"revoked": True})
-        assert request.url.path == "/revoke-all"
-        assert request.headers["Authorization"].startswith("SudomimusClientJWT ")
-        return httpx.Response(200, json={"revokedCount": 5})
-
-    auth = ConnectClientAuthWithKey(application_anchor="my-app", private_key_pem=private_pem)
-
-    async def run() -> tuple[bool, int]:
-        async with AsyncConnectClient(
-            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
-            client_auth=auth,
-        ) as client:
-            logged_out = await client.logout(LogoutRequest(refreshToken="r.t"))
-            revoked = await client.revoke_all(RevokeAllRequest(subject="subject-1"))
-            return logged_out.revoked, revoked.revokedCount
-
-    revoked, count = asyncio.run(run())
-    assert revoked is True
-    assert count == 5
-
-
 def test_async_base_url_normalized_and_default() -> None:
     assert AsyncConnectClient(base_url="https://connect.example.com/").base_url == (
         "https://connect.example.com"
@@ -458,52 +372,26 @@ def test_async_aclose_closes_owned_client() -> None:
     assert asyncio.run(run()) is True
 
 
-def test_async_health_status_poll_refresh_introspect() -> None:
+def test_async_health_status_poll() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if path == "/health":
             return httpx.Response(200, json={"ready": True, "service": "connect", "version": "1"})
         if path == "/status-poll":
             return httpx.Response(200, json={"status": "PENDING"})
-        if path == "/refresh":
-            return httpx.Response(
-                200,
-                json={
-                    "accessToken": "a2",
-                    "refreshToken": "r2",
-                    "claims": {
-                        "email": {"requirement": "OFF", "state": "UNKNOWN"},
-                        "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
-                        "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                    },
-                },
-            )
-        if path == "/introspect":
-            return httpx.Response(200, json={"status": "active", "recommendedRecheckSeconds": 15})
         return httpx.Response(404)
 
-    async def run() -> tuple[bool, str, str, str, int]:
+    async def run() -> tuple[bool, str]:
         async with AsyncConnectClient(
             http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
         ) as client:
             health = await client.health()
             poll = await client.status_poll(StatusPollRequest(exposureKey="ek", hiddenKey="hk"))
-            refreshed = await client.refresh(RefreshRequest(refreshToken="r.t"))
-            introspected = await client.introspect(IntrospectRequest(accessToken="a.t"))
-            return (
-                health.ready,
-                poll.root.status,
-                refreshed.accessToken,
-                introspected.status,
-                introspected.recommendedRecheckSeconds,
-            )
+            return health.ready, poll.root.status
 
-    ready, status, access_token, introspect_status, recheck = asyncio.run(run())
+    ready, status = asyncio.run(run())
     assert ready is True
     assert status == "PENDING"
-    assert access_token == "a2"
-    assert introspect_status == "active"
-    assert recheck == 15
 
 
 def test_async_public_key_cache_hit_and_clear() -> None:

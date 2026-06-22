@@ -11,7 +11,7 @@ authors = [
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.7",
-    "sudomimus-connect",
+    "sudomimus-session",
 ]
 
 [project.urls]

@@ -15,7 +15,7 @@ namespace Sudomimus.Native;
 /// The attempt is a delegate so the same loop serves both direct-issue flows,
 /// and so the Steam flow can re-acquire a fresh ticket on every retry. Tokens
 /// are returned as raw strings on <see cref="DirectIssueResult"/>; seed your
-/// <c>RotatingConnectClient</c> from them.
+/// <c>RotatingSessionClient</c> from them.
 /// </summary>
 public sealed class NativeAuthenticator
 {

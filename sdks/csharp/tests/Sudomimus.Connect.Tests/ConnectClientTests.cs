@@ -112,45 +112,6 @@ public class ConnectClientTests
     }
 
     [Fact]
-    public async Task RefreshAsync_RoundTrips()
-    {
-        var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "new-a", "refreshToken": "new-r", "claims": { "email": { "requirement": "OPTIONAL", "state": "GRANTED" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
-        var client = NewClient(handler);
-
-        var resp = await client.RefreshAsync(new RefreshRequest { RefreshToken = "r" });
-        Assert.Equal("new-a", resp.AccessToken);
-        Assert.Equal("new-r", resp.RefreshToken);
-        Assert.Equal(ClaimRequirement.Optional, resp.Claims.Email.Requirement);
-        Assert.Equal(ClaimGrantState.Granted, resp.Claims.Email.State);
-    }
-
-    [Fact]
-    public async Task IntrospectAsync_ParsesAllStatusValues()
-    {
-        var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """
-            { "status": "active", "recommendedRecheckSeconds": 30 }
-            """);
-        var client = NewClient(handler);
-
-        var resp = await client.IntrospectAsync(new IntrospectRequest { AccessToken = "a" });
-        Assert.Equal(IntrospectStatus.Active, resp.Status);
-        Assert.Equal(30, resp.RecommendedRecheckSeconds);
-    }
-
-    [Fact]
-    public async Task LogoutAsync_ReportsRevoked()
-    {
-        var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "revoked": true }""");
-        var client = NewClient(handler);
-
-        var resp = await client.LogoutAsync(new LogoutRequest { RefreshToken = "r" });
-        Assert.True(resp.Revoked);
-    }
-
-    [Fact]
     public async Task ApiError_Parsed_FromResponseBody()
     {
         var handler = new FakeHttpMessageHandler();
@@ -177,7 +138,7 @@ public class ConnectClientTests
         var client = NewClient(handler);
 
         var ex = await Assert.ThrowsAsync<ConnectApiException>(() =>
-            client.RefreshAsync(new RefreshRequest { RefreshToken = "r" }));
+            client.HealthAsync());
 
         Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
         Assert.Null(ex.Reason);
@@ -243,16 +204,6 @@ public class ConnectClientTests
             client.EstablishAsync(new EstablishRequest { ApplicationAnchor = "anchor-1" }));
 
         Assert.Empty(handler.Requests);
-    }
-
-    [Fact]
-    public async Task RevokeAllAsync_WithoutClientAuth_Throws()
-    {
-        var handler = new FakeHttpMessageHandler();
-        var client = NewClient(handler);
-
-        await Assert.ThrowsAsync<ConnectConfigException>(() =>
-            client.RevokeAllAsync(new RevokeAllRequest { Subject = "subject-1" }));
     }
 
     // ───────── helpers ─────────

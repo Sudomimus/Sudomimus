@@ -2,8 +2,8 @@ namespace Sudomimus.Native;
 
 /// <summary>
 /// A successful direct-issue outcome: the issued tokens plus the per-claim
-/// view. Tokens are raw strings (not a <c>Connect.TokenPair</c>) so this
-/// package stays dependency-free — seed your <c>RotatingConnectClient</c> from
+/// view. Tokens are raw strings (not a <c>Session.TokenPair</c>) so this
+/// package stays dependency-free; seed your <c>RotatingSessionClient</c> from
 /// <see cref="AccessToken"/> / <see cref="RefreshToken"/>.
 /// </summary>
 public sealed record DirectIssueResult

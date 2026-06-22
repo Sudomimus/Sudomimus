@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Sudomimus.Connect\Sudomimus.Connect.csproj" />
     <ProjectReference Include="..\..\src\Sudomimus.Native\Sudomimus.Native.csproj" />
+    <ProjectReference Include="..\..\src\Sudomimus.Session\Sudomimus.Session.csproj" />
     <ProjectReference Include="..\..\src\Sudomimus.Token\Sudomimus.Token.csproj" />
   </ItemGroup>
 

@@ -1,7 +1,7 @@
 [project]
 name = "sudomimus-connect"
 version = "1.0.0"
-description = "Sudomimus Connect SDK — token exchange (Establish, Redeem, Refresh)."
+description = "Sudomimus Connect SDK — establish authentication inquiries, poll status, redeem tokens, and fetch application metadata."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

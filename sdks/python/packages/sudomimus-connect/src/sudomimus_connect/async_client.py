@@ -16,16 +16,8 @@ from ._generated.models import (
     HealthResponse,
     InfoRequest,
     InfoResponse,
-    IntrospectRequest,
-    IntrospectResponse,
-    LogoutRequest,
-    LogoutResponse,
     RedeemRequest,
     RedeemResponse,
-    RefreshRequest,
-    RefreshResponse,
-    RevokeAllRequest,
-    RevokeAllResponse,
     StatusPollRequest,
     StatusPollResponse,
 )
@@ -101,22 +93,8 @@ class AsyncConnectClient:
     async def redeem(self, request: RedeemRequest) -> RedeemResponse:
         return await self._post("/redeem", request, RedeemResponse)
 
-    async def refresh(self, request: RefreshRequest) -> RefreshResponse:
-        return await self._post("/refresh", request, RefreshResponse)
-
     async def info(self, request: InfoRequest) -> InfoResponse:
         return await self._post("/info", request, InfoResponse)
-
-    async def introspect(self, request: IntrospectRequest) -> IntrospectResponse:
-        return await self._post("/introspect", request, IntrospectResponse)
-
-    async def logout(self, request: LogoutRequest) -> LogoutResponse:
-        return await self._post("/logout", request, LogoutResponse)
-
-    async def revoke_all(self, request: RevokeAllRequest) -> RevokeAllResponse:
-        return await self._post_with_client_auth(
-            "/revoke-all", request, RevokeAllResponse, method_name="revoke_all"
-        )
 
     async def get_application_public_key(
         self,

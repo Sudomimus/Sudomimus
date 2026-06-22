@@ -1,7 +1,7 @@
-namespace Sudomimus.Connect;
+namespace Sudomimus.Session;
 
 /// <summary>
-/// Wraps a <see cref="ConnectClient"/> together with an
+/// Wraps a <see cref="SessionClient"/> together with an
 /// <see cref="ITokenStore"/> to handle OAuth 2.1 BCP §4.14.2 strict
 /// refresh-token rotation correctly:
 /// <list type="bullet">
@@ -24,16 +24,16 @@ namespace Sudomimus.Connect;
 ///
 /// Initial population of the store happens via <see cref="SeedAsync"/>
 /// — call it with the <c>{ AccessToken, RefreshToken }</c> pair
-/// returned by <c>/redeem</c>.
+/// returned by an ordinary login flow.
 /// </summary>
-public sealed class RotatingConnectClient
+public sealed class RotatingSessionClient
 {
-    private readonly ConnectClient _client;
+    private readonly SessionClient _client;
     private readonly ITokenStore _store;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private Task<string>? _inFlightRefresh;
 
-    public RotatingConnectClient(ConnectClient client, ITokenStore store)
+    public RotatingSessionClient(SessionClient client, ITokenStore store)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -41,17 +41,16 @@ public sealed class RotatingConnectClient
 
     /// <summary>
     /// The underlying low-level client. Exposed for callers that need
-    /// to drive non-rotation endpoints (<c>/establish</c>,
-    /// <c>/redeem</c>, <c>/info</c>, <c>/introspect</c>,
+    /// to drive non-rotation endpoints (<c>/introspect</c>,
     /// <c>/revoke-all</c>, <c>/health</c>) without re-wiring.
     /// </summary>
-    public ConnectClient Client => _client;
+    public SessionClient Client => _client;
 
     /// <summary>The token store this wrapper owns.</summary>
     public ITokenStore Store => _store;
 
     /// <summary>
-    /// Persist the initial pair returned by <c>/redeem</c>. Call this
+    /// Persist the initial pair returned by an ordinary login flow. Call this
     /// once, right after a successful redeem, before any other method
     /// on this wrapper.
     /// </summary>
@@ -90,12 +89,13 @@ public sealed class RotatingConnectClient
     /// store, calls <c>/refresh</c>, persists the new pair, and
     /// returns the new access token.
     ///
-    /// Throws <see cref="ConnectConfigException"/> if the store is
-    /// empty. Surfaces the underlying <see cref="ConnectApiException"/>
+    /// Throws <see cref="SessionConfigException"/> if the store is
+    /// empty. Surfaces the underlying <see cref="SessionApiException"/>
     /// (with reasons like <c>RefreshTokenFamilyCompromised</c> /
     /// <c>RefreshTokenRotationRaceLost</c>) on rotation failure — in
     /// those cases the family is server-side revoked and the caller
-    /// MUST re-authenticate via <c>/establish</c>.
+    /// MUST re-authenticate via Connect, Device, Native, or another ordinary
+    /// application-token issuance path.
     ///
     /// Concurrent calls on the same instance share one in-flight
     /// refresh.
@@ -172,8 +172,8 @@ public sealed class RotatingConnectClient
         var pair = await _store.LoadAsync(ct).ConfigureAwait(false);
         if (pair is null)
         {
-            throw new ConnectConfigException(
-                "RotatingConnectClient.RefreshAsync called before SeedAsync — no token pair to rotate.");
+            throw new SessionConfigException(
+                "RotatingSessionClient.RefreshAsync called before SeedAsync — no token pair to rotate.");
         }
 
         var response = await _client.RefreshAsync(

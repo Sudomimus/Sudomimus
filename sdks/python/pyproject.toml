@@ -14,6 +14,7 @@ exclude-newer = "1 week"
 sudomimus-connect = { workspace = true }
 sudomimus-device = { workspace = true }
 sudomimus-native = { workspace = true }
+sudomimus-session = { workspace = true }
 sudomimus-token = { workspace = true }
 
 [dependency-groups]
@@ -26,6 +27,7 @@ dev = [
     "sudomimus-connect",
     "sudomimus-device",
     "sudomimus-native",
+    "sudomimus-session",
     "sudomimus-token",
 ]
 
@@ -47,7 +49,7 @@ addopts = ["--import-mode=importlib"]
 
 [tool.coverage.run]
 branch = true
-source = ["sudomimus_token", "sudomimus_native", "sudomimus_connect", "sudomimus_device"]
+source = ["sudomimus_token", "sudomimus_native", "sudomimus_connect", "sudomimus_device", "sudomimus_session"]
 omit = ["*/_generated/*"]
 
 [tool.coverage.report]

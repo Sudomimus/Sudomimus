@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from ._generated.models import DeviceAuthorizeResponse, DeviceTokenError, Error
+from ._generated.models import DeviceAuthorizeResponse, DeviceTokenError, Error1
 
 
 class DeviceApiError(Exception):
     """Raised for generic non-2xx responses from the Device API."""
 
-    def __init__(self, status: int, reason: str | None, body: Error | None) -> None:
+    def __init__(self, status: int, reason: str | None, body: Error1 | None) -> None:
         message = f"Device API error {status}: {reason}" if reason else f"Device API error {status}"
         super().__init__(message)
         self.status = status

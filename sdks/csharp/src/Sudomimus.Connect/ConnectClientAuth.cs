@@ -9,8 +9,7 @@ namespace Sudomimus.Connect;
 public delegate Task<string> ConnectClientAuthSigner(string rawBody, CancellationToken cancellationToken);
 
 /// <summary>
-/// Configuration for the client-auth JWT required by <c>/establish</c> and
-/// <c>/revoke-all</c>. Use a derived type:
+/// Configuration for the client-auth JWT required by <c>/establish</c>. Use a derived type:
 /// <see cref="ConnectClientAuthWithKey"/> to let the SDK sign with a
 /// PEM-encoded RSA private key, or <see cref="ConnectClientAuthWithSigner"/>
 /// to delegate signing to an external system (HSM, KMS, etc.).

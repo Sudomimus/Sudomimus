@@ -18,6 +18,7 @@ TARGETS = [
     ("connect", "sudomimus-connect", "sudomimus_connect"),
     ("device", "sudomimus-device", "sudomimus_device"),
     ("native", "sudomimus-native", "sudomimus_native"),
+    ("session", "sudomimus-session", "sudomimus_session"),
 ]
 
 

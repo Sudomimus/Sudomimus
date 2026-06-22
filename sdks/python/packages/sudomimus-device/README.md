@@ -4,7 +4,7 @@ Python SDK for the Sudomimus Device API: public-client device authorization via
 `/device-authorize` and `/device-token`.
 
 The Device API does not refresh tokens itself. A successful `/device-token`
-returns a normal Sudomimus access/refresh pair; use `sudomimus-connect` for
+returns a normal Sudomimus access/refresh pair; use `sudomimus-session` for
 later `/refresh`, `/logout`, `/introspect`, and `/revoke-all`.
 
 ## Manual polling and manual storage
@@ -38,7 +38,7 @@ while True:
 ## Automatic polling with Connect-compatible storage
 
 ```python
-from sudomimus_connect import ConnectClient, InMemoryTokenStore, RotatingConnectClient
+from sudomimus_session import InMemoryTokenStore, RotatingSessionClient, SessionClient
 from sudomimus_device import DeviceAuthenticator, DeviceAuthorizeRequest, DeviceClient
 
 store = InMemoryTokenStore()
@@ -51,8 +51,8 @@ device = DeviceAuthenticator(
 result = device.authorize_and_poll(DeviceAuthorizeRequest(applicationAnchor="my-app"))
 print(result.tokens.accessToken)
 
-# Later refresh/logout through Connect using the same store.
-rotating = RotatingConnectClient(ConnectClient(), store)
+# Later refresh/logout through Session using the same store.
+rotating = RotatingSessionClient(SessionClient(), store)
 access_token = rotating.refresh()
 ```
 

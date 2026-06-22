@@ -23,8 +23,8 @@ public sealed record ConnectClientOptions
     public string? PublicKeyFetchLocale { get; init; }
 
     /// <summary>
-    /// Client-auth config. Required for <c>EstablishAsync</c> and
-    /// <c>RevokeAllAsync</c>; ignored by every other endpoint.
+    /// Client-auth config. Required for <c>EstablishAsync</c>; ignored by
+    /// every other endpoint.
     /// </summary>
     public ConnectClientAuth? ClientAuth { get; init; }
 }

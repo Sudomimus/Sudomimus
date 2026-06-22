@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from sudomimus_connect import AsyncTokenStore, TokenPair, TokenStore
+from sudomimus_session import AsyncTokenStore, TokenPair, TokenStore
 
 from ._generated.models import (
     DeviceAuthorizeRequest,
@@ -51,9 +51,9 @@ AsyncPollCallback = Callable[[DevicePollProgress], None | Awaitable[None]]
 class DeviceAuthenticator:
     """Synchronous automatic device authorization helper.
 
-    If a :class:`sudomimus_connect.TokenStore` is provided, successful polling
+    If a :class:`sudomimus_session.TokenStore` is provided, successful polling
     writes the issued token pair before returning. Use that same store with
-    :class:`sudomimus_connect.RotatingConnectClient` for later refresh/logout.
+    :class:`sudomimus_session.RotatingSessionClient` for later refresh/logout.
     """
 
     def __init__(
@@ -96,7 +96,7 @@ class DeviceAuthenticator:
 
         opener = open_url if open_url is not None else self._open_url
         if opener is not None:
-            opener(authorization.verificationUriComplete, authorization)
+            opener(str(authorization.verificationUriComplete), authorization)
 
         tokens = self.poll_for_token(
             authorization,
@@ -228,7 +228,7 @@ class AsyncDeviceAuthenticator:
 
         opener = open_url if open_url is not None else self._open_url
         if opener is not None:
-            await _maybe_await(opener(authorization.verificationUriComplete, authorization))
+            await _maybe_await(opener(str(authorization.verificationUriComplete), authorization))
 
         tokens = await self.poll_for_token(
             authorization,

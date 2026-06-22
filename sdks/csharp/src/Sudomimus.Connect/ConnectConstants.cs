@@ -16,8 +16,8 @@ public static class ConnectConstants
     public const string DefaultPublicKeyLocale = "en-US";
 
     /// <summary>
-    /// Fixed <c>aud</c> claim value the server requires on every client-auth
-    /// JWT (<c>/establish</c>, <c>/revoke-all</c>).
+    /// Fixed <c>aud</c> claim value the server requires on Connect client-auth
+    /// JWTs (<c>/establish</c>).
     /// </summary>
     public const string ClientJwtAudience = "sudomimus-connect";
 

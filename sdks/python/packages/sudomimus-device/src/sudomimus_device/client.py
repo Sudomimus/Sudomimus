@@ -14,7 +14,7 @@ from ._generated.models import (
     DeviceTokenError,
     DeviceTokenRequest,
     DeviceTokenResponse,
-    Error,
+    Error1,
     HealthResponse,
 )
 from .constants import PRODUCTION_BASE_URL
@@ -113,10 +113,10 @@ def _try_read_device_token_error(response: httpx.Response) -> DeviceTokenError |
         return None
 
 
-def _try_read_error(response: httpx.Response) -> Error | None:
+def _try_read_error(response: httpx.Response) -> Error1 | None:
     if not response.content:
         return None
     try:
-        return Error.model_validate_json(response.content)
+        return Error1.model_validate_json(response.content)
     except ValueError:
         return None

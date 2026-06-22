@@ -2,14 +2,14 @@ using System.Net;
 using System.Text.Json;
 using Xunit;
 
-namespace Sudomimus.Connect.Tests;
+namespace Sudomimus.Session.Tests;
 
-public class RotatingConnectClientTests
+public class RotatingSessionClientTests
 {
     [Fact]
     public async Task GetAccessTokenAsync_ReturnsNullWhenEmpty()
     {
-        var wrapper = new RotatingConnectClient(NewClient(new FakeHttpMessageHandler()), new InMemoryTokenStore());
+        var wrapper = new RotatingSessionClient(NewClient(new FakeHttpMessageHandler()), new InMemoryTokenStore());
 
         Assert.Null(await wrapper.GetAccessTokenAsync());
         Assert.Null(await wrapper.GetTokensAsync());
@@ -18,7 +18,7 @@ public class RotatingConnectClientTests
     [Fact]
     public async Task SeedAsync_PersistsInitialPair()
     {
-        var wrapper = new RotatingConnectClient(NewClient(new FakeHttpMessageHandler()), new InMemoryTokenStore());
+        var wrapper = new RotatingSessionClient(NewClient(new FakeHttpMessageHandler()), new InMemoryTokenStore());
 
         await wrapper.SeedAsync(new TokenPair { AccessToken = "a1", RefreshToken = "r1" });
 
@@ -35,7 +35,7 @@ public class RotatingConnectClientTests
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
         var store = new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" });
-        var wrapper = new RotatingConnectClient(NewClient(handler), store);
+        var wrapper = new RotatingSessionClient(NewClient(handler), store);
 
         var next = await wrapper.RefreshAsync();
 
@@ -52,9 +52,9 @@ public class RotatingConnectClientTests
     public async Task RefreshAsync_ThrowsWhenStoreIsEmpty()
     {
         var handler = new FakeHttpMessageHandler();
-        var wrapper = new RotatingConnectClient(NewClient(handler), new InMemoryTokenStore());
+        var wrapper = new RotatingSessionClient(NewClient(handler), new InMemoryTokenStore());
 
-        await Assert.ThrowsAsync<ConnectConfigException>(() => wrapper.RefreshAsync());
+        await Assert.ThrowsAsync<SessionConfigException>(() => wrapper.RefreshAsync());
         Assert.Empty(handler.Requests);
     }
 
@@ -63,7 +63,7 @@ public class RotatingConnectClientTests
     {
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
-        var wrapper = new RotatingConnectClient(
+        var wrapper = new RotatingSessionClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
 
@@ -82,7 +82,7 @@ public class RotatingConnectClientTests
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
         handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a3", "refreshToken": "r3", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
-        var wrapper = new RotatingConnectClient(
+        var wrapper = new RotatingSessionClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
 
@@ -101,11 +101,11 @@ public class RotatingConnectClientTests
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.Unauthorized, """{ "reason": "RefreshTokenFamilyCompromised" }""");
         handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
-        var wrapper = new RotatingConnectClient(
+        var wrapper = new RotatingSessionClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
 
-        await Assert.ThrowsAsync<ConnectApiException>(() => wrapper.RefreshAsync());
+        await Assert.ThrowsAsync<SessionApiException>(() => wrapper.RefreshAsync());
 
         var next = await wrapper.RefreshAsync();
         Assert.Equal("a2", next);
@@ -117,9 +117,9 @@ public class RotatingConnectClientTests
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.Unauthorized, """{ "reason": "RefreshTokenExpired" }""");
         var store = new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" });
-        var wrapper = new RotatingConnectClient(NewClient(handler), store);
+        var wrapper = new RotatingSessionClient(NewClient(handler), store);
 
-        await Assert.ThrowsAsync<ConnectApiException>(() => wrapper.RefreshAsync());
+        await Assert.ThrowsAsync<SessionApiException>(() => wrapper.RefreshAsync());
 
         var stored = await store.LoadAsync();
         Assert.Equal("a1", stored!.AccessToken);
@@ -132,7 +132,7 @@ public class RotatingConnectClientTests
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.OK, """{ "revoked": true }""");
         var store = new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" });
-        var wrapper = new RotatingConnectClient(NewClient(handler), store);
+        var wrapper = new RotatingSessionClient(NewClient(handler), store);
 
         await wrapper.LogoutAsync();
 
@@ -149,9 +149,9 @@ public class RotatingConnectClientTests
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.InternalServerError, """{ "reason": "InternalError" }""");
         var store = new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" });
-        var wrapper = new RotatingConnectClient(NewClient(handler), store);
+        var wrapper = new RotatingSessionClient(NewClient(handler), store);
 
-        await Assert.ThrowsAsync<ConnectApiException>(() => wrapper.LogoutAsync());
+        await Assert.ThrowsAsync<SessionApiException>(() => wrapper.LogoutAsync());
 
         Assert.Null(await store.LoadAsync());
     }
@@ -160,7 +160,7 @@ public class RotatingConnectClientTests
     public async Task LogoutAsync_NoOpWhenStoreEmpty()
     {
         var handler = new FakeHttpMessageHandler();
-        var wrapper = new RotatingConnectClient(NewClient(handler), new InMemoryTokenStore());
+        var wrapper = new RotatingSessionClient(NewClient(handler), new InMemoryTokenStore());
 
         await wrapper.LogoutAsync();
 
@@ -171,18 +171,18 @@ public class RotatingConnectClientTests
     public void Client_ExposesUnderlyingClient()
     {
         var client = NewClient(new FakeHttpMessageHandler());
-        var wrapper = new RotatingConnectClient(client, new InMemoryTokenStore());
+        var wrapper = new RotatingSessionClient(client, new InMemoryTokenStore());
 
         Assert.Same(client, wrapper.Client);
     }
 
     // ───────── helpers ─────────
 
-    private static ConnectClient NewClient(FakeHttpMessageHandler handler)
+    private static SessionClient NewClient(FakeHttpMessageHandler handler)
     {
-        return new ConnectClient(new ConnectClientOptions
+        return new SessionClient(new SessionClientOptions
         {
-            BaseUrl = "https://connect.example.com",
+            BaseUrl = "https://session.example.com",
             HttpClient = new HttpClient(handler),
         });
     }

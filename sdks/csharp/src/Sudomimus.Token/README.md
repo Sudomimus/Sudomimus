@@ -4,7 +4,7 @@ C# SDK for parsing and verifying Sudomimus access and refresh JWTs.
 
 Mirrors the [`@sudomimus/token`](https://www.npmjs.com/package/@sudomimus/token)
 TypeScript SDK. Use it wherever you receive tokens issued by Sudomimus
-Connect (`/redeem`, `/refresh`) or Native (`/direct-issue/steam-ticket`) —
+Connect (`/redeem`), Session (`/refresh`), or Native (`/direct-issue/steam-ticket`) —
 typically a game's authoritative backend that validates incoming access
 tokens.
 

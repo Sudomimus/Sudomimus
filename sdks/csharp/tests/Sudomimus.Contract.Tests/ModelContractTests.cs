@@ -35,20 +35,27 @@ public sealed class ModelContractTests
         { "connect", "StatusPollRequest", typeof(Connect.StatusPollRequest) },
         { "connect", "RedeemRequest", typeof(Connect.RedeemRequest) },
         { "connect", "RedeemResponse", typeof(Connect.RedeemResponse) },
-        { "connect", "RefreshRequest", typeof(Connect.RefreshRequest) },
-        { "connect", "RefreshResponse", typeof(Connect.RefreshResponse) },
         { "connect", "InfoRequest", typeof(Connect.InfoRequest) },
         { "connect", "InfoResponse", typeof(Connect.InfoResponse) },
-        { "connect", "IntrospectRequest", typeof(Connect.IntrospectRequest) },
-        { "connect", "IntrospectResponse", typeof(Connect.IntrospectResponse) },
-        { "connect", "LogoutRequest", typeof(Connect.LogoutRequest) },
-        { "connect", "LogoutResponse", typeof(Connect.LogoutResponse) },
-        { "connect", "RevokeAllRequest", typeof(Connect.RevokeAllRequest) },
-        { "connect", "RevokeAllResponse", typeof(Connect.RevokeAllResponse) },
 
-        // ---- Connect: claims view (carried on redeem / refresh) ----
+        // ---- Connect: claims view (carried on redeem) ----
         { "connect", "ClaimRequirementStateView", typeof(Connect.ClaimRequirementStateView) },
         { "connect", "ClaimsStateView", typeof(Connect.ClaimsStateView) },
+
+        // ---- Session: flat request/response DTOs ----
+        { "session", "HealthResponse", typeof(Session.HealthResponse) },
+        { "session", "RefreshRequest", typeof(Session.RefreshRequest) },
+        { "session", "RefreshResponse", typeof(Session.RefreshResponse) },
+        { "session", "IntrospectRequest", typeof(Session.IntrospectRequest) },
+        { "session", "IntrospectResponse", typeof(Session.IntrospectResponse) },
+        { "session", "LogoutRequest", typeof(Session.LogoutRequest) },
+        { "session", "LogoutResponse", typeof(Session.LogoutResponse) },
+        { "session", "RevokeAllRequest", typeof(Session.RevokeAllRequest) },
+        { "session", "RevokeAllResponse", typeof(Session.RevokeAllResponse) },
+
+        // ---- Session: claims view (carried on refresh) ----
+        { "session", "ClaimRequirementStateView", typeof(Session.ClaimRequirementStateView) },
+        { "session", "ClaimsStateView", typeof(Session.ClaimsStateView) },
 
         // ---- Native: direct-issue DTOs ----
         { "native", "DirectIssueAccessKeyRequest", typeof(Native.DirectIssueAccessKeyRequest) },
@@ -103,9 +110,11 @@ public sealed class ModelContractTests
     public static TheoryData<string, string, string, Type> MappedEnums() => new()
     {
         { "connect", "AuthenticationRuleConstraint", "method", typeof(Connect.AuthenticationMethod) },
-        { "connect", "IntrospectResponse", "status", typeof(Connect.IntrospectStatus) },
         { "connect", "ClaimRequirementStateView", "requirement", typeof(Connect.ClaimRequirement) },
         { "connect", "ClaimRequirementStateView", "state", typeof(Connect.ClaimGrantState) },
+        { "session", "IntrospectResponse", "status", typeof(Session.IntrospectStatus) },
+        { "session", "ClaimRequirementStateView", "requirement", typeof(Session.ClaimRequirement) },
+        { "session", "ClaimRequirementStateView", "state", typeof(Session.ClaimGrantState) },
         { "native", "ClaimRequirementStateView", "requirement", typeof(Native.ClaimRequirement) },
         { "native", "ClaimRequirementStateView", "state", typeof(Native.ClaimGrantState) },
         { "native", "ErrandStatusResponse", "status", typeof(Native.ErrandStatus) },

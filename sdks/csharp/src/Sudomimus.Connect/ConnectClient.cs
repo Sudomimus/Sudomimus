@@ -87,34 +87,10 @@ public sealed class ConnectClient
         return PostAsync<RedeemRequest, RedeemResponse>("/redeem", request, ct);
     }
 
-    public Task<RefreshResponse> RefreshAsync(RefreshRequest request, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        return PostAsync<RefreshRequest, RefreshResponse>("/refresh", request, ct);
-    }
-
     public Task<InfoResponse> InfoAsync(InfoRequest request, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         return PostAsync<InfoRequest, InfoResponse>("/info", request, ct);
-    }
-
-    public Task<IntrospectResponse> IntrospectAsync(IntrospectRequest request, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        return PostAsync<IntrospectRequest, IntrospectResponse>("/introspect", request, ct);
-    }
-
-    public Task<LogoutResponse> LogoutAsync(LogoutRequest request, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        return PostAsync<LogoutRequest, LogoutResponse>("/logout", request, ct);
-    }
-
-    public Task<RevokeAllResponse> RevokeAllAsync(RevokeAllRequest request, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        return PostWithClientAuthAsync<RevokeAllResponse>(nameof(RevokeAllAsync), "/revoke-all", request, ct);
     }
 
     // ───────── Public-key resolution ─────────

@@ -16,16 +16,8 @@ from ._generated.models import (
     HealthResponse,
     InfoRequest,
     InfoResponse,
-    IntrospectRequest,
-    IntrospectResponse,
-    LogoutRequest,
-    LogoutResponse,
     RedeemRequest,
     RedeemResponse,
-    RefreshRequest,
-    RefreshResponse,
-    RevokeAllRequest,
-    RevokeAllResponse,
     StatusPollRequest,
     StatusPollResponse,
 )
@@ -102,22 +94,8 @@ class ConnectClient:
     def redeem(self, request: RedeemRequest) -> RedeemResponse:
         return self._post("/redeem", request, RedeemResponse)
 
-    def refresh(self, request: RefreshRequest) -> RefreshResponse:
-        return self._post("/refresh", request, RefreshResponse)
-
     def info(self, request: InfoRequest) -> InfoResponse:
         return self._post("/info", request, InfoResponse)
-
-    def introspect(self, request: IntrospectRequest) -> IntrospectResponse:
-        return self._post("/introspect", request, IntrospectResponse)
-
-    def logout(self, request: LogoutRequest) -> LogoutResponse:
-        return self._post("/logout", request, LogoutResponse)
-
-    def revoke_all(self, request: RevokeAllRequest) -> RevokeAllResponse:
-        return self._post_with_client_auth(
-            "/revoke-all", request, RevokeAllResponse, method_name="revoke_all"
-        )
 
     def get_application_public_key(
         self,

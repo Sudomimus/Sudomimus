@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Sudomimus.Connect;
+namespace Sudomimus.Session;
 
 public sealed record LogoutRequest
 {

@@ -1,9 +1,9 @@
-namespace Sudomimus.Connect;
+namespace Sudomimus.Session;
 
 /// <summary>
-/// A pair of Connect-issued tokens. The shape matches what
-/// <c>/redeem</c> and <c>/refresh</c> return — persist both verbatim so
-/// the next rotation can present the current refresh token.
+/// A pair of Sudomimus application tokens. Initial login flows and
+/// <c>/refresh</c> return this shape — persist both verbatim so the next
+/// rotation can present the current refresh token.
 /// </summary>
 public sealed record TokenPair
 {
@@ -15,7 +15,7 @@ public sealed record TokenPair
 /// <summary>
 /// Persistence contract for a single Sudomimus session's token pair.
 ///
-/// The Connect API does OAuth 2.1 BCP §4.14.2 strict refresh-token
+/// The Session API does OAuth 2.1 BCP §4.14.2 strict refresh-token
 /// rotation: every <c>/refresh</c> returns a NEW refresh token and
 /// invalidates the one that was presented. Re-presenting the old
 /// refresh token (or losing the rotation race to a concurrent caller)
@@ -47,8 +47,8 @@ public interface ITokenStore
     Task<TokenPair?> LoadAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Atomically overwrite the stored pair. Called after the initial
-    /// <c>/redeem</c> and after every successful <c>/refresh</c>.
+    /// Atomically overwrite the stored pair. Called after the initial login
+    /// flow and after every successful <c>/refresh</c>.
     /// </summary>
     Task SaveAsync(TokenPair tokens, CancellationToken ct = default);
 
