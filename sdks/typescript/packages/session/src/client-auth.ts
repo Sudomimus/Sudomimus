@@ -11,9 +11,9 @@ import {
     CLIENT_JWT_AUDIENCE,
     CLIENT_JWT_DEFAULT_LIFETIME_SECONDS,
     CLIENT_JWT_MAX_LIFETIME_SECONDS,
-} from "./constants";
-import type { SessionClientAuthWithKey } from "./declare";
-import { SessionConfigError } from "./error";
+} from "./constants.js";
+import type { SessionClientAuthWithKey } from "./declare.js";
+import { SessionConfigError } from "./error.js";
 
 export type SessionClientJwtClaims = {
 

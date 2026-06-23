@@ -13,7 +13,7 @@ import type {
     RefreshToken,
     RefreshTokenBody,
     RefreshTokenHeader,
-} from "./declare";
+} from "./declare.js";
 
 export const parseAccessToken = (jwt: string): AccessToken | null => {
 

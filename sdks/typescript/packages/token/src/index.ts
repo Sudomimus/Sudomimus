@@ -5,9 +5,9 @@
  * @description Index
  */
 
-export * from "./constants";
-export * from "./declare";
-export * from "./error";
-export * from "./id";
-export * from "./parse";
-export * from "./verifier";
+export * from "./constants.js";
+export * from "./declare.js";
+export * from "./error.js";
+export * from "./id.js";
+export * from "./parse.js";
+export * from "./verifier.js";

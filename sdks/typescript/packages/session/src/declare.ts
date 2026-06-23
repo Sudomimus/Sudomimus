@@ -5,7 +5,7 @@
  * @description Session schema-derived type aliases
  */
 
-import type { components, paths } from "./_generated/schema";
+import type { components, paths } from "./_generated/schema.js";
 
 export type SessionSchemas = components["schemas"];
 export type SessionPaths = paths;

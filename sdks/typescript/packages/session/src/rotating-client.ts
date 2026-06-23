@@ -5,9 +5,9 @@
  * @description Refresh-token rotation wrapper around SessionClient
  */
 
-import type { SessionClient } from "./client";
-import { SessionConfigError } from "./error";
-import type { TokenPair, TokenStore } from "./token-store";
+import type { SessionClient } from "./client.js";
+import { SessionConfigError } from "./error.js";
+import type { TokenPair, TokenStore } from "./token-store.js";
 
 export class RotatingSessionClient {
 

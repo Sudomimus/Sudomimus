@@ -5,8 +5,8 @@
  * @description Session HTTP client
  */
 
-import { signSessionClientJwt } from "./client-auth";
-import { CLIENT_JWT_AUTH_SCHEME, PRODUCTION_BASE_URL } from "./constants";
+import { signSessionClientJwt } from "./client-auth.js";
+import { CLIENT_JWT_AUTH_SCHEME, PRODUCTION_BASE_URL } from "./constants.js";
 import type {
     HealthResponse,
     IntrospectRequest,
@@ -20,8 +20,8 @@ import type {
     SessionClientAuthConfig,
     SessionClientOptions,
     SessionErrorBody,
-} from "./declare";
-import { SessionApiError, SessionConfigError } from "./error";
+} from "./declare.js";
+import { SessionApiError, SessionConfigError } from "./error.js";
 
 export class SessionClient {
 

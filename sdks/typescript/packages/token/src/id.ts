@@ -6,7 +6,7 @@
  */
 
 import { JWTToken } from "@sudoo/jwt";
-import { TokenError } from "./error";
+import { TokenError } from "./error.js";
 
 export type IdTokenHeader = {
 

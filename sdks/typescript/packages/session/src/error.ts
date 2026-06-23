@@ -5,7 +5,7 @@
  * @description Session SDK errors
  */
 
-import type { SessionErrorBody } from "./declare";
+import type { SessionErrorBody } from "./declare.js";
 
 export class SessionApiError extends Error {
 

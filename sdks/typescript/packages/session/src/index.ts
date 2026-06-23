@@ -5,10 +5,10 @@
  * @description Index
  */
 
-export * from "./client";
-export * from "./client-auth";
-export * from "./constants";
-export * from "./declare";
-export * from "./error";
-export * from "./rotating-client";
-export * from "./token-store";
+export * from "./client.js";
+export * from "./client-auth.js";
+export * from "./constants.js";
+export * from "./declare.js";
+export * from "./error.js";
+export * from "./rotating-client.js";
+export * from "./token-store.js";

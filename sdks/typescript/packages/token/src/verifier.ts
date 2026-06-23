@@ -5,15 +5,15 @@
  * @description Token verifier
  */
 
-import { ACCESS_TOKEN_KEY_TYPE, REFRESH_TOKEN_KEY_TYPE } from "./constants";
+import { ACCESS_TOKEN_KEY_TYPE, REFRESH_TOKEN_KEY_TYPE } from "./constants.js";
 import type {
     AccessToken,
     PublicKeyResolver,
     RefreshToken,
     TokenVerifierOptions,
-} from "./declare";
-import { TokenError } from "./error";
-import { parseAccessToken, parseRefreshToken } from "./parse";
+} from "./declare.js";
+import { TokenError } from "./error.js";
+import { parseAccessToken, parseRefreshToken } from "./parse.js";
 
 export class TokenVerifier {
 
