@@ -5,7 +5,7 @@
  * @description Device SDK errors
  */
 
-import type { DeviceAuthorizeResponse, DeviceErrorBody, DeviceTokenErrorBody } from "./declare";
+import type { DeviceAuthorizeResponse, DeviceErrorBody, DeviceTokenErrorBody } from "./declare.js";
 
 export class DeviceApiError extends Error {
 

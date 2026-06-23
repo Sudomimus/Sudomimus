@@ -5,7 +5,7 @@
  * @description Device schema-derived type aliases
  */
 
-import type { components, paths } from "./_generated/schema";
+import type { components, paths } from "./_generated/schema.js";
 
 export type DeviceSchemas = components["schemas"];
 export type DevicePaths = paths;

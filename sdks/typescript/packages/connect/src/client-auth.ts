@@ -11,9 +11,9 @@ import {
     CLIENT_JWT_AUDIENCE,
     CLIENT_JWT_DEFAULT_LIFETIME_SECONDS,
     CLIENT_JWT_MAX_LIFETIME_SECONDS,
-} from "./constants";
-import type { ConnectClientAuthWithKey } from "./declare";
-import { ConnectConfigError } from "./error";
+} from "./constants.js";
+import type { ConnectClientAuthWithKey } from "./declare.js";
+import { ConnectConfigError } from "./error.js";
 
 export type EstablishClientJwtClaims = {
 

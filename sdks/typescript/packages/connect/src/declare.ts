@@ -5,7 +5,7 @@
  * @description Connect schema-derived type aliases
  */
 
-import type { components, paths } from "./_generated/schema";
+import type { components, paths } from "./_generated/schema.js";
 
 export type ConnectSchemas = components["schemas"];
 export type ConnectPaths = paths;

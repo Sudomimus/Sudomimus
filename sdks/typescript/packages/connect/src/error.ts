@@ -5,7 +5,7 @@
  * @description Connect API error class
  */
 
-import type { ConnectErrorBody } from "./declare";
+import type { ConnectErrorBody } from "./declare.js";
 
 export class ConnectApiError extends Error {
 

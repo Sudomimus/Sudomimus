@@ -6,8 +6,8 @@
  */
 
 import { TokenVerifier, type AccessToken, type RefreshToken } from "@sudomimus/token";
-import { signEstablishClientJwt } from "./client-auth";
-import { CLIENT_JWT_AUTH_SCHEME, DEFAULT_PUBLIC_KEY_LOCALE, PRODUCTION_BASE_URL } from "./constants";
+import { signEstablishClientJwt } from "./client-auth.js";
+import { CLIENT_JWT_AUTH_SCHEME, DEFAULT_PUBLIC_KEY_LOCALE, PRODUCTION_BASE_URL } from "./constants.js";
 import type {
     ConnectClientAuthConfig,
     ConnectClientOptions,
@@ -22,8 +22,8 @@ import type {
     RedeemResponse,
     StatusPollRequest,
     StatusPollResponse,
-} from "./declare";
-import { ConnectApiError, ConnectConfigError } from "./error";
+} from "./declare.js";
+import { ConnectApiError, ConnectConfigError } from "./error.js";
 
 export class ConnectClient {
 

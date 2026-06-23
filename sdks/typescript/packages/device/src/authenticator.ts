@@ -6,13 +6,13 @@
  */
 
 import type { TokenPair, TokenStore } from "@sudomimus/session";
-import type { DeviceClient } from "./client";
+import type { DeviceClient } from "./client.js";
 import type {
     DeviceAuthorizeRequest,
     DeviceAuthorizeResponse,
     DeviceTokenResponse,
-} from "./declare";
-import { DevicePollTimeoutError, DeviceTokenApiError } from "./error";
+} from "./declare.js";
+import { DevicePollTimeoutError, DeviceTokenApiError } from "./error.js";
 
 export type DeviceOpenUrl = (
     url: string,
