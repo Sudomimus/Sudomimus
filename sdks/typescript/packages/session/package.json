@@ -1,6 +1,6 @@
 {
     "name": "@sudomimus/session",
-    "version": "1.0.0",
+    "version": "3.0.1",
     "description": "Sudomimus Session SDK — refresh-token rotation, introspection, logout, and account session revocation.",
     "license": "MIT",
     "repository": {

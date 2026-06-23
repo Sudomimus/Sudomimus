@@ -1,6 +1,6 @@
 {
     "name": "@sudomimus/device",
-    "version": "1.0.0",
+    "version": "3.0.1",
     "description": "Sudomimus Device SDK — public-client device authorization with manual or automatic polling.",
     "license": "MIT",
     "repository": {

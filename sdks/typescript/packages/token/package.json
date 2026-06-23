@@ -1,6 +1,6 @@
 {
     "name": "@sudomimus/token",
-    "version": "1.2.0",
+    "version": "3.0.1",
     "description": "Sudomimus Token SDK — parse and verify Sudomimus access and refresh JWTs.",
     "license": "MIT",
     "repository": {
