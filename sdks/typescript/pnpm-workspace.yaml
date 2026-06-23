@@ -8,14 +8,14 @@ catalog:
   "@sudoo/jwt": 3.6.0
   "@sudoo/token": 1.7.0
   "@types/jest": 30.0.0
-  "@types/node": 22.10.5
-  "@typescript-eslint/eslint-plugin": 8.60.1
-  "@typescript-eslint/parser": 8.60.1
-  eslint: 10.4.1
+  "@types/node": 25.9.3
+  "@typescript-eslint/eslint-plugin": 8.61.0
+  "@typescript-eslint/parser": 8.61.0
+  eslint: 10.5.0
   jest: 30.4.2
   openapi-typescript: 7.13.0
   ts-jest: 29.4.11
-  turbo: 2.9.16
+  turbo: 2.9.18
   typescript: 6.0.3
 
 minimumReleaseAge: 10080
