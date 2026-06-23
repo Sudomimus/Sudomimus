@@ -5,6 +5,7 @@
  * @description Index
  */
 
-export * from "./client";
-export * from "./declare";
-export * from "./error";
+export * from "./client.js";
+export * from "./constants.js";
+export * from "./declare.js";
+export * from "./error.js";

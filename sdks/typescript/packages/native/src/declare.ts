@@ -5,7 +5,7 @@
  * @description Native schema-derived type aliases
  */
 
-import type { components, paths } from "./_generated/schema";
+import type { components, paths } from "./_generated/schema.js";
 
 export type NativeSchemas = components["schemas"];
 export type NativePaths = paths;

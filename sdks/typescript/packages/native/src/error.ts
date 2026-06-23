@@ -5,7 +5,7 @@
  * @description Native API error class
  */
 
-import type { NativeErrorBody } from "./declare";
+import type { NativeErrorBody } from "./declare.js";
 
 export class NativeApiError extends Error {
 
