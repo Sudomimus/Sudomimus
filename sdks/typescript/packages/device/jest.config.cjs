@@ -9,6 +9,7 @@ module.exports = {
     moduleNameMapper: {
         "^@sudomimus/session$": "<rootDir>/../session/src/index.ts",
         "^@sudomimus/token$": "<rootDir>/../token/src/index.ts",
+        "^(\\.{1,2}/.*)\\.js$": "$1",
     },
     collectCoverageFrom: [
         "src/**/*.ts",
