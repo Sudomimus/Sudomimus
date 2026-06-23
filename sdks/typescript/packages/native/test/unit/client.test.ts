@@ -5,7 +5,7 @@
  * @description Client.test
  */
 
-import { NativeApiError, NativeClient } from "../../src";
+import { NativeApiError, NativeClient, PRODUCTION_BASE_URL } from "../../src";
 import type { DirectIssueAccessKeyResponse, DirectIssueSteamTicketResponse } from "../../src";
 
 const VALID_ACCESS_KEY_IDENTIFIER = "01890c5e-1234-4abc-9def-0123456789ab";
@@ -47,6 +47,11 @@ const makeFetch = (specs: FakeResponseSpec[]): jest.Mock => {
 };
 
 describe("NativeClient", () => {
+
+    it("defaults to the production base URL", () => {
+
+        expect(new NativeClient().baseUrl).toBe(PRODUCTION_BASE_URL);
+    });
 
     it("normalizes the base URL", () => {
 

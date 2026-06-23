@@ -15,18 +15,19 @@ import type {
     ErrandStatusResponse,
     NativeClientOptions,
     NativeErrorBody,
-} from "./declare";
-import { NativeApiError } from "./error";
+} from "./declare.js";
+import { PRODUCTION_BASE_URL } from "./constants.js";
+import { NativeApiError } from "./error.js";
 
 export class NativeClient {
 
     private readonly _baseUrl: string;
     private readonly _fetch: typeof globalThis.fetch;
 
-    public constructor(options: NativeClientOptions) {
+    public constructor(options: NativeClientOptions = {}) {
 
-        this._baseUrl = options.baseUrl.replace(/\/+$/, "");
-        this._fetch = options.fetch ?? globalThis.fetch;
+        this._baseUrl = (options.baseUrl ?? PRODUCTION_BASE_URL).replace(/\/+$/, "");
+        this._fetch = (options.fetch ?? globalThis.fetch).bind(globalThis);
     }
 
     public get baseUrl(): string {

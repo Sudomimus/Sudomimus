@@ -15,9 +15,10 @@ pnpm add @sudomimus/native
 ```typescript
 import { NativeClient } from "@sudomimus/native";
 
-const client = new NativeClient({
-    baseUrl: "https://native-api.sudomimus.com",
-});
+const client = new NativeClient();
+
+// Override the API host when needed:
+// const client = new NativeClient({ baseUrl: "https://native.example.com" });
 ```
 
 ### Steam ticket

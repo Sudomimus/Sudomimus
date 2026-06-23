@@ -31,7 +31,7 @@ export type CreateErrandResponse = components["schemas"]["CreateErrandResponse"]
 export type NativeErrorBody = components["schemas"]["DirectIssueDeniedError"];
 
 export interface NativeClientOptions {
-    baseUrl: string;
+    baseUrl?: string;
     fetch?: typeof globalThis.fetch;
 }
 
