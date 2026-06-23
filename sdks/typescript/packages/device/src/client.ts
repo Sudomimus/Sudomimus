@@ -14,17 +14,18 @@ import type {
     DeviceTokenRequest,
     DeviceTokenResponse,
     HealthResponse,
-} from "./declare";
-import { DeviceApiError, DeviceTokenApiError } from "./error";
+} from "./declare.js";
+import { PRODUCTION_BASE_URL } from "./constants.js";
+import { DeviceApiError, DeviceTokenApiError } from "./error.js";
 
 export class DeviceClient {
 
     private readonly _baseUrl: string;
     private readonly _fetch: typeof globalThis.fetch;
 
-    public constructor(options: DeviceClientOptions) {
+    public constructor(options: DeviceClientOptions = {}) {
 
-        this._baseUrl = options.baseUrl.replace(/\/+$/, "");
+        this._baseUrl = (options.baseUrl ?? PRODUCTION_BASE_URL).replace(/\/+$/, "");
         this._fetch = (options.fetch ?? globalThis.fetch).bind(globalThis);
     }
 

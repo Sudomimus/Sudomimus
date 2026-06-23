@@ -9,6 +9,7 @@ import {
     DeviceApiError,
     DeviceClient,
     DeviceTokenApiError,
+    PRODUCTION_BASE_URL,
 } from "../../src";
 import type {
     DeviceAuthorizeResponse,
@@ -39,6 +40,11 @@ const tokenResponse = (): DeviceTokenResponse => ({
 });
 
 describe("DeviceClient", () => {
+
+    it("defaults to the production base URL", () => {
+
+        expect(new DeviceClient().baseUrl).toBe(PRODUCTION_BASE_URL);
+    });
 
     it("normalizes the base URL", () => {
 

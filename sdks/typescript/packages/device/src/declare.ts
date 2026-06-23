@@ -26,6 +26,6 @@ export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementS
 export type DeviceErrorBody = components["schemas"]["Error"];
 
 export interface DeviceClientOptions {
-    baseUrl: string;
+    baseUrl?: string;
     fetch?: typeof globalThis.fetch;
 }

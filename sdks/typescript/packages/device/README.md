@@ -12,7 +12,7 @@ later `/refresh`, `/logout`, `/introspect`, and `/revoke-all`.
 ```ts
 import { DeviceClient, DeviceTokenApiError } from "@sudomimus/device";
 
-const client = new DeviceClient({ baseUrl: "https://device-api.sudomimus.com" });
+const client = new DeviceClient();
 const auth = await client.deviceAuthorize({ applicationAnchor: "my-app" });
 
 console.log(auth.userCode, auth.verificationUriComplete);
@@ -42,7 +42,7 @@ import { InMemoryTokenStore, RotatingSessionClient, SessionClient } from "@sudom
 import { DeviceAuthenticator, DeviceClient } from "@sudomimus/device";
 
 const store = new InMemoryTokenStore();
-const device = new DeviceClient({ baseUrl: "https://device-api.sudomimus.com" });
+const device = new DeviceClient();
 const auth = new DeviceAuthenticator(device, {
     store,
     openUrl: (url) => console.log("Open:", url),
