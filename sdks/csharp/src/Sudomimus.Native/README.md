@@ -38,10 +38,10 @@ token?": `OFF` (the app never asks), `UNKNOWN` (user never decided), `DENIED`
 
 ```csharp
 ClaimsStateView claims = response.Claims;
-// claims.Email.Requirement -> ClaimRequirement.Off / Optional / Required
+// claims.Email.Requirement -> ClaimRequirement.Off / Optional / Required / SyntheticOnly / SyntheticFallback
 // claims.Email.State       -> ClaimGrantState.Unknown / Granted / Denied
-bool emailInToken = claims.Email.Requirement != ClaimRequirement.Off
-                 && claims.Email.State == ClaimGrantState.Granted;
+bool realEmailShared = claims.Email.Requirement != ClaimRequirement.Off
+                    && claims.Email.State == ClaimGrantState.Granted;
 ```
 
 ## Errand recovery for claim-gated logins

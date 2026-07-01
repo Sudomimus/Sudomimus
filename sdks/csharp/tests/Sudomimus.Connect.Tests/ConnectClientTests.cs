@@ -85,7 +85,8 @@ public class ConnectClientTests
                 "claims": {
                     "email": { "requirement": "REQUIRED", "state": "GRANTED" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);

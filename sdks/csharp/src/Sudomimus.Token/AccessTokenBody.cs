@@ -34,10 +34,18 @@ public sealed record AccessTokenBody
 
     /// <summary>
     /// Verified email associated with this login. Consent-gated like
-    /// <c>FirstName</c> / <c>LastName</c> (minted only when policy permits AND
-    /// the user granted the EMAIL claim), and always omitted for accounts with
-    /// no verified email (e.g. Steam-only or AccessKey-only).
+    /// <c>FirstName</c> / <c>LastName</c> / <c>AvatarUrl</c> (minted only when
+    /// policy permits AND the user granted the EMAIL claim), and omitted for
+    /// accounts with no verified email unless a synthetic email policy emits a
+    /// proxy address.
     /// </summary>
     [JsonPropertyName("emailAddress")]
     public string? EmailAddress { get; init; }
+
+    /// <summary>
+    /// Sector-scoped public avatar URL. Consent-gated like the other shareable
+    /// claims; synthetic avatar policies may emit a generated placeholder image.
+    /// </summary>
+    [JsonPropertyName("avatarUrl")]
+    public string? AvatarUrl { get; init; }
 }

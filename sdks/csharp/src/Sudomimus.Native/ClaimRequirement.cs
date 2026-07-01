@@ -16,6 +16,9 @@ public static class ClaimRequirement
     /// <summary>The user must grant it for a non-interactive issue to succeed.</summary>
     public const string Required = "REQUIRED";
 
-    /// <summary>Guarantees the claim is present but permits a generated placeholder when the user has not shared real data.</summary>
-    public const string Synthetic = "SYNTHETIC";
+    /// <summary>Always emits a generated placeholder and never asks for real data.</summary>
+    public const string SyntheticOnly = "SYNTHETIC_ONLY";
+
+    /// <summary>Emits real data when shared, otherwise a generated placeholder.</summary>
+    public const string SyntheticFallback = "SYNTHETIC_FALLBACK";
 }

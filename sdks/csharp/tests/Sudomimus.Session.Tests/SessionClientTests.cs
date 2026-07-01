@@ -172,7 +172,8 @@ public class SessionClientTests
             "claims": {
                 "email": { "requirement": "OPTIONAL", "state": "GRANTED" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
             }
         }
         """;

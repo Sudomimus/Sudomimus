@@ -12,6 +12,7 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     private readonly Queue<HttpResponseMessage> _responses = new();
 
     public List<RecordedRequest> Requests { get; } = new();
+    public Func<CancellationToken, Task>? BeforeRespondAsync { get; set; }
 
     public void Enqueue(HttpStatusCode status, string? jsonBody)
     {
@@ -45,6 +46,12 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
             throw new InvalidOperationException("No queued response.");
         }
+
+        if (BeforeRespondAsync is { } beforeRespond)
+        {
+            await beforeRespond(cancellationToken).ConfigureAwait(false);
+        }
+
         return _responses.Dequeue();
     }
 }

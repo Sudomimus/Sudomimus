@@ -7,6 +7,9 @@ namespace Sudomimus.Native.Tests;
 
 public class NativeClientTests
 {
+    private const string ValidAccessKeyIdentifier = "acs_k_01890c5e-1234-4abc-9def-0123456789ab";
+    private static readonly string ValidAccessKeySecret = "acs_t_" + new string('a', 64);
+
     [Fact]
     public void Constructor_NormalizesBaseUrlTrailingSlash()
     {
@@ -27,7 +30,8 @@ public class NativeClientTests
                 "claims": {
                     "email": { "requirement": "REQUIRED", "state": "GRANTED" },
                     "firstName": { "requirement": "OPTIONAL", "state": "DENIED" },
-                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);
@@ -136,7 +140,8 @@ public class NativeClientTests
                 "claims": {
                     "email": { "requirement": "OFF", "state": "UNKNOWN" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);
@@ -146,8 +151,8 @@ public class NativeClientTests
         var response = await client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
         {
             ApplicationAnchor = "anchor-1",
-            AccessKeyIdentifier = "01890c5e-1234-4abc-9def-0123456789ab",
-            AccessKeySecret = new string('a', 64),
+            AccessKeyIdentifier = ValidAccessKeyIdentifier,
+            AccessKeySecret = ValidAccessKeySecret,
         });
 
         Assert.Equal("anchor-1", response.ApplicationAnchor);
@@ -166,10 +171,10 @@ public class NativeClientTests
         using var parsed = JsonDocument.Parse(sentRequest.Body!);
         Assert.Equal("anchor-1", parsed.RootElement.GetProperty("applicationAnchor").GetString());
         Assert.Equal(
-            "01890c5e-1234-4abc-9def-0123456789ab",
+            ValidAccessKeyIdentifier,
             parsed.RootElement.GetProperty("accessKeyIdentifier").GetString());
         Assert.Equal(
-            new string('a', 64),
+            ValidAccessKeySecret,
             parsed.RootElement.GetProperty("accessKeySecret").GetString());
     }
 
@@ -185,8 +190,8 @@ public class NativeClientTests
             client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
             {
                 ApplicationAnchor = "anchor-1",
-                AccessKeyIdentifier = "01890c5e-1234-4abc-9def-0123456789ab",
-                AccessKeySecret = new string('a', 64),
+                AccessKeyIdentifier = ValidAccessKeyIdentifier,
+                AccessKeySecret = ValidAccessKeySecret,
             }));
 
         Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
@@ -205,8 +210,8 @@ public class NativeClientTests
             client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
             {
                 ApplicationAnchor = "anchor-1",
-                AccessKeyIdentifier = "01890c5e-1234-4abc-9def-0123456789ab",
-                AccessKeySecret = new string('a', 64),
+                AccessKeyIdentifier = ValidAccessKeyIdentifier,
+                AccessKeySecret = ValidAccessKeySecret,
             }));
 
         Assert.Equal(HttpStatusCode.Forbidden, ex.StatusCode);
@@ -231,7 +236,8 @@ public class NativeClientTests
                 "claims": {
                     "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
                 },
                 "errand": {
                     "errandKey": "ernd_courier-route-abcdef012345-seal",
@@ -281,8 +287,8 @@ public class NativeClientTests
             client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
             {
                 ApplicationAnchor = "anchor-1",
-                AccessKeyIdentifier = "01890c5e-1234-4abc-9def-0123456789ab",
-                AccessKeySecret = new string('a', 64),
+                AccessKeyIdentifier = ValidAccessKeyIdentifier,
+                AccessKeySecret = ValidAccessKeySecret,
             }));
 
         Assert.Equal(NativeReason.Layer2Denied, ex.Reason);
@@ -334,7 +340,8 @@ public class NativeClientTests
                 "claims": {
                     "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);

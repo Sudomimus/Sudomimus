@@ -33,7 +33,7 @@ public class RotatingSessionClientTests
     public async Task RefreshAsync_RotatesAndPersistsNewPair()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
+        handler.Enqueue(HttpStatusCode.OK, RefreshJson("a2", "r2"));
         var store = new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" });
         var wrapper = new RotatingSessionClient(NewClient(handler), store);
 
@@ -62,14 +62,23 @@ public class RotatingSessionClientTests
     public async Task RefreshAsync_CoalescesConcurrentCalls()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
+        handler.Enqueue(HttpStatusCode.OK, RefreshJson("a2", "r2"));
+        var releaseResponse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        handler.BeforeRespondAsync = _ => releaseResponse.Task;
         var wrapper = new RotatingSessionClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
 
         var t1 = wrapper.RefreshAsync();
+        while (handler.Requests.Count == 0)
+        {
+            await Task.Yield();
+        }
+
         var t2 = wrapper.RefreshAsync();
         var t3 = wrapper.RefreshAsync();
+        releaseResponse.SetResult();
+
         var results = await Task.WhenAll(t1, t2, t3);
 
         Assert.All(results, r => Assert.Equal("a2", r));
@@ -80,8 +89,8 @@ public class RotatingSessionClientTests
     public async Task RefreshAsync_ReleasesInFlightSlotOnSuccess()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a3", "refreshToken": "r3", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
+        handler.Enqueue(HttpStatusCode.OK, RefreshJson("a2", "r2"));
+        handler.Enqueue(HttpStatusCode.OK, RefreshJson("a3", "r3"));
         var wrapper = new RotatingSessionClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
@@ -100,7 +109,7 @@ public class RotatingSessionClientTests
     {
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.Unauthorized, """{ "reason": "RefreshTokenFamilyCompromised" }""");
-        handler.Enqueue(HttpStatusCode.OK, """{ "accessToken": "a2", "refreshToken": "r2", "claims": { "email": { "requirement": "OFF", "state": "UNKNOWN" }, "firstName": { "requirement": "OFF", "state": "UNKNOWN" }, "lastName": { "requirement": "OFF", "state": "UNKNOWN" } } }""");
+        handler.Enqueue(HttpStatusCode.OK, RefreshJson("a2", "r2"));
         var wrapper = new RotatingSessionClient(
             NewClient(handler),
             new InMemoryTokenStore(new TokenPair { AccessToken = "a1", RefreshToken = "r1" }));
@@ -186,6 +195,20 @@ public class RotatingSessionClientTests
             HttpClient = new HttpClient(handler),
         });
     }
+
+    private static string RefreshJson(string accessToken, string refreshToken) =>
+        $$"""
+        {
+            "accessToken": "{{accessToken}}",
+            "refreshToken": "{{refreshToken}}",
+            "claims": {
+                "email": { "requirement": "OFF", "state": "UNKNOWN" },
+                "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
+                "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
+            }
+        }
+        """;
 }
 
 public class InMemoryTokenStoreTests

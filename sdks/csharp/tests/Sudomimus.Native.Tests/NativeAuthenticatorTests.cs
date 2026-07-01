@@ -8,6 +8,8 @@ public class NativeAuthenticatorTests
 {
     private const string ErrandKey = "ernd_courier-route-abcdef012345-seal";
     private const string ErrandUrl = "https://via.sudomimus.com/errand?key=ernd_courier-route-abcdef012345-seal";
+    private const string ValidAccessKeyIdentifier = "acs_k_01890c5e-1234-4abc-9def-0123456789ab";
+    private static readonly string ValidAccessKeySecret = "acs_t_" + new string('a', 64);
 
     private const string Gate403 = """
         {
@@ -15,7 +17,8 @@ public class NativeAuthenticatorTests
             "claims": {
                 "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
             },
             "errand": {
                 "errandKey": "ernd_courier-route-abcdef012345-seal",
@@ -33,7 +36,8 @@ public class NativeAuthenticatorTests
             "claims": {
                 "email": { "requirement": "REQUIRED", "state": "GRANTED" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "lastName": { "requirement": "OFF", "state": "UNKNOWN" }
+                "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
             }
         }
         """;
@@ -178,8 +182,8 @@ public class NativeAuthenticatorTests
     private static DirectIssueAccessKeyRequest Req() => new()
     {
         ApplicationAnchor = "anchor-1",
-        AccessKeyIdentifier = "01890c5e-1234-4abc-9def-0123456789ab",
-        AccessKeySecret = new string('a', 64),
+        AccessKeyIdentifier = ValidAccessKeyIdentifier,
+        AccessKeySecret = ValidAccessKeySecret,
     };
 
     private static (NativeAuthenticator Auth, List<Uri> Opened) NewAuth(
