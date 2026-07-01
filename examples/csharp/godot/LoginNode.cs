@@ -311,7 +311,8 @@ public partial class LoginNode : Control
                 text +=
                     $"\nclaims.email:      {claims.Email.Requirement}/{claims.Email.State}" +
                     $"\nclaims.firstName:  {claims.FirstName.Requirement}/{claims.FirstName.State}" +
-                    $"\nclaims.lastName:   {claims.LastName.Requirement}/{claims.LastName.State}";
+                    $"\nclaims.lastName:   {claims.LastName.Requirement}/{claims.LastName.State}" +
+                    $"\nclaims.avatar:     {claims.Avatar.Requirement}/{claims.Avatar.State}";
             }
             _resultLabel.Text = text;
         }

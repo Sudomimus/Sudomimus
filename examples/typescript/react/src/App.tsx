@@ -51,9 +51,11 @@ const readCallbackParams = (): { exposureKey: string; confirmationKey: string } 
 };
 
 type AccessTokenBody = {
-    accountIdentifier: string;
-    firstName: string;
+    subject: string;
+    firstName?: string;
     lastName?: string;
+    emailAddress?: string;
+    avatarUrl?: string;
 };
 
 type DoneState =

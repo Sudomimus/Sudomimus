@@ -82,10 +82,10 @@ try
         case "access-key":
         case "accesskey":
         {
-            Console.Write("accessKeyIdentifier (UUID v4): ");
+            Console.Write("accessKeyIdentifier (acs_k_<UUID v4>): ");
             var keyId = (Console.ReadLine() ?? string.Empty).Trim();
 
-            Console.Write("accessKeySecret (64 hex chars): ");
+            Console.Write("accessKeySecret (acs_t_<64 hex chars>): ");
             var keySecret = (Console.ReadLine() ?? string.Empty).Trim();
 
             Console.WriteLine();
@@ -212,9 +212,10 @@ static void PrintClaims(Sudomimus.Native.ClaimsStateView claims)
     PrintClaim("email", claims.Email);
     PrintClaim("firstName", claims.FirstName);
     PrintClaim("lastName", claims.LastName);
+    PrintClaim("avatar", claims.Avatar);
 
     static void PrintClaim(string name, Sudomimus.Native.ClaimRequirementStateView claim)
-        => Console.WriteLine($"    {name,-10} requirement={claim.Requirement,-8} state={claim.State}");
+        => Console.WriteLine($"    {name,-10} requirement={claim.Requirement,-18} state={claim.State}");
 }
 
 static Task OpenBrowser(Uri uri, CancellationToken cancellationToken)

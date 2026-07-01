@@ -59,19 +59,19 @@ autowrap_mode = 2
 
 [node name="AccessKeyIdLabel" type="Label" parent="VBox/Tabs/AccessKey"]
 layout_mode = 2
-text = "accessKeyIdentifier (UUID):"
+text = "accessKeyIdentifier (acs_k_<UUID>):"
 
 [node name="AccessKeyIdInput" type="LineEdit" parent="VBox/Tabs/AccessKey"]
 layout_mode = 2
-placeholder_text = "01890c5e-1234-4abc-9def-0123456789ab"
+placeholder_text = "acs_k_01890c5e-1234-4abc-9def-0123456789ab"
 
 [node name="AccessKeySecretLabel" type="Label" parent="VBox/Tabs/AccessKey"]
 layout_mode = 2
-text = "accessKeySecret (64 hex chars):"
+text = "accessKeySecret (acs_t_<64 hex chars>):"
 
 [node name="AccessKeySecretInput" type="LineEdit" parent="VBox/Tabs/AccessKey"]
 layout_mode = 2
-placeholder_text = "64 lowercase hex chars"
+placeholder_text = "acs_t_ + 64 lowercase hex chars"
 secret = true
 
 [node name="AccessKeyLoginButton" type="Button" parent="VBox/Tabs/AccessKey"]

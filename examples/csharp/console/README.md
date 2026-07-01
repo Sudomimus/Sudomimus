@@ -33,8 +33,9 @@ surface, not on integrating Steamworks.
    - **steam-ticket**: a real Steam ticket hex obtained externally (e.g.
      from the Godot example or any Steamworks-capable program that called
      `ISteamUser::GetAuthTicketForWebApi("sudomimus")`).
-   - **access-key**: `accessKeyIdentifier` (UUID v4) and `accessKeySecret`
-     (64 hex chars), captured at creation time.
+   - **access-key**: `accessKeyIdentifier` (`acs_k_<UUID v4>`) and
+     `accessKeySecret` (`acs_t_<64 lowercase hex chars>`), captured at
+     creation time.
 4. (Optional) The application's public PEM key, if you want the example
    to verify the access token signature.
 
@@ -65,9 +66,10 @@ logs out through Session `/logout`.
   subject:           subject-...
   firstName:         <name or SteamID64>
   claims:
-    email      requirement=REQUIRED state=GRANTED
-    firstName  requirement=OFF      state=UNKNOWN
-    lastName   requirement=OFF      state=UNKNOWN
+    email      requirement=REQUIRED           state=GRANTED
+    firstName  requirement=OFF                state=UNKNOWN
+    lastName   requirement=OFF                state=UNKNOWN
+    avatar     requirement=OFF                state=UNKNOWN
 ```
 
 ## Claim-gated logins (errands)
