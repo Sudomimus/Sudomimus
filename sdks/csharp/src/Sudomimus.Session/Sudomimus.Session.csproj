@@ -1,18 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <PackageId>Sudomimus.Session</PackageId>
-    <Version>3.0.0</Version>
-    <Description>HTTP client for the Sudomimus Session API — refresh-token rotation, session introspection, logout, and account session revocation.</Description>
-    <PackageTags>sudomimus;auth;session;jwt</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <RootNamespace>Sudomimus.Session</RootNamespace>
-  </PropertyGroup>
+    <PropertyGroup>
+        <PackageId>Sudomimus.Session</PackageId>
+        <Version>3.1.0</Version>
+        <Description>HTTP client for the Sudomimus Session API — refresh-token rotation, session
+            introspection, logout, and account session revocation.</Description>
+        <PackageTags>sudomimus;auth;session;jwt</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+        <RootNamespace>Sudomimus.Session</RootNamespace>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
 </Project>

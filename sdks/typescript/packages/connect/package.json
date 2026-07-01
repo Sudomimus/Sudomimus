@@ -1,6 +1,6 @@
 {
     "name": "@sudomimus/connect",
-    "version": "3.0.1",
+    "version": "3.1.0",
     "description": "Sudomimus Connect SDK — establish authentication inquiries, poll status, redeem tokens, and fetch application metadata.",
     "license": "MIT",
     "repository": {
