@@ -33,11 +33,11 @@ Access-key credentials (issued in the admin console for headless callers):
 from sudomimus_native import DirectIssueAccessKeyRequest
 
 tokens = client.direct_issue_access_key(
-    DirectIssueAccessKeyRequest(
-        applicationAnchor="my-app",
-        accessKeyIdentifier="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-        accessKeySecret="<64 hex chars>",
-    )
+        DirectIssueAccessKeyRequest(
+            applicationAnchor="my-app",
+            accessKeyIdentifier="acs_k_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+            accessKeySecret="acs_t_<64 lowercase hex chars>",
+        )
 )
 ```
 

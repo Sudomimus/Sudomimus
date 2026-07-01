@@ -4,180 +4,172 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 
 
 class HealthResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     ready: bool
     service: str
     version: str
 
 
 class ApplicationAnchor(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            description='Public anchor identifying the application. Strict kebab-case, unique at\napplication creation, and immutable after creation.\n',
-            max_length=64,
-            min_length=3,
-            pattern='^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$',
-        ),
-    ]
+    root: str = Field(
+        ...,
+        description="Public anchor identifying the application. Strict kebab-case, unique at\napplication creation, and immutable after creation.\n",
+        max_length=64,
+        min_length=3,
+        pattern="^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+    )
 
 
 class DeviceCode(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            description='High-entropy bearer secret for `/device-token`, returned only to the\ninitiating client. Keep it private; do not display it to the browser\nuser.\n',
-            pattern='^dvc_[0-9a-f]{64}$',
-        ),
-    ]
+    root: str = Field(
+        ...,
+        description="High-entropy bearer secret for `/device-token`, returned only to the\ninitiating client. Keep it private; do not display it to the browser\nuser.\n",
+        pattern="^dvc_[0-9a-f]{64}$",
+    )
 
 
 class UserCode(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            description='Short human-facing code shown by the client and confirmed in the\nbrowser. Uses the Crockford-style alphabet without ambiguous letters.\n',
-            pattern='^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{4}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{4}$',
-        ),
-    ]
+    root: str = Field(
+        ...,
+        description="Short human-facing code shown by the client and confirmed in the\nbrowser. Uses the Crockford-style alphabet without ambiguous letters.\n",
+        pattern="^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{4}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{4}$",
+    )
 
 
 class DeviceAuthorizeRequest(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
     applicationAnchor: ApplicationAnchor
 
 
 class DeviceAuthorizeResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     applicationAnchor: ApplicationAnchor
     deviceCode: DeviceCode
     userCode: UserCode
-    verificationUri: Annotated[
-        AnyUrl,
-        Field(description='Browser page where the user enters or confirms `userCode`.'),
-    ]
-    verificationUriComplete: Annotated[
-        AnyUrl, Field(description='Browser URL pre-filled with `userCode`.')
-    ]
-    expiresIn: Annotated[
-        int,
-        Field(
-            description='Session lifetime in seconds. Default production value is 600.',
-            ge=1,
-        ),
-    ]
-    interval: Annotated[
-        int,
-        Field(
-            description='Minimum polling interval in seconds. Default production value is 5.',
-            ge=1,
-        ),
-    ]
+    verificationUri: AnyUrl = Field(
+        ..., description="Browser page where the user enters or confirms `userCode`."
+    )
+    verificationUriComplete: AnyUrl = Field(
+        ..., description="Browser URL pre-filled with `userCode`."
+    )
+    expiresIn: int = Field(
+        ...,
+        description="Session lifetime in seconds. Default production value is 600.",
+        ge=1,
+    )
+    interval: int = Field(
+        ...,
+        description="Minimum polling interval in seconds. Default production value is 5.",
+        ge=1,
+    )
 
 
 class DeviceTokenRequest(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
     deviceCode: DeviceCode
 
 
 class Error(StrEnum):
-    authorization_pending = 'authorization_pending'
-    slow_down = 'slow_down'
-    access_denied = 'access_denied'
-    expired_token = 'expired_token'
-    invalid_request = 'invalid_request'
-    server_error = 'server_error'
+    authorization_pending = "authorization_pending"
+    slow_down = "slow_down"
+    access_denied = "access_denied"
+    expired_token = "expired_token"
+    invalid_request = "invalid_request"
+    server_error = "server_error"
 
 
 class DeviceTokenError(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """
+    OAuth-style device-flow error body returned by `/device-token`.
+    Polling clients should branch on `error`, not on Sudomimus wire
+    `reason` symbols.
+
+    """
+
     error: Error
-    interval: Annotated[
-        int | None,
-        Field(
-            description='Present for `slow_down`; use this value for subsequent polls.',
-            ge=1,
-        ),
-    ] = None
+    interval: int | None = Field(
+        None,
+        description="Present for `slow_down`; use this value for subsequent polls.",
+        ge=1,
+    )
 
 
 class Requirement(StrEnum):
-    OFF = 'OFF'
-    OPTIONAL = 'OPTIONAL'
-    REQUIRED = 'REQUIRED'
-    SYNTHETIC = 'SYNTHETIC'
+    """
+    The developer's policy for the claim. `SYNTHETIC_ONLY` always
+    emits a generated placeholder and never asks for real data.
+    `SYNTHETIC_FALLBACK` guarantees the claim is present but uses a
+    generated placeholder when the user has not shared real data.
+
+    """
+
+    SYNTHETIC_ONLY = "SYNTHETIC_ONLY"
+    OFF = "OFF"
+    OPTIONAL = "OPTIONAL"
+    REQUIRED = "REQUIRED"
+    SYNTHETIC_FALLBACK = "SYNTHETIC_FALLBACK"
 
 
 class State(StrEnum):
-    UNKNOWN = 'UNKNOWN'
-    GRANTED = 'GRANTED'
-    DENIED = 'DENIED'
+    UNKNOWN = "UNKNOWN"
+    GRANTED = "GRANTED"
+    DENIED = "DENIED"
 
 
 class ClaimRequirementStateView(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    """
+    One shareable claim: what the application requests (`requirement`)
+    joined with the user's standing decision (`state`). `UNKNOWN` means the
+    user was never asked; `DENIED` means the user explicitly declined.
+
+    """
+
+    requirement: Requirement = Field(
+        ...,
+        description="The developer's policy for the claim. `SYNTHETIC_ONLY` always\nemits a generated placeholder and never asks for real data.\n`SYNTHETIC_FALLBACK` guarantees the claim is present but uses a\ngenerated placeholder when the user has not shared real data.\n",
     )
-    requirement: Annotated[
-        Requirement,
-        Field(
-            description="The developer's policy for the claim. `SYNTHETIC` guarantees the\nclaim is present but permits a generated placeholder when the user\nhas not shared real data.\n"
-        ),
-    ]
     state: State
 
 
 class ClaimsStateView(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """
+    Per-claim view across the four shareable claims - why a claim is or is
+    not present in the minted token.
+
+    """
+
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
 
 
 class Error1(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    reason: Annotated[
-        str | None, Field(description='Stable machine-readable reason code.')
-    ] = None
+    """
+    Error response body for non-polling validation and infrastructure
+    failures. `/device-token` handler-level polling states use
+    `DeviceTokenError` instead.
+
+    """
+
+    reason: str | None = Field(None, description="Stable machine-readable reason code.")
 
 
 class DeviceTokenResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     applicationAnchor: ApplicationAnchor
-    accessToken: Annotated[
-        str,
-        Field(
-            description="Short-lived access token (JWT). The application-visible user key is\nthe `subject` (sector subject) claim. Claim fields such as\n`emailAddress`, `firstName`, and `lastName` are minted according to\nthe application's claim policy and the user's standing grant.\n"
-        ),
-    ]
-    refreshToken: Annotated[
-        str,
-        Field(
-            description='Long-lived refresh token (JWT). Use Session API `/refresh` to rotate it\nand issue later access tokens.\n'
-        ),
-    ]
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). The application-visible user key is\nthe `subject` (sector subject) claim. Claim fields such as\n`emailAddress`, `firstName`, `lastName`, and `avatarUrl` are minted\naccording to the application's claim policy and the user's standing grant.\n",
+    )
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Use Session API `/refresh` to rotate it\nand issue later access tokens.\n",
+    )
     claims: ClaimsStateView

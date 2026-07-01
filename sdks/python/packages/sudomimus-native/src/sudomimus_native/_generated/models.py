@@ -4,200 +4,192 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
 
 
 class HealthResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     ready: bool
     service: str
     version: str
 
 
 class DirectIssueAccessKeyRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    applicationAnchor: str = Field(
+        ..., description="Public anchor identifying the integrating application."
     )
-    applicationAnchor: Annotated[
-        str, Field(description='Public anchor identifying the integrating application.')
-    ]
-    accessKeyIdentifier: Annotated[
-        str,
-        Field(
-            description='UUID v4 string identifying the access-key credential.\nFormat: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.\n'
-        ),
-    ]
-    accessKeySecret: Annotated[
-        str,
-        Field(
-            description='64-char lowercase hex string (32 random bytes) returned exactly\nonce when the access key was issued. Never logged or persisted\nin plaintext server-side after creation.\n'
-        ),
-    ]
+    accessKeyIdentifier: str = Field(
+        ...,
+        description="Canonical access-key identifier, including the mandatory\n`acs_k_` prefix followed by its UUID.\n",
+        pattern="^acs_k_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+    )
+    accessKeySecret: str = Field(
+        ...,
+        description="Canonical access-key secret, including the mandatory `acs_t_`\nprefix followed by 64 lowercase hexadecimal characters (32\nrandom bytes). Returned exactly once when the access key was\nissued. Never logged or persisted in plaintext server-side after\ncreation.\n",
+        pattern="^acs_t_[0-9a-f]{64}$",
+    )
 
 
 class DirectIssueSteamTicketRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    applicationAnchor: str = Field(
+        ..., description="Public anchor identifying the integrating application."
     )
-    applicationAnchor: Annotated[
-        str, Field(description='Public anchor identifying the integrating application.')
-    ]
-    steamTicketHex: Annotated[
-        str,
-        Field(
-            description='Hex-encoded Steam Web API auth ticket bytes returned from\n`ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case\ninsensitive — the server lowercases before hashing for replay\nprotection, but forwards the original bytes to Steam.\n'
-        ),
-    ]
-    steamAppId: Annotated[
-        int,
-        Field(
-            description="Steam App ID under which the ticket was generated. Must be\nallow-listed by the application's `STEAM_TICKET` authentication\nrule. Tickets are bound to their issuing App ID server-side;\npassing a different value will fail Steam verification.\n",
-            ge=1,
-        ),
-    ]
+    steamTicketHex: str = Field(
+        ...,
+        description='Hex-encoded Steam Web API auth ticket bytes returned from\n`ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case\ninsensitive — the server lowercases before hashing for replay\nprotection, but forwards the original bytes to Steam.\n',
+    )
+    steamAppId: int = Field(
+        ...,
+        description="Steam App ID under which the ticket was generated. Must be\nallow-listed by the application's `STEAM_TICKET` authentication\nrule. Tickets are bound to their issuing App ID server-side;\npassing a different value will fail Steam verification.\n",
+        ge=1,
+    )
 
 
 class Requirement(StrEnum):
-    OFF = 'OFF'
-    OPTIONAL = 'OPTIONAL'
-    REQUIRED = 'REQUIRED'
-    SYNTHETIC = 'SYNTHETIC'
+    """
+    The developer's policy for the claim. `SYNTHETIC_ONLY` always
+    emits the generated placeholder and never asks for real data.
+    `SYNTHETIC_FALLBACK` guarantees the claim is present but uses a
+    generated placeholder (a stand-in name, a proxy email, or a
+    generated avatar) when the user has not shared real data. Unlike `REQUIRED`, neither
+    synthetic mode blocks issuance or raises an errand.
+
+    """
+
+    SYNTHETIC_ONLY = "SYNTHETIC_ONLY"
+    OFF = "OFF"
+    OPTIONAL = "OPTIONAL"
+    REQUIRED = "REQUIRED"
+    SYNTHETIC_FALLBACK = "SYNTHETIC_FALLBACK"
 
 
 class State(StrEnum):
-    UNKNOWN = 'UNKNOWN'
-    GRANTED = 'GRANTED'
-    DENIED = 'DENIED'
+    UNKNOWN = "UNKNOWN"
+    GRANTED = "GRANTED"
+    DENIED = "DENIED"
 
 
 class ClaimRequirementStateView(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    """
+    One shareable claim: what the application requests (`requirement`)
+    joined with the user's standing decision (`state`). `UNKNOWN` means
+    the user was never asked; `DENIED` means the user explicitly
+    declined.
+
+    """
+
+    requirement: Requirement = Field(
+        ...,
+        description="The developer's policy for the claim. `SYNTHETIC_ONLY` always\nemits the generated placeholder and never asks for real data.\n`SYNTHETIC_FALLBACK` guarantees the claim is present but uses a\ngenerated placeholder (a stand-in name, a proxy email, or a\ngenerated avatar) when the user has not shared real data. Unlike `REQUIRED`, neither\nsynthetic mode blocks issuance or raises an errand.\n",
     )
-    requirement: Annotated[
-        Requirement,
-        Field(
-            description="The developer's policy for the claim. `SYNTHETIC` guarantees the\nclaim is present but permits a generated placeholder (a stand-in\nname, a proxy email) when the user has not shared real data —\nunlike `REQUIRED` it never blocks issuance or raises an errand.\n"
-        ),
-    ]
     state: State
 
 
 class ClaimsStateView(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """
+    Per-claim view across the four shareable claims, carried on both
+    the 200 (why is a claim absent from the minted token) and the
+    claim-gate 403 (what is still owed).
+
+    """
+
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
 
 
 class ErrandHandoff(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    """
+    The browser side-trip that unblocks a claim-gated direct-issue:
+    a short-lived (30 minutes), single-use bearer URL where the user
+    authenticates (when account data is being written), completes any
+    missing data, and grants consent. The stored task list is server-
+    side only — open the URL and let the page drive. Repeated blocked
+    calls re-hand the same live handoff (same `errandKey`, original
+    `expiresAt`) while it has at least 15 minutes left and the owed
+    task scope is unchanged.
+
+    """
+
+    errandKey: str = Field(
+        ..., description="Bearer key (`ernd_…`); also the status-poll path key."
     )
-    errandKey: Annotated[
-        str, Field(description='Bearer key (`ernd_…`); also the status-poll path key.')
-    ]
-    url: Annotated[AnyUrl, Field(description="Open this in the user's system browser.")]
+    url: AnyUrl = Field(..., description="Open this in the user's system browser.")
     expiresAt: AwareDatetime
 
 
 class DirectIssueDeniedError(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    reason: Annotated[str, Field(description='Stable machine-readable reason code.')]
+    """
+    403 body. For the claim-gate reasons (`ClaimConsentRequired`,
+    `RequiredClaimDataMissing`) the `claims` view and the `errand`
+    handoff are present; for every other reason only `reason` is set.
+
+    """
+
+    reason: str = Field(..., description="Stable machine-readable reason code.")
     claims: ClaimsStateView | None = None
     errand: ErrandHandoff | None = None
 
 
 class CreateErrandRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    accessToken: str = Field(
+        ...,
+        description="An access token (JWT) the application already holds for the user.\nVerified server-side with its expiry enforced, then reverse-resolved\nfrom its `subject` (sector subject) claim to the account — so present\na currently-valid token, not an expired one.\n",
     )
-    accessToken: Annotated[
-        str,
-        Field(
-            description='An access token (JWT) the application already holds for the user.\nVerified server-side with its expiry enforced, then reverse-resolved\nfrom its `subject` (sector subject) claim to the account — so present\na currently-valid token, not an expired one.\n'
-        ),
-    ]
 
 
 class CreateErrandResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    errand: ErrandHandoff | None = Field(
+        ...,
+        description="The browser side-trip to open, or `null` when the account already\nsatisfies the application's claim policy (nothing to consent to or\ncomplete) — in that case just direct-issue.\n",
     )
-    errand: Annotated[
-        ErrandHandoff | None,
-        Field(
-            description="The browser side-trip to open, or `null` when the account already\nsatisfies the application's claim policy (nothing to consent to or\ncomplete) — in that case just direct-issue.\n"
-        ),
-    ]
     claims: ClaimsStateView
 
 
 class Status(StrEnum):
-    PENDING = 'PENDING'
-    COMPLETED = 'COMPLETED'
-    EXPIRED = 'EXPIRED'
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    EXPIRED = "EXPIRED"
 
 
 class ErrandStatusResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     status: Status
 
 
 class Error(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    reason: Annotated[
-        str | None, Field(description='Stable machine-readable reason code.')
-    ] = None
+    """
+    Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
+    for known failure modes. When the reason symbol's description begins with
+    `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+    signal — both `reason` and the body itself are absent in that case.
+
+    """
+
+    reason: str | None = Field(None, description="Stable machine-readable reason code.")
 
 
 class DirectIssueAccessKeyResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     claims: ClaimsStateView
     applicationAnchor: str
-    accessToken: Annotated[
-        str,
-        Field(
-            description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n"
-        ),
-    ]
-    refreshToken: Annotated[
-        str,
-        Field(
-            description='Long-lived refresh token (JWT). Use Session API `/refresh` for renewal without re-presenting the access key.'
-        ),
-    ]
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+    )
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Use Session API `/refresh` for renewal without re-presenting the access key.",
+    )
 
 
 class DirectIssueSteamTicketResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     claims: ClaimsStateView
     applicationAnchor: str
-    accessToken: Annotated[
-        str,
-        Field(
-            description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n"
-        ),
-    ]
-    refreshToken: Annotated[
-        str,
-        Field(
-            description='Long-lived refresh token (JWT). Use Session API `/refresh` to obtain a new access token without re-acquiring a Steam ticket.'
-        ),
-    ]
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+    )
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Use Session API `/refresh` to obtain a new access token without re-acquiring a Steam ticket.",
+    )

@@ -4,479 +4,533 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 
 
 class HealthResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     ready: bool
     service: str
     version: str
 
 
 class EstablishResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     applicationAnchor: str
-    exposureKey: Annotated[
-        str,
-        Field(
-            description='Public half of the inquiry key pair; safe to share with the user agent.'
-        ),
-    ]
-    hiddenKey: Annotated[
-        str,
-        Field(
-            description='Private half of the inquiry key pair; must stay on the originating client.'
-        ),
-    ]
+    exposureKey: str = Field(
+        ...,
+        description="Public half of the inquiry key pair; safe to share with the user agent.",
+    )
+    hiddenKey: str = Field(
+        ...,
+        description="Private half of the inquiry key pair; must stay on the originating client.",
+    )
 
 
 class StatusPollRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     exposureKey: str
     hiddenKey: str
 
 
 class Status(StrEnum):
-    PENDING = 'PENDING'
+    PENDING = "PENDING"
 
 
 class StatusPollPendingResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    status: Literal['PENDING']
+    status: Literal["PENDING"]
 
 
 class Status1(StrEnum):
-    REALIZED = 'REALIZED'
+    REALIZED = "REALIZED"
 
 
 class StatusPollRealizedResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    status: Literal["REALIZED"]
+    confirmationKey: str = Field(
+        ...,
+        description="One-time key proving the inquiry has been realized; pass to /redeem.",
     )
-    status: Literal['REALIZED']
-    confirmationKey: Annotated[
-        str,
-        Field(
-            description='One-time key proving the inquiry has been realized; pass to /redeem.'
-        ),
-    ]
 
 
 class RedeemRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     exposureKey: str
     hiddenKey: str
     confirmationKey: str
 
 
 class Requirement(StrEnum):
-    OFF = 'OFF'
-    OPTIONAL = 'OPTIONAL'
-    REQUIRED = 'REQUIRED'
-    SYNTHETIC = 'SYNTHETIC'
+    """
+    The developer's policy for the claim. `SYNTHETIC_ONLY` always
+    emits the generated placeholder and never asks for real data.
+    `SYNTHETIC_FALLBACK` guarantees the claim is present but uses a
+    generated placeholder (a stand-in name, a proxy email, or a
+    generated avatar) when the user has not shared real data. Unlike `REQUIRED`, neither
+    synthetic mode blocks issuance or raises an errand.
+
+    """
+
+    SYNTHETIC_ONLY = "SYNTHETIC_ONLY"
+    OFF = "OFF"
+    OPTIONAL = "OPTIONAL"
+    REQUIRED = "REQUIRED"
+    SYNTHETIC_FALLBACK = "SYNTHETIC_FALLBACK"
 
 
 class State(StrEnum):
-    UNKNOWN = 'UNKNOWN'
-    GRANTED = 'GRANTED'
-    DENIED = 'DENIED'
+    UNKNOWN = "UNKNOWN"
+    GRANTED = "GRANTED"
+    DENIED = "DENIED"
 
 
 class ClaimRequirementStateView(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    """
+    One shareable claim: what the application requests (`requirement`)
+    joined with the user's standing decision (`state`). `UNKNOWN` means
+    the user was never asked; `DENIED` means the user explicitly
+    declined.
+
+    """
+
+    requirement: Requirement = Field(
+        ...,
+        description="The developer's policy for the claim. `SYNTHETIC_ONLY` always\nemits the generated placeholder and never asks for real data.\n`SYNTHETIC_FALLBACK` guarantees the claim is present but uses a\ngenerated placeholder (a stand-in name, a proxy email, or a\ngenerated avatar) when the user has not shared real data. Unlike `REQUIRED`, neither\nsynthetic mode blocks issuance or raises an errand.\n",
     )
-    requirement: Annotated[
-        Requirement,
-        Field(
-            description="The developer's policy for the claim. `SYNTHETIC` guarantees the\nclaim is present but permits a generated placeholder (a stand-in\nname, a proxy email) when the user has not shared real data —\nunlike `REQUIRED` it never blocks issuance or raises an errand.\n"
-        ),
-    ]
     state: State
 
 
 class ClaimsStateView(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """
+    Per-claim view across the four shareable claims — why a claim is
+    or is not present in the minted token (policy OFF, never asked,
+    declined, or granted).
+
+    """
+
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
 
 
 class RedeemResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     claims: ClaimsStateView
     applicationAnchor: str
-    refreshToken: Annotated[
-        str,
-        Field(
-            description='Long-lived refresh token (JWT). Decode its body to\n`RefreshTokenBody` (see schema). The refresh token leaves the\nsystem, so its body carries the sector `subject`, never the\nunderlying account identifier.\n'
-        ),
-    ]
-    accessToken: Annotated[
-        str,
-        Field(
-            description='Short-lived access token (JWT). Decode its body to\n`AccessTokenBody` (see schema) — the application-visible user\nkey is the `subject` (sector subject) claim.\n'
-        ),
-    ]
+    refreshToken: str = Field(
+        ...,
+        description="Long-lived refresh token (JWT). Decode its body to\n`RefreshTokenBody` (see schema). The refresh token leaves the\nsystem, so its body carries the sector `subject`, never the\nunderlying account identifier.\n",
+    )
+    accessToken: str = Field(
+        ...,
+        description="Short-lived access token (JWT). Decode its body to\n`AccessTokenBody` (see schema) — the application-visible user\nkey is the `subject` (sector subject) claim.\n",
+    )
 
 
 class AccessTokenBody(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    """
+    Decoded body (payload) of a Sudomimus access token. The standard
+    JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
+    `sub`) live in the JWT *header*; this object is the body. The
+    application keys its users on `subject`. The `firstName`,
+    `lastName`, `emailAddress`, and `avatarUrl` claims are consent-gated (claim
+    sharing): each is minted only when the application's claim policy
+    permits it AND the user has granted that claim, so any of them may
+    be absent. Synthetic modes are the exception: `SYNTHETIC_ONLY` always
+    emits a generated placeholder, and `SYNTHETIC_FALLBACK` emits real
+    data when granted or the placeholder otherwise.
+
+    """
+
+    subject: str = Field(
+        ...,
+        description="The application-visible user identifier — the per-(account,\nsector) **sector subject**, also the OIDC `sub`. This is the\nvalue an application keys its users on; the underlying account\nidentifier never appears in a token. User-rotatable.\nOpaque: never parse or format-validate it.\n",
     )
-    subject: Annotated[
-        str,
-        Field(
-            description='The application-visible user identifier — the per-(account,\nsector) **sector subject**, also the OIDC `sub`. This is the\nvalue an application keys its users on; the underlying account\nidentifier never appears in a token. User-rotatable.\nOpaque: never parse or format-validate it.\n'
-        ),
-    ]
-    firstName: Annotated[
-        str | None,
-        Field(
-            description="Given name. Minted only when the application's claim policy\npermits it AND the user has granted the claim; may be absent\neven when the account has a value stored. Under a `SYNTHETIC`\npolicy it is always present, possibly a placeholder name.\n"
-        ),
-    ] = None
-    lastName: Annotated[
-        str | None,
-        Field(description='Family name. Same consent gating as `firstName`.\n'),
-    ] = None
-    emailAddress: Annotated[
-        str | None,
-        Field(
-            description="Email associated with this login. Consent-gated like\n`firstName` / `lastName` (minted only when policy permits AND\nthe user granted the EMAIL claim). When a real value is included:\nthe exact email typed for email-OTP logins, otherwise the\naccount's primary email; omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only). The exception is a\n`SYNTHETIC` email policy: the field is then always present — a\nreal verified email when shared, otherwise a\n`…@proxy.sudomimus.email` proxy address (best-effort forwarding,\nnot guaranteed; not a verified mailbox).\n"
-        ),
-    ] = None
+    firstName: str | None = Field(
+        None,
+        description="Given name. Minted only when the application's claim policy\npermits it AND the user has granted the claim; may be absent\neven when the account has a value stored. Under a synthetic policy\nit is always present, possibly a placeholder name.\n",
+    )
+    lastName: str | None = Field(
+        None, description="Family name. Same consent gating as `firstName`.\n"
+    )
+    emailAddress: str | None = Field(
+        None,
+        description="Email associated with this login. Consent-gated like\n`firstName` / `lastName` / `avatarUrl` (minted only when policy permits AND\nthe user granted the EMAIL claim). When a real value is included:\nthe exact email typed for email-OTP logins, otherwise the\naccount's primary email; omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only). Synthetic email policies\nare the exception: the field is then always present — a real\nverified email only under `SYNTHETIC_FALLBACK` when shared,\notherwise a `…@proxy.sudomimus.email` proxy address (best-effort\nforwarding, not guaranteed; not a verified mailbox).\n",
+    )
+    avatarUrl: AnyUrl | None = Field(
+        None,
+        description="Sector-scoped public avatar URL. Consent-gated like the other\nshareable claims and minted as `AVATAR` when policy and grant allow\nit. The URL is pairwise to this account / sector delivery handle,\neven when it resolves to the user's global avatar image. Synthetic\navatar policies return a generated sector placeholder image.\n",
+    )
 
 
 class RefreshTokenBody(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    """
+    Decoded body (payload) of a Sudomimus refresh token. Carries the
+    sector `subject` (the same pairwise identifier as the access-token
+    body) because the refresh token leaves the system and must never
+    expose the underlying account identifier. Informational only —
+    `/refresh` resolves the token by its `jti`, not by reading the body.
+
+    """
+
+    subject: str = Field(
+        ...,
+        description="The application-visible **sector subject**. Opaque: never\nparse or format-validate it.\n",
     )
-    subject: Annotated[
-        str,
-        Field(
-            description='The application-visible **sector subject**. Opaque: never\nparse or format-validate it.\n'
-        ),
-    ]
 
 
 class InfoRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     applicationAnchor: str
-    locale: Annotated[
-        str,
-        Field(
-            description='IETF BCP 47 locale tag (e.g. "en-US"). Falls back to the application\'s default locale if not available.'
-        ),
-    ]
+    locale: str = Field(
+        ...,
+        description='IETF BCP 47 locale tag (e.g. "en-US"). Falls back to the application\'s default locale if not available.',
+    )
 
 
 class InfoResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
     applicationAnchor: str
-    applicationName: Annotated[
-        str, Field(description='Localized application display name.')
-    ]
-    applicationPublicKey: Annotated[
-        str,
-        Field(
-            description='PEM-encoded application public key used to verify issued JWTs.'
-        ),
-    ]
+    applicationName: str = Field(..., description="Localized application display name.")
+    applicationPublicKey: str = Field(
+        ...,
+        description="PEM-encoded application public key used to verify issued JWTs.",
+    )
 
 
 class Method(StrEnum):
-    PASSKEY_USERNAMELESS = 'PASSKEY_USERNAMELESS'
-    PASSKEY_REASONED = 'PASSKEY_REASONED'
-    EMAIL_VERIFICATION = 'EMAIL_VERIFICATION'
-    STEAM_TICKET = 'STEAM_TICKET'
-    STEAM_OPENID = 'STEAM_OPENID'
-    ACCESS_KEY_DIRECT = 'ACCESS_KEY_DIRECT'
-    GOOGLE_OAUTH = 'GOOGLE_OAUTH'
-    GITHUB_OAUTH = 'GITHUB_OAUTH'
-    DISCORD_OAUTH = 'DISCORD_OAUTH'
-    BATTLENET_OAUTH = 'BATTLENET_OAUTH'
-    X_OAUTH = 'X_OAUTH'
+    """
+    Which authentication method this constraint narrows to.
+    """
+
+    PASSKEY_USERNAMELESS = "PASSKEY_USERNAMELESS"
+    PASSKEY_REASONED = "PASSKEY_REASONED"
+    EMAIL_VERIFICATION = "EMAIL_VERIFICATION"
+    STEAM_TICKET = "STEAM_TICKET"
+    STEAM_OPENID = "STEAM_OPENID"
+    ACCESS_KEY_DIRECT = "ACCESS_KEY_DIRECT"
+    GOOGLE_OAUTH = "GOOGLE_OAUTH"
+    GITHUB_OAUTH = "GITHUB_OAUTH"
+    DISCORD_OAUTH = "DISCORD_OAUTH"
+    BATTLENET_OAUTH = "BATTLENET_OAUTH"
+    X_OAUTH = "X_OAUTH"
 
 
 class AuthenticationRulePasskeyUsernamelessPayload(BaseModel):
+    """
+    Empty payload — narrows to usernameless (discoverable-credential)
+    passkey login, the "Sign in with a passkey" entry shown before any
+    email is entered. Realize authorization is still decided by Layer 2.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AuthenticationRulePasskeyReasonedPayload(BaseModel):
+    """
+    Empty payload — narrows to email-first ("reasoned") passkey login,
+    the passkey option offered after the user enters their email.
+    Realize authorization is still decided by Layer 2.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AuthenticationRuleEmailVerificationPayload(BaseModel):
+    """
+    Empty payload — email-verification constraints carry no further parameters.
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AllowedSteamAppId(RootModel[int]):
-    root: Annotated[int, Field(ge=1)]
+    root: int = Field(..., ge=1)
 
 
 class AuthenticationRuleSteamTicketPayload(BaseModel):
+    """
+    Steam-native-ticket payload. Gates native-api's
+    `/direct-issue/steam-ticket` flow. `allowedSteamAppIds` is the
+    non-empty list of Steam App IDs whose tickets are accepted.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
-    allowedSteamAppIds: Annotated[list[AllowedSteamAppId], Field(min_length=1)]
+    allowedSteamAppIds: list[AllowedSteamAppId] = Field(..., min_length=1)
 
 
 class AuthenticationRuleSteamOpenIdPayload(BaseModel):
+    """
+    Steam OpenID 2.0 carries no app-id concept (that is
+    native-ticket-specific). Any Steam account is accepted as long
+    as the application's rule set allows STEAM_OPENID at all.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AuthenticationRuleAccessKeyDirectPayload(BaseModel):
+    """
+    Gates native-api's `/direct-issue/access-key` flow. Credentials
+    live in the dedicated `AccessKeyCredential` table; no row of
+    this method ever appears in the `Authentication` table.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AuthenticationRuleGoogleOAuthPayload(BaseModel):
+    """
+    Phase 1: any Google account is accepted as long as the
+    application's rule set allows GOOGLE_OAUTH at all. A later
+    phase will add `allowedHostedDomains: string[]` for Google
+    Workspace gating.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AllowedGitHubOrg(RootModel[str]):
-    root: Annotated[str, Field(min_length=1)]
+    root: str = Field(..., min_length=1)
 
 
 class AuthenticationRuleGitHubOAuthPayload(BaseModel):
+    """
+    Empty `allowedGitHubOrgs` array means no org gating — any
+    GitHub account is accepted. Non-empty means the user must be a
+    member of at least one listed organization (case-insensitive
+    match on the org `login`). The `read:org` OAuth scope is only
+    requested when at least one matching rule carries a non-empty
+    allowlist; applications without org gating keep the minimal
+    `read:user user:email` consent screen.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
     allowedGitHubOrgs: list[AllowedGitHubOrg]
 
 
 class AuthenticationRuleDiscordOAuthPayload(BaseModel):
+    """
+    Phase 1: any Discord account is accepted as long as the
+    application's rule set allows DISCORD_OAUTH at all. Phase 1.5
+    will add `allowedDiscordGuilds: string[]` for guild (server)
+    gating, which will additionally request the `guilds` OAuth
+    scope and fetch `GET /users/@me/guilds`.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AuthenticationRuleBattleNetOAuthPayload(BaseModel):
+    """
+    Battle.net (Blizzard) has no per-application gating concept, so any
+    Battle.net account is accepted as long as the application's rule set
+    allows BATTLENET_OAUTH at all. Empty payload. Battle.net is an
+    email-less provider, so Layer-2 EMAIL rules fail closed against a
+    Battle.net-only account.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class AuthenticationRuleXOAuthPayload(BaseModel):
+    """
+    X (formerly Twitter) has no per-application gating concept, so any
+    X account is accepted as long as the application's rule set allows
+    X_OAUTH at all. Empty payload. X is an email-less provider, so
+    Layer-2 EMAIL rules fail closed against an X-only account.
+
+    """
+
     model_config = ConfigDict(
-        extra='forbid',
-        populate_by_name=True,
+        extra="forbid",
     )
 
 
 class ConstraintType(StrEnum):
-    EMAIL = 'EMAIL'
-    STEAM_ID = 'STEAM_ID'
-    ACCOUNT_ALIAS = 'ACCOUNT_ALIAS'
-    SECTOR_SUBJECT = 'SECTOR_SUBJECT'
+    """
+    Which realize-rule kind this constraint narrows to.
+    """
+
+    EMAIL = "EMAIL"
+    STEAM_ID = "STEAM_ID"
+    ACCOUNT_ALIAS = "ACCOUNT_ALIAS"
+    SECTOR_SUBJECT = "SECTOR_SUBJECT"
 
 
 class RealizeRuleEmailPayload(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    allowedEmails: list[str] = Field(
+        ...,
+        description="List of email addresses or glob patterns the realized identity\nmust match. Glob patterns are bounded by server-side limits to\nprevent regex backtracking attacks.\n",
     )
-    allowedEmails: Annotated[
-        list[str],
-        Field(
-            description='List of email addresses or glob patterns the realized identity\nmust match. Glob patterns are bounded by server-side limits to\nprevent regex backtracking attacks.\n'
-        ),
-    ]
 
 
 class AllowedSteamId(RootModel[str]):
-    root: Annotated[str, Field(pattern='^(\\*|[0-9]{1,20})$')]
+    root: str = Field(..., pattern="^(\\*|[0-9]{1,20})$")
 
 
 class RealizeRuleSteamIdPayload(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """
+    Per-realize-time check against the realized account's SteamID64.
+    Each entry is either the literal `"*"` (wildcard, allow any
+    Steam identity) or a decimal SteamID64 string.
+
+    """
+
     allowedSteamIds: list[AllowedSteamId]
 
 
 class AllowedAccountAliase(RootModel[str]):
-    root: Annotated[str, Field(max_length=128, min_length=1)]
+    root: str = Field(..., max_length=128, min_length=1)
 
 
 class RealizeRuleAccountAliasPayload(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """
+    Exact match on the realizing account's **account alias** — the
+    user-visible, application-invisible, rotatable handle the user
+    reads in the With portal and shares out-of-band with whoever
+    configures the rule. No wildcard — because the account does not
+    yet exist during fresh registration, this constraint matches
+    nothing for new sign-ups. The alias is opaque: it is compared by
+    exact-string equality and never parsed or format-validated.
+
+    """
+
     allowedAccountAliases: list[AllowedAccountAliase]
 
 
 class AllowedSectorSubject(RootModel[str]):
-    root: Annotated[str, Field(max_length=128, min_length=1)]
+    root: str = Field(..., max_length=128, min_length=1)
 
 
 class RealizeRuleSectorSubjectPayload(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """
+    Exact match on the realizing account's **sector subject** for the
+    realizing application's sector — the application-visible token
+    `sub` the owner already sees in their own logs. No wildcard.
+    Rotating the subject locks the user out (it becomes a brand-new,
+    not-yet-allow-listed identity) rather than letting them bypass the
+    rule. The subject is opaque: compared by exact-string equality and
+    never parsed or format-validated.
+
+    """
+
     allowedSectorSubjects: list[AllowedSectorSubject]
 
 
 class Type(StrEnum):
-    CALLBACK = 'CALLBACK'
+    CALLBACK = "CALLBACK"
 
 
 class Payload(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    callbackUrl: str = Field(
+        ...,
+        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains.\n",
     )
-    callbackUrl: Annotated[
-        str,
-        Field(
-            description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains.\n"
-        ),
-    ]
 
 
 class ReturnMethodCallback(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    type: Literal['CALLBACK']
+    type: Literal["CALLBACK"]
     payload: Payload
 
 
 class Type1(StrEnum):
-    STATUS_POLL = 'STATUS_POLL'
+    STATUS_POLL = "STATUS_POLL"
 
 
 class ReturnMethodStatusPoll(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    type: Literal["STATUS_POLL"]
+    payload: dict[str, Any] = Field(
+        ...,
+        description="Empty payload — STATUS_POLL carries no per-inquiry parameters.",
     )
-    type: Literal['STATUS_POLL']
-    payload: Annotated[
-        dict[str, Any],
-        Field(
-            description='Empty payload — STATUS_POLL carries no per-inquiry parameters.'
-        ),
-    ]
 
 
 class Type2(StrEnum):
-    REVEAL = 'REVEAL'
+    REVEAL = "REVEAL"
 
 
 class ReturnMethodReveal(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    type: Literal["REVEAL"]
+    payload: dict[str, Any] = Field(
+        ...,
+        description="Empty payload. Tokens are surfaced directly in the UI at\nrealize time and the inquiry is marked redeemed immediately;\nany subsequent `/redeem` for the same inquiry fails with\n`InquiryAlreadyRedeemed`.\n",
     )
-    type: Literal['REVEAL']
-    payload: Annotated[
-        dict[str, Any],
-        Field(
-            description='Empty payload. Tokens are surfaced directly in the UI at\nrealize time and the inquiry is marked redeemed immediately;\nany subsequent `/redeem` for the same inquiry fails with\n`InquiryAlreadyRedeemed`.\n'
-        ),
-    ]
 
 
 class Type3(StrEnum):
-    DIRECT_ISSUE = 'DIRECT_ISSUE'
+    DIRECT_ISSUE = "DIRECT_ISSUE"
 
 
 class ReturnMethodDirectIssue(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    type: Literal["DIRECT_ISSUE"]
+    payload: dict[str, Any] = Field(
+        ...,
+        description="Empty payload. Opts the application in to native-api's\ndirect-issue flows (`/direct-issue/steam-ticket`,\n`/direct-issue/access-key`). Per-inquiry payload is empty\nbecause direct-issue does not flow through `/establish`.\n",
     )
-    type: Literal['DIRECT_ISSUE']
-    payload: Annotated[
-        dict[str, Any],
-        Field(
-            description="Empty payload. Opts the application in to native-api's\ndirect-issue flows (`/direct-issue/steam-ticket`,\n`/direct-issue/access-key`). Per-inquiry payload is empty\nbecause direct-issue does not flow through `/establish`.\n"
-        ),
-    ]
 
 
 class Type4(StrEnum):
-    OIDC = 'OIDC'
+    OIDC = "OIDC"
 
 
 class ReturnMethodOidc(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    type: Literal["OIDC"]
+    payload: dict[str, Any] = Field(
+        ...,
+        description="Accepted on the wire for symmetry, but in practice OIDC is\nnot declared per-inquiry — the OIDC API drives its own\ninquiry against Connect via CALLBACK-to-self. The matching\nper-inquiry payload is therefore empty.\n",
     )
-    type: Literal['OIDC']
-    payload: Annotated[
-        dict[str, Any],
-        Field(
-            description='Accepted on the wire for symmetry, but in practice OIDC is\nnot declared per-inquiry — the OIDC API drives its own\ninquiry against Connect via CALLBACK-to-self. The matching\nper-inquiry payload is therefore empty.\n'
-        ),
-    ]
 
 
 class Error(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    reason: Annotated[
-        str | None, Field(description='Stable machine-readable reason code.')
-    ] = None
+    """
+    Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
+    for known failure modes. When the reason symbol's description begins with
+    `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
+    signal — both `reason` and the body itself are absent in that case.
+
+    """
+
+    reason: str | None = Field(None, description="Stable machine-readable reason code.")
 
 
 class StatusPollResponse(
     RootModel[StatusPollPendingResponse | StatusPollRealizedResponse]
 ):
-    root: Annotated[
-        StatusPollPendingResponse | StatusPollRealizedResponse,
-        Field(discriminator='status'),
-    ]
+    root: StatusPollPendingResponse | StatusPollRealizedResponse = Field(
+        ..., discriminator="status"
+    )
 
 
 class AuthenticationRuleConstraint(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    method: Method = Field(
+        ..., description="Which authentication method this constraint narrows to."
     )
-    method: Annotated[
-        Method,
-        Field(description='Which authentication method this constraint narrows to.'),
-    ]
     payload: (
         AuthenticationRulePasskeyUsernamelessPayload
         | AuthenticationRulePasskeyReasonedPayload
@@ -490,46 +544,34 @@ class AuthenticationRuleConstraint(BaseModel):
         | AuthenticationRuleBattleNetOAuthPayload
         | AuthenticationRuleXOAuthPayload
     )
-    accessTokenTtlSeconds: Annotated[
-        int | None,
-        Field(
-            description='Per-constraint override for access token lifetime. Resolved at realize time.'
-        ),
-    ] = None
-    refreshTokenTtlSeconds: Annotated[
-        int | None,
-        Field(
-            description='Per-constraint override for refresh token lifetime. Resolved at realize time.'
-        ),
-    ] = None
+    accessTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for access token lifetime. Resolved at realize time.",
+    )
+    refreshTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
+    )
 
 
 class RealizeRuleConstraint(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    constraintType: ConstraintType = Field(
+        ..., description="Which realize-rule kind this constraint narrows to."
     )
-    constraintType: Annotated[
-        ConstraintType,
-        Field(description='Which realize-rule kind this constraint narrows to.'),
-    ]
     payload: (
         RealizeRuleEmailPayload
         | RealizeRuleSteamIdPayload
         | RealizeRuleAccountAliasPayload
         | RealizeRuleSectorSubjectPayload
     )
-    accessTokenTtlSeconds: Annotated[
-        int | None,
-        Field(
-            description='Per-constraint override for access token lifetime. Resolved at realize time.'
-        ),
-    ] = None
-    refreshTokenTtlSeconds: Annotated[
-        int | None,
-        Field(
-            description='Per-constraint override for refresh token lifetime. Resolved at realize time.'
-        ),
-    ] = None
+    accessTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for access token lifetime. Resolved at realize time.",
+    )
+    refreshTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
+    )
 
 
 class ReturnMethodDeclaration(
@@ -541,38 +583,28 @@ class ReturnMethodDeclaration(
         | ReturnMethodOidc
     ]
 ):
-    root: Annotated[
+    root: (
         ReturnMethodCallback
         | ReturnMethodStatusPoll
         | ReturnMethodReveal
         | ReturnMethodDirectIssue
-        | ReturnMethodOidc,
-        Field(discriminator='type'),
-    ]
+        | ReturnMethodOidc
+    ) = Field(..., discriminator="type")
 
 
 class EstablishRequest(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
+    applicationAnchor: str = Field(
+        ..., description="Public anchor identifying the integrating application."
     )
-    applicationAnchor: Annotated[
-        str, Field(description='Public anchor identifying the integrating application.')
-    ]
-    authenticationConstraints: Annotated[
-        list[AuthenticationRuleConstraint] | None,
-        Field(
-            description="Optional per-inquiry narrowing of the application's\nauthentication-rule layer. Absent means no narrowing. If present,\nthe array MUST be non-empty; empty arrays are rejected with 400.\n"
-        ),
-    ] = None
-    realizeConstraints: Annotated[
-        list[RealizeRuleConstraint] | None,
-        Field(
-            description="Optional per-inquiry narrowing of the application's realize-rule\nlayer. Absent means no narrowing. If present, the array MUST be\nnon-empty; empty arrays are rejected with 400.\n"
-        ),
-    ] = None
-    returnMethods: Annotated[
-        list[ReturnMethodDeclaration] | None,
-        Field(
-            description='Optional per-inquiry return-method declaration. Doubles as the\nconcrete delivery info for CALLBACK (carries the callback URL).\nAbsent means no per-inquiry narrowing (CALLBACK is unreachable\nfor this inquiry because no URL is anchored). If present, the\narray MUST be non-empty; empty arrays are rejected with 400.\n'
-        ),
-    ] = None
+    authenticationConstraints: list[AuthenticationRuleConstraint] | None = Field(
+        None,
+        description="Optional per-inquiry narrowing of the application's\nauthentication-rule layer. Absent means no narrowing. If present,\nthe array MUST be non-empty; empty arrays are rejected with 400.\n",
+    )
+    realizeConstraints: list[RealizeRuleConstraint] | None = Field(
+        None,
+        description="Optional per-inquiry narrowing of the application's realize-rule\nlayer. Absent means no narrowing. If present, the array MUST be\nnon-empty; empty arrays are rejected with 400.\n",
+    )
+    returnMethods: list[ReturnMethodDeclaration] | None = Field(
+        None,
+        description="Optional per-inquiry return-method declaration. Doubles as the\nconcrete delivery info for CALLBACK (carries the callback URL).\nAbsent means no per-inquiry narrowing (CALLBACK is unreachable\nfor this inquiry because no URL is anchored). If present, the\narray MUST be non-empty; empty arrays are rejected with 400.\n",
+    )

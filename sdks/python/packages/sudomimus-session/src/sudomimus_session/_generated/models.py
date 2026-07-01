@@ -15,10 +15,11 @@ class HealthResponse(BaseModel):
 
 
 class Requirement(StrEnum):
+    SYNTHETIC_ONLY = "SYNTHETIC_ONLY"
     OFF = "OFF"
     OPTIONAL = "OPTIONAL"
     REQUIRED = "REQUIRED"
-    SYNTHETIC = "SYNTHETIC"
+    SYNTHETIC_FALLBACK = "SYNTHETIC_FALLBACK"
 
 
 class State(StrEnum):
@@ -36,6 +37,7 @@ class ClaimsStateView(BaseModel):
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
 
 
 class RefreshRequest(BaseModel):

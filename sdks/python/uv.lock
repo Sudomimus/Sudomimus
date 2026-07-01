@@ -7,12 +7,17 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 
+[options]
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer-span = "P1W"
+
 [manifest]
 members = [
     "sudomimus-connect",
     "sudomimus-device",
     "sudomimus-native",
     "sudomimus-sdks-python",
+    "sudomimus-session",
     "sudomimus-token",
 ]
 
@@ -1057,14 +1062,14 @@ source = { editable = "packages/sudomimus-device" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
-    { name = "sudomimus-connect" },
+    { name = "sudomimus-session" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "pydantic", specifier = ">=2.7" },
-    { name = "sudomimus-connect", editable = "packages/sudomimus-connect" },
+    { name = "sudomimus-session", editable = "packages/sudomimus-session" },
 ]
 
 [[package]]
@@ -1097,6 +1102,7 @@ dev = [
     { name = "sudomimus-connect" },
     { name = "sudomimus-device" },
     { name = "sudomimus-native" },
+    { name = "sudomimus-session" },
     { name = "sudomimus-token" },
 ]
 
@@ -1112,6 +1118,24 @@ dev = [
     { name = "sudomimus-connect", editable = "packages/sudomimus-connect" },
     { name = "sudomimus-device", editable = "packages/sudomimus-device" },
     { name = "sudomimus-native", editable = "packages/sudomimus-native" },
+    { name = "sudomimus-session", editable = "packages/sudomimus-session" },
+    { name = "sudomimus-token", editable = "packages/sudomimus-token" },
+]
+
+[[package]]
+name = "sudomimus-session"
+version = "1.0.0"
+source = { editable = "packages/sudomimus-session" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sudomimus-token" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "pydantic", specifier = ">=2.7" },
     { name = "sudomimus-token", editable = "packages/sudomimus-token" },
 ]
 
@@ -1126,7 +1150,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cryptography", specifier = ">=48.0.1" },
+    { name = "cryptography", specifier = ">=42" },
     { name = "pydantic", specifier = ">=2.7" },
 ]
 

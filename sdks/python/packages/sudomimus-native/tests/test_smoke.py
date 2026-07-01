@@ -19,6 +19,8 @@ from sudomimus_native import (
 )
 
 Handler = Callable[[httpx.Request], httpx.Response]
+ACCESS_KEY_IDENTIFIER = "acs_k_11111111-1111-4111-8111-111111111111"
+ACCESS_KEY_SECRET = "acs_t_" + ("0" * 64)
 
 
 def _client(handler: Handler) -> NativeClient:
@@ -36,6 +38,7 @@ def _token_response(request: httpx.Request) -> httpx.Response:
                 "email": {"requirement": "OFF", "state": "UNKNOWN"},
                 "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                 "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
             },
         },
     )
@@ -80,8 +83,8 @@ def test_direct_issue_access_key() -> None:
         result = client.direct_issue_access_key(
             DirectIssueAccessKeyRequest(
                 applicationAnchor="my-app",
-                accessKeyIdentifier="11111111-1111-4111-8111-111111111111",
-                accessKeySecret="0" * 64,
+                accessKeyIdentifier=ACCESS_KEY_IDENTIFIER,
+                accessKeySecret=ACCESS_KEY_SECRET,
             )
         )
     assert result.accessToken == "a.b.c"
@@ -95,8 +98,8 @@ def test_error_with_reason() -> None:
         client.direct_issue_access_key(
             DirectIssueAccessKeyRequest(
                 applicationAnchor="my-app",
-                accessKeyIdentifier="11111111-1111-4111-8111-111111111111",
-                accessKeySecret="0" * 64,
+                accessKeyIdentifier=ACCESS_KEY_IDENTIFIER,
+                accessKeySecret=ACCESS_KEY_SECRET,
             )
         )
     assert exc.value.status == 401
@@ -177,8 +180,8 @@ def test_async_direct_issue_access_key() -> None:
             result = await client.direct_issue_access_key(
                 DirectIssueAccessKeyRequest(
                     applicationAnchor="my-app",
-                    accessKeyIdentifier="11111111-1111-4111-8111-111111111111",
-                    accessKeySecret="0" * 64,
+                    accessKeyIdentifier=ACCESS_KEY_IDENTIFIER,
+                    accessKeySecret=ACCESS_KEY_SECRET,
                 )
             )
             return result.accessToken
@@ -204,6 +207,7 @@ def test_create_errand() -> None:
                     "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
                     "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                     "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
                 },
             },
         )
@@ -247,6 +251,7 @@ def test_async_create_errand() -> None:
                         "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
                         "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                         "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
                     },
                 },
             )
@@ -273,4 +278,3 @@ def test_async_errand_status() -> None:
             return result.status
 
     assert asyncio.run(run()) == "COMPLETED"
-
