@@ -18,9 +18,11 @@ public final class AccessTokenBody {
      * Given name. Consent-gated (claim sharing): minted only when the
      * application's claim policy permits it AND the user has granted the claim,
      * so it may be {@code null} even when the account has a value stored. The
-     * same gating applies to {@link #lastName} and {@link #emailAddress}.
+     * same gating applies to {@link #lastName}, {@link #emailAddress}, and
+     * {@link #avatarUrl}.
      */
     @JsonProperty("firstName") public String firstName;
     @JsonProperty("lastName") public String lastName;
     @JsonProperty("emailAddress") public String emailAddress;
+    @JsonProperty("avatarUrl") public String avatarUrl;
 }

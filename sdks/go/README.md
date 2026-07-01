@@ -46,7 +46,7 @@ if err != nil {
     }
     return err
 }
-fmt.Println(tok.Body.Subject, tok.Body.FirstName)
+fmt.Println(tok.Body.Subject, tok.Body.FirstName, tok.Body.AvatarURL)
 ```
 
 The verifier performs, in order: parse → `kty` matches `"Access"`/`"Refresh"`

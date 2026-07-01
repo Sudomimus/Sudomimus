@@ -66,6 +66,7 @@ func mintAccessToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string {
 		"firstName":    "Ada",
 		"lastName":     "Lovelace",
 		"emailAddress": "ada@example.com",
+		"avatarUrl":    "https://cdn.sudomimus.com/avatar/subject-1.png",
 	}
 	return mintToken(t, header, body, priv)
 }
@@ -94,14 +95,16 @@ func TestVerifyAccessToken_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if tok.Body.Subject != "subject-1" || tok.Body.FirstName != "Ada" {
+	if tok.Body.Subject != "subject-1" ||
+		tok.Body.FirstName != "Ada" ||
+		tok.Body.AvatarURL != "https://cdn.sudomimus.com/avatar/subject-1.png" {
 		t.Fatalf("unexpected body: %+v", tok.Body)
 	}
 }
 
 func TestVerifyAccessToken_ConsentGatedClaimsAbsent(t *testing.T) {
-	// firstName / lastName / emailAddress are consent-gated and may be
-	// absent; a token carrying only `subject` must still verify.
+	// firstName / lastName / emailAddress / avatarUrl are consent-gated and may
+	// be absent; a token carrying only `subject` must still verify.
 	keys := generateRSAKeyPair(t)
 	iat := time.Now().Unix()
 	header := map[string]any{
@@ -116,7 +119,10 @@ func TestVerifyAccessToken_ConsentGatedClaimsAbsent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if tok.Body.Subject != "subject-1" || tok.Body.FirstName != "" || tok.Body.EmailAddress != "" {
+	if tok.Body.Subject != "subject-1" ||
+		tok.Body.FirstName != "" ||
+		tok.Body.EmailAddress != "" ||
+		tok.Body.AvatarURL != "" {
 		t.Fatalf("unexpected body: %+v", tok.Body)
 	}
 }

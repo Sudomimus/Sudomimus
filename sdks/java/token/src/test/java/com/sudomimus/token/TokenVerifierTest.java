@@ -31,6 +31,7 @@ class TokenVerifierTest {
 
         assertEquals("subject-1", token.getBody().subject);
         assertEquals("Ada", token.getBody().firstName);
+        assertEquals("https://cdn.sudomimus.com/avatar/subject-1.png", token.getBody().avatarUrl);
     }
 
     @Test
@@ -86,7 +87,7 @@ class TokenVerifierTest {
         header.put("exp", Long.MAX_VALUE / 2);
         header.put("kty", "Access");
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("accountIdentifier", "acct-1");
+        body.put("subject", "subject-1");
         body.put("firstName", "Ada");
         String jwt = TestHelpers.mintToken(header, body, keys.privateKey);
 

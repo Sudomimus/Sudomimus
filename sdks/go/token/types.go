@@ -30,14 +30,16 @@ type Header struct {
 // identifier never appears in a token. It is opaque: never parse or
 // format-validate it.
 //
-// FirstName, LastName, and EmailAddress are consent-gated (claim sharing):
-// each is minted only when the application's claim policy permits it AND the
-// user has granted that claim, so any of them may be absent.
+// FirstName, LastName, EmailAddress, and AvatarURL are consent-gated (claim
+// sharing): each is minted only when the application's claim policy permits it
+// AND the user has granted that claim, so any of them may be absent. Synthetic
+// policies may emit generated placeholders.
 type AccessTokenBody struct {
 	Subject      string `json:"subject"`
 	FirstName    string `json:"firstName,omitempty"`
 	LastName     string `json:"lastName,omitempty"`
 	EmailAddress string `json:"emailAddress,omitempty"`
+	AvatarURL    string `json:"avatarUrl,omitempty"`
 }
 
 // RefreshTokenBody is the payload of a Sudomimus refresh token. It carries the
