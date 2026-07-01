@@ -37,6 +37,7 @@ const claims = {
     email: { requirement: "OFF", state: "UNKNOWN" },
     firstName: { requirement: "OPTIONAL", state: "GRANTED" },
     lastName: { requirement: "OFF", state: "UNKNOWN" },
+    avatar: { requirement: "OFF", state: "UNKNOWN" },
 } as const;
 
 describe("ConnectClient", () => {

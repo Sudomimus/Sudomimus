@@ -8,8 +8,8 @@
 import { NativeApiError, NativeClient, PRODUCTION_BASE_URL } from "../../src";
 import type { DirectIssueAccessKeyResponse, DirectIssueSteamTicketResponse } from "../../src";
 
-const VALID_ACCESS_KEY_IDENTIFIER = "01890c5e-1234-4abc-9def-0123456789ab";
-const VALID_ACCESS_KEY_SECRET = "a".repeat(64);
+const VALID_ACCESS_KEY_IDENTIFIER = "acs_k_01890c5e-1234-4abc-9def-0123456789ab";
+const VALID_ACCESS_KEY_SECRET = `acs_t_${"a".repeat(64)}`;
 
 type FakeResponseSpec = {
     ok: boolean;
@@ -74,6 +74,7 @@ describe("NativeClient", () => {
                     email: { requirement: "OFF", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
+                    avatar: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -116,6 +117,7 @@ describe("NativeClient", () => {
                     email: { requirement: "OFF", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
+                    avatar: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -206,6 +208,7 @@ describe("NativeClient", () => {
                     email: { requirement: "REQUIRED", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
+                    avatar: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -261,6 +264,7 @@ describe("NativeClient", () => {
                         email: { requirement: "REQUIRED", state: "UNKNOWN" },
                         firstName: { requirement: "OFF", state: "UNKNOWN" },
                         lastName: { requirement: "OFF", state: "UNKNOWN" },
+                        avatar: { requirement: "OFF", state: "UNKNOWN" },
                     },
                     errand: {
                         errandKey: "ernd_courier-route-abcdef012345-seal",

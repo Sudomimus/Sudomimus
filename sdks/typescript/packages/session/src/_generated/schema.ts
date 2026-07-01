@@ -36,12 +36,16 @@ export interface paths {
          *     invalidating the presented refresh token. The Session API implements
          *     OAuth 2.1 BCP §4.14.2 strict refresh-token rotation: every successful
          *     `/refresh` rotates the refresh token, and a later presentation of the
-         *     parent token is treated as evidence of compromise.
+         *     parent token is treated as evidence of compromise unless it is a
+         *     near-simultaneous retry inside the rotation grace window.
          *
-         *     On compromise, the entire refresh-token family is revoked and the
-         *     caller must restart with its initial login flow: Connect inquiry,
-         *     device authorization, native direct-issue, or another ordinary
-         *     application-token issuance path.
+         *     Inside that short grace window, if the parent was already rotated and
+         *     the winning child is still active, the retry adopts the same child and
+         *     receives HTTP 200 instead of revoking the family. Outside the grace
+         *     window, or when adoption cannot cleanly rebuild the child session, the
+         *     entire refresh-token family is revoked and the caller must restart with
+         *     its initial login flow: Connect inquiry, device authorization, native
+         *     direct-issue, or another ordinary application-token issuance path.
          */
         post: operations["refresh"];
         delete?: never;
@@ -132,7 +136,7 @@ export interface components {
         };
         ClaimRequirementStateView: {
             /** @enum {string} */
-            requirement: "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC";
+            requirement: "SYNTHETIC_ONLY" | "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC_FALLBACK";
             /** @enum {string} */
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
@@ -140,6 +144,7 @@ export interface components {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
         };
         RefreshRequest: {
             refreshToken: string;
@@ -218,7 +223,11 @@ export interface operations {
             };
         };
         responses: {
-            /** @description New access token and rotated refresh token issued. */
+            /**
+             * @description New access token and rotated refresh token issued. A benign
+             *     concurrent retry may also receive 200 by adopting the live child
+             *     created by the winning refresh inside the rotation grace window.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -239,11 +248,19 @@ export interface operations {
             /**
              * @description Refresh token rejected. The `reason` distinguishes:
              *
-             *     - `RefreshTokenNotFound` — token cannot be resolved.
+             *     - `RefreshTokenInvalid` — the JWT is malformed, has an unsupported
+             *       algorithm or issuer, lacks required claims, names an unknown
+             *       application, or no longer resolves to a stored token row.
+             *     - `RefreshTokenInvalidType` — the JWT is not a refresh token.
+             *     - `RefreshTokenInvalidSignature` — signature verification failed.
              *     - `RefreshTokenSuspended` — the refresh-token session is suspended.
              *     - `RefreshTokenExpired` — the token is past its `exp`.
-             *     - `RefreshTokenFamilyCompromised` — the presented token had already been rotated; the whole family has now been revoked.
-             *     - `RefreshTokenRotationRaceLost` — a concurrent rotation won the conditional write and the family was revoked.
+             *     - `RefreshTokenRevoked` — the refresh-token row was revoked.
+             *     - `RefreshTokenFamilyCompromised` — the presented token had already been rotated and grace-window adoption did not apply; the whole family has now been revoked.
+             *
+             *     A concurrent rotation race that cannot adopt the winning child also
+             *     returns HTTP 401 and revokes the family, but intentionally carries
+             *     an empty response body rather than exposing a public reason.
              */
             401: {
                 headers: {
@@ -258,6 +275,7 @@ export interface operations {
              *
              *     - `AccountDisabled` — the account behind the refresh token is disabled.
              *     - `AccountDeleted` — the account has been erased.
+             *     - `ApplicationDisabled` — the application, parent sector, or parent organization no longer permits token issuance.
              *     - `ClaimConsentRequired` — a REQUIRED claim is no longer satisfied by a standing grant.
              *     - `EmailDomainBlocked` — a verified adopted domain now blocks this account.
              *     - `EmailDomainRequiresSso` — a verified adopted domain now requires SSO and this session was not realized through the required connector.

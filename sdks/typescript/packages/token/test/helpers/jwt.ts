@@ -57,6 +57,7 @@ export const mintAccessToken = (
             firstName: "Ada",
             lastName: "Lovelace",
             emailAddress: "ada@example.com",
+            avatarUrl: "https://cdn.sudomimus.com/avatar/subject-1.png",
         },
     });
 };

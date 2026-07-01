@@ -36,6 +36,7 @@ const tokenResponse = (): DeviceTokenResponse => ({
         email: { requirement: "OFF", state: "UNKNOWN" },
         firstName: { requirement: "OPTIONAL", state: "GRANTED" },
         lastName: { requirement: "OPTIONAL", state: "DENIED" },
+        avatar: { requirement: "OFF", state: "UNKNOWN" },
     },
 });
 

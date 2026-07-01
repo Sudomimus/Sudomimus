@@ -1,6 +1,6 @@
 # @sudomimus/native
 
-TypeScript SDK for the [Sudomimus](https://sudomimus.com) Native API — the direct-issue gateway for native clients (desktop apps, games, headless processes). The client presents a platform-issued proof (a Steam Web API auth ticket) or a long-lived access-key credential and receives application access + refresh tokens in a single round trip. No browser handoff, no inquiry establishment, no polling.
+TypeScript SDK for the [Sudomimus](https://sudomimus.com) Native API — the direct-issue gateway for native clients (desktop apps, games, headless processes). The client presents a platform-issued proof (a Steam Web API auth ticket) or a long-lived access-key credential and receives application access + refresh tokens in a single round trip. Claim-gated logins may return an errand browser handoff; no Connect inquiry establishment is required.
 
 ## Install
 
@@ -48,8 +48,8 @@ Trade an access-key credential (issued in the admin console) for tokens. Intende
 ```typescript
 const tokens = await client.directIssueAccessKey({
     applicationAnchor: "your-app-anchor",
-    accessKeyIdentifier: "01890c5e-1234-4abc-9def-0123456789ab",
-    accessKeySecret: "<64-char lowercase hex secret>",
+    accessKeyIdentifier: "acs_k_01890c5e-1234-4abc-9def-0123456789ab",
+    accessKeySecret: "acs_t_<64-char lowercase hex secret>",
 });
 ```
 
@@ -81,7 +81,7 @@ Every direct-issue response carries a `claims` view — the per-claim policy joi
 
 ```typescript
 const tokens = await client.directIssueAccessKey({ /* ... */ });
-// tokens.claims.email.requirement -> "OFF" | "OPTIONAL" | "REQUIRED"
+// tokens.claims.email.requirement -> "SYNTHETIC_ONLY" | "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC_FALLBACK"
 // tokens.claims.email.state       -> "UNKNOWN" | "GRANTED" | "DENIED"
 ```
 

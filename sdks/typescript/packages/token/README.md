@@ -23,7 +23,7 @@ import { parseAccessToken, parseRefreshToken } from "@sudomimus/token";
 
 const token = parseAccessToken(jwt);
 if (token !== null) {
-    console.log(token.body.subject, token.body.firstName);
+    console.log(token.body.subject, token.body.firstName, token.body.avatarUrl);
     console.log(token.header.aud); // applicationAnchor
 }
 ```

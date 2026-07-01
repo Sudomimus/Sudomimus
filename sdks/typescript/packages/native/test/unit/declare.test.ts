@@ -20,6 +20,7 @@ const SAMPLE_CLAIMS: ClaimsStateView = {
     email: { requirement: "REQUIRED", state: "GRANTED" },
     firstName: { requirement: "OFF", state: "UNKNOWN" },
     lastName: { requirement: "OFF", state: "UNKNOWN" },
+    avatar: { requirement: "OFF", state: "UNKNOWN" },
 };
 
 describe("Native schema-derived types", () => {
@@ -63,13 +64,13 @@ describe("Native schema-derived types", () => {
 
         const request: DirectIssueAccessKeyRequest = {
             applicationAnchor: "anchor-1",
-            accessKeyIdentifier: "01890c5e-1234-4abc-9def-0123456789ab",
-            accessKeySecret: "a".repeat(64),
+            accessKeyIdentifier: "acs_k_01890c5e-1234-4abc-9def-0123456789ab",
+            accessKeySecret: `acs_t_${"a".repeat(64)}`,
         };
 
         expect(request.applicationAnchor).toBe("anchor-1");
-        expect(request.accessKeyIdentifier).toMatch(/^[0-9a-f]{8}-/);
-        expect(request.accessKeySecret).toHaveLength(64);
+        expect(request.accessKeyIdentifier).toMatch(/^acs_k_[0-9a-f]{8}-/);
+        expect(request.accessKeySecret).toHaveLength(70);
     });
 
     it("exposes DirectIssueAccessKeyResponse with token fields and claims", () => {

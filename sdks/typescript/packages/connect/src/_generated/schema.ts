@@ -178,18 +178,20 @@ export interface components {
          */
         ClaimRequirementStateView: {
             /**
-             * @description The developer's policy for the claim. `SYNTHETIC` guarantees the
-             *     claim is present but permits a generated placeholder (a stand-in
-             *     name, a proxy email) when the user has not shared real data —
-             *     unlike `REQUIRED` it never blocks issuance or raises an errand.
+             * @description The developer's policy for the claim. `SYNTHETIC_ONLY` always
+             *     emits the generated placeholder and never asks for real data.
+             *     `SYNTHETIC_FALLBACK` guarantees the claim is present but uses a
+             *     generated placeholder (a stand-in name, a proxy email, or a
+             *     generated avatar) when the user has not shared real data. Unlike `REQUIRED`, neither
+             *     synthetic mode blocks issuance or raises an errand.
              * @enum {string}
              */
-            requirement: "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC";
+            requirement: "SYNTHETIC_ONLY" | "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC_FALLBACK";
             /** @enum {string} */
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the three shareable claims — why a claim is
+         * @description Per-claim view across the four shareable claims — why a claim is
          *     or is not present in the minted token (policy OFF, never asked,
          *     declined, or granted).
          */
@@ -197,6 +199,7 @@ export interface components {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
         };
         RedeemResponse: {
             claims: components["schemas"]["ClaimsStateView"];
@@ -220,12 +223,12 @@ export interface components {
          *     JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
          *     `sub`) live in the JWT *header*; this object is the body. The
          *     application keys its users on `subject`. The `firstName`,
-         *     `lastName`, and `emailAddress` claims are consent-gated (claim
+         *     `lastName`, `emailAddress`, and `avatarUrl` claims are consent-gated (claim
          *     sharing): each is minted only when the application's claim policy
          *     permits it AND the user has granted that claim, so any of them may
-         *     be absent. The exception is a `SYNTHETIC` claim policy: that field is
-         *     instead always present, carrying a generated placeholder (a stand-in
-         *     name, a proxy email) whenever the user has not shared real data.
+         *     be absent. Synthetic modes are the exception: `SYNTHETIC_ONLY` always
+         *     emits a generated placeholder, and `SYNTHETIC_FALLBACK` emits real
+         *     data when granted or the placeholder otherwise.
          */
         AccessTokenBody: {
             /**
@@ -239,25 +242,34 @@ export interface components {
             /**
              * @description Given name. Minted only when the application's claim policy
              *     permits it AND the user has granted the claim; may be absent
-             *     even when the account has a value stored. Under a `SYNTHETIC`
-             *     policy it is always present, possibly a placeholder name.
+             *     even when the account has a value stored. Under a synthetic policy
+             *     it is always present, possibly a placeholder name.
              */
             firstName?: string;
             /** @description Family name. Same consent gating as `firstName`. */
             lastName?: string;
             /**
              * @description Email associated with this login. Consent-gated like
-             *     `firstName` / `lastName` (minted only when policy permits AND
+             *     `firstName` / `lastName` / `avatarUrl` (minted only when policy permits AND
              *     the user granted the EMAIL claim). When a real value is included:
              *     the exact email typed for email-OTP logins, otherwise the
              *     account's primary email; omitted for accounts with no verified
-             *     email (e.g. Steam-only or AccessKey-only). The exception is a
-             *     `SYNTHETIC` email policy: the field is then always present — a
-             *     real verified email when shared, otherwise a
-             *     `…@proxy.sudomimus.email` proxy address (best-effort forwarding,
-             *     not guaranteed; not a verified mailbox).
+             *     email (e.g. Steam-only or AccessKey-only). Synthetic email policies
+             *     are the exception: the field is then always present — a real
+             *     verified email only under `SYNTHETIC_FALLBACK` when shared,
+             *     otherwise a `…@proxy.sudomimus.email` proxy address (best-effort
+             *     forwarding, not guaranteed; not a verified mailbox).
              */
             emailAddress?: string;
+            /**
+             * Format: uri
+             * @description Sector-scoped public avatar URL. Consent-gated like the other
+             *     shareable claims and minted as `AVATAR` when policy and grant allow
+             *     it. The URL is pairwise to this account / sector delivery handle,
+             *     even when it resolves to the user's global avatar image. Synthetic
+             *     avatar policies return a generated sector placeholder image.
+             */
+            avatarUrl?: string;
         };
         /**
          * @description Decoded body (payload) of a Sudomimus refresh token. Carries the
@@ -669,9 +681,14 @@ export interface operations {
              *     - `AccountDisabled` — the realizing account is disabled.
              *     - `AccountDeleted` — the realizing account has been erased.
              *     - `ClaimConsentRequired` — the application requires a claim
-             *       (email / first name / last name) the user has not granted;
+             *       (email / first name / last name / avatar) the user has not granted;
              *       the standing grant must be (re)established through an
              *       interactive browser login before tokens can be issued.
+             *     - `EmailDomainBlocked` — one of the account's verified email
+             *       domains is governed by a `BLOCK_ALL` login policy.
+             *     - `EmailDomainRequiresSso` — one of the account's verified email
+             *       domains requires SSO and the inquiry was not realized through
+             *       the currently required connector.
              */
             403: {
                 headers: {

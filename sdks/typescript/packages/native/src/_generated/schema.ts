@@ -198,14 +198,16 @@ export interface components {
             /** @description Public anchor identifying the integrating application. */
             applicationAnchor: string;
             /**
-             * @description UUID v4 string identifying the access-key credential.
-             *     Format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+             * @description Canonical access-key identifier, including the mandatory
+             *     `acs_k_` prefix followed by its UUID.
              */
             accessKeyIdentifier: string;
             /**
-             * @description 64-char lowercase hex string (32 random bytes) returned exactly
-             *     once when the access key was issued. Never logged or persisted
-             *     in plaintext server-side after creation.
+             * @description Canonical access-key secret, including the mandatory `acs_t_`
+             *     prefix followed by 64 lowercase hexadecimal characters (32
+             *     random bytes). Returned exactly once when the access key was
+             *     issued. Never logged or persisted in plaintext server-side after
+             *     creation.
              */
             accessKeySecret: string;
         };
@@ -216,7 +218,7 @@ export interface components {
              * @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
-             *     The `firstName` / `lastName` / `emailAddress` claims are
+             *     The `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              */
             accessToken: string;
@@ -249,7 +251,7 @@ export interface components {
              * @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
-             *     The `firstName` / `lastName` / `emailAddress` claims are
+             *     The `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              */
             accessToken: string;
@@ -264,18 +266,20 @@ export interface components {
          */
         ClaimRequirementStateView: {
             /**
-             * @description The developer's policy for the claim. `SYNTHETIC` guarantees the
-             *     claim is present but permits a generated placeholder (a stand-in
-             *     name, a proxy email) when the user has not shared real data —
-             *     unlike `REQUIRED` it never blocks issuance or raises an errand.
+             * @description The developer's policy for the claim. `SYNTHETIC_ONLY` always
+             *     emits the generated placeholder and never asks for real data.
+             *     `SYNTHETIC_FALLBACK` guarantees the claim is present but uses a
+             *     generated placeholder (a stand-in name, a proxy email, or a
+             *     generated avatar) when the user has not shared real data. Unlike `REQUIRED`, neither
+             *     synthetic mode blocks issuance or raises an errand.
              * @enum {string}
              */
-            requirement: "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC";
+            requirement: "SYNTHETIC_ONLY" | "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC_FALLBACK";
             /** @enum {string} */
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the three shareable claims, carried on both
+         * @description Per-claim view across the four shareable claims, carried on both
          *     the 200 (why is a claim absent from the minted token) and the
          *     claim-gate 403 (what is still owed).
          */
@@ -283,6 +287,7 @@ export interface components {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
         };
         /**
          * @description The browser side-trip that unblocks a claim-gated direct-issue:
@@ -401,8 +406,9 @@ export interface operations {
             };
             /**
              * @description Malformed request body. The `reason` distinguishes
-             *     `Invalid accessKeyIdentifier` (must be a UUID v4) and
-             *     `Invalid accessKeySecret` (must be 64 lowercase hex chars).
+             *     `InvalidAccessKeyIdentifier` (must use the canonical
+             *     `acs_k_<UUID v4>` form) and `InvalidAccessKeySecret` (must use
+             *     the canonical `acs_t_<64 lowercase hex chars>` form).
              */
             400: {
                 headers: {

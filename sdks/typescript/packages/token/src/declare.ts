@@ -34,12 +34,20 @@ export type AccessTokenBody = {
 
     /**
      * Verified email associated with this login. Consent-gated like
-     * `firstName` / `lastName` (minted only when policy permits AND the user
-     * granted the EMAIL claim). When included: the exact email typed for
-     * email-OTP logins, otherwise the account's primary email. Always omitted
-     * for accounts with no verified email (e.g. Steam-only or AccessKey-only).
+     * `firstName` / `lastName` / `avatarUrl` (minted only when policy permits
+     * AND the user granted the EMAIL claim). When included: the exact email
+     * typed for email-OTP logins, otherwise the account's primary email.
+     * Always omitted for accounts with no verified email (e.g. Steam-only or
+     * AccessKey-only), unless a synthetic email policy emits a proxy address.
      */
     readonly emailAddress?: string;
+
+    /**
+     * Sector-scoped public avatar URL. Consent-gated like the other shareable
+     * claims and minted only when policy and grant allow it. Synthetic avatar
+     * policies may emit a generated sector placeholder image.
+     */
+    readonly avatarUrl?: string;
 };
 
 export type RefreshTokenHeader = Record<string, never>;

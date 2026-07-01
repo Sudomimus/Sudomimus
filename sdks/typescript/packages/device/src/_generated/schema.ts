@@ -133,8 +133,8 @@ export interface components {
             /**
              * @description Short-lived access token (JWT). The application-visible user key is
              *     the `subject` (sector subject) claim. Claim fields such as
-             *     `emailAddress`, `firstName`, and `lastName` are minted according to
-             *     the application's claim policy and the user's standing grant.
+             *     `emailAddress`, `firstName`, `lastName`, and `avatarUrl` are minted
+             *     according to the application's claim policy and the user's standing grant.
              */
             accessToken: string;
             /**
@@ -162,23 +162,25 @@ export interface components {
          */
         ClaimRequirementStateView: {
             /**
-             * @description The developer's policy for the claim. `SYNTHETIC` guarantees the
-             *     claim is present but permits a generated placeholder when the user
-             *     has not shared real data.
+             * @description The developer's policy for the claim. `SYNTHETIC_ONLY` always
+             *     emits a generated placeholder and never asks for real data.
+             *     `SYNTHETIC_FALLBACK` guarantees the claim is present but uses a
+             *     generated placeholder when the user has not shared real data.
              * @enum {string}
              */
-            requirement: "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC";
+            requirement: "SYNTHETIC_ONLY" | "OFF" | "OPTIONAL" | "REQUIRED" | "SYNTHETIC_FALLBACK";
             /** @enum {string} */
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the three shareable claims - why a claim is or is
+         * @description Per-claim view across the four shareable claims - why a claim is or is
          *     not present in the minted token.
          */
         ClaimsStateView: {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
         };
         /**
          * @description Error response body for non-polling validation and infrastructure
