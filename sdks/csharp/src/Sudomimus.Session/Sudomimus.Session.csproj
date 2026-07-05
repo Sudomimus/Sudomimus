@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <PackageId>Sudomimus.Session</PackageId>
-        <Version>3.1.0</Version>
+        <Version>3.2.0</Version>
         <Description>HTTP client for the Sudomimus Session API — refresh-token rotation, session
             introspection, logout, and account session revocation.</Description>
         <PackageTags>sudomimus;auth;session;jwt</PackageTags>

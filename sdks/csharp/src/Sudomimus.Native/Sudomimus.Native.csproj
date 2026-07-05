@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <PackageId>Sudomimus.Native</PackageId>
-        <Version>3.1.0</Version>
+        <Version>3.2.0</Version>
         <Description>HTTP client for the Sudomimus Native API — exchanges Steam Web API auth tickets
             or access-key credentials for application access and refresh tokens, surfaces the
             per-claim consent view, and carries the errand recovery handoff for claim-gated logins.
