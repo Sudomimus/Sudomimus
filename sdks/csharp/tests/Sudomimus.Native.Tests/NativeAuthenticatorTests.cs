@@ -18,7 +18,8 @@ public class NativeAuthenticatorTests
                 "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                 "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
             },
             "errand": {
                 "errandKey": "ernd_courier-route-abcdef012345-seal",
@@ -37,7 +38,8 @@ public class NativeAuthenticatorTests
                 "email": { "requirement": "REQUIRED", "state": "GRANTED" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                 "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "avatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
             }
         }
         """;

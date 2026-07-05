@@ -15,7 +15,8 @@ public class TokenParserTests
 
         Assert.Equal("Ada", token.Body.FirstName);
         Assert.Equal("Lovelace", token.Body.LastName);
-        Assert.Equal("https://cdn.sudomimus.com/avatar/subject-1.png", token.Body.AvatarUrl);
+        Assert.Equal("https://cdn.sudomimus.com/avatar/subject-1.png", token.Body.StaticAvatarUrl);
+        Assert.Equal("https://cdn.sudomimus.com/avatar/subject-1.gif", token.Body.AnimatedAvatarUrl);
         Assert.Equal("subject-1", token.Body.Subject);
         Assert.Equal("Access", token.Header.KeyType);
         Assert.Equal("anchor-1", token.Header.Audience);

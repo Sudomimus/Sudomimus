@@ -34,7 +34,7 @@ public sealed record AccessTokenBody
 
     /// <summary>
     /// Verified email associated with this login. Consent-gated like
-    /// <c>FirstName</c> / <c>LastName</c> / <c>AvatarUrl</c> (minted only when
+    /// <c>FirstName</c> / <c>LastName</c> / avatar URLs (minted only when
     /// policy permits AND the user granted the EMAIL claim), and omitted for
     /// accounts with no verified email unless a synthetic email policy emits a
     /// proxy address.
@@ -43,9 +43,18 @@ public sealed record AccessTokenBody
     public string? EmailAddress { get; init; }
 
     /// <summary>
-    /// Sector-scoped public avatar URL. Consent-gated like the other shareable
-    /// claims; synthetic avatar policies may emit a generated placeholder image.
+    /// Sector-scoped static public avatar URL. Consent-gated like the other
+    /// shareable claims; synthetic avatar policies may emit a generated
+    /// placeholder image.
     /// </summary>
-    [JsonPropertyName("avatarUrl")]
-    public string? AvatarUrl { get; init; }
+    [JsonPropertyName("staticAvatarUrl")]
+    public string? StaticAvatarUrl { get; init; }
+
+    /// <summary>
+    /// Sector-scoped animated public avatar URL. Consent-gated separately from
+    /// <c>StaticAvatarUrl</c>. If the selected avatar has no animation, this is
+    /// the same URL as <c>StaticAvatarUrl</c>.
+    /// </summary>
+    [JsonPropertyName("animatedAvatarUrl")]
+    public string? AnimatedAvatarUrl { get; init; }
 }

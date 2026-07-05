@@ -74,7 +74,8 @@ internal static class TestHelpers
             firstName = "Ada",
             lastName = "Lovelace",
             emailAddress = "ada@example.com",
-            avatarUrl = "https://cdn.sudomimus.com/avatar/subject-1.png",
+            staticAvatarUrl = "https://cdn.sudomimus.com/avatar/subject-1.png",
+            animatedAvatarUrl = "https://cdn.sudomimus.com/avatar/subject-1.gif",
         };
         return MintToken(header, body, privateKeyPem);
     }
