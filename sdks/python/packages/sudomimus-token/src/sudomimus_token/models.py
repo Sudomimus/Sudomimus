@@ -35,7 +35,8 @@ class AccessTokenBody(BaseModel):
     internal account identifier never appears in a token. Opaque: never
     parse or format-validate it.
 
-    ``firstName``, ``lastName``, ``emailAddress``, and ``avatarUrl`` are
+    ``firstName``, ``lastName``, ``emailAddress``, ``staticAvatarUrl``, and
+    ``animatedAvatarUrl`` are
     consent-gated (claim sharing): each is minted only when the application's
     claim policy permits it AND the user has granted that claim, so any of
     them may be absent. Synthetic policies may emit generated placeholders.
@@ -45,7 +46,8 @@ class AccessTokenBody(BaseModel):
     firstName: str | None = None
     lastName: str | None = None
     emailAddress: str | None = None
-    avatarUrl: str | None = None
+    staticAvatarUrl: str | None = None
+    animatedAvatarUrl: str | None = None
 
 
 class RefreshTokenBody(BaseModel):

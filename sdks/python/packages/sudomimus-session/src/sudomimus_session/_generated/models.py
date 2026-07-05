@@ -37,7 +37,8 @@ class ClaimsStateView(BaseModel):
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    avatar: ClaimRequirementStateView
+    staticAvatar: ClaimRequirementStateView
+    animatedAvatar: ClaimRequirementStateView
 
 
 class RefreshRequest(BaseModel):

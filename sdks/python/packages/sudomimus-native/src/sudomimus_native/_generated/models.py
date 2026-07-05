@@ -87,7 +87,7 @@ class ClaimRequirementStateView(BaseModel):
 
 class ClaimsStateView(BaseModel):
     """
-    Per-claim view across the four shareable claims, carried on both
+    Per-claim view across the five shareable claims, carried on both
     the 200 (why is a claim absent from the minted token) and the
     claim-gate 403 (what is still owed).
 
@@ -96,7 +96,8 @@ class ClaimsStateView(BaseModel):
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    avatar: ClaimRequirementStateView
+    staticAvatar: ClaimRequirementStateView
+    animatedAvatar: ClaimRequirementStateView
 
 
 class ErrandHandoff(BaseModel):
@@ -174,7 +175,7 @@ class DirectIssueAccessKeyResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `staticAvatarUrl` /\n`animatedAvatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
     )
     refreshToken: str = Field(
         ...,
@@ -187,7 +188,7 @@ class DirectIssueSteamTicketResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `staticAvatarUrl` /\n`animatedAvatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
     )
     refreshToken: str = Field(
         ...,

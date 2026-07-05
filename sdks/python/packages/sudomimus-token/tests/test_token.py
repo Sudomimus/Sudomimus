@@ -52,7 +52,8 @@ def _mint(
         {
             "subject": "subject-1",
             "firstName": "Ada",
-            "avatarUrl": "https://cdn.sudomimus.com/avatar/subject-1.png",
+            "staticAvatarUrl": "https://cdn.sudomimus.com/avatar/subject-1.png",
+            "animatedAvatarUrl": "https://cdn.sudomimus.com/avatar/subject-1.gif",
         }
         if kty == "Access"
         else {"subject": "subject-1"}
@@ -71,12 +72,13 @@ def test_verify_access_token_happy_path() -> None:
     token = TokenVerifier(lambda _: public_pem).verify_access_token(jwt)
     assert token.body.subject == "subject-1"
     assert token.body.firstName == "Ada"
-    assert token.body.avatarUrl == "https://cdn.sudomimus.com/avatar/subject-1.png"
+    assert token.body.staticAvatarUrl == "https://cdn.sudomimus.com/avatar/subject-1.png"
+    assert token.body.animatedAvatarUrl == "https://cdn.sudomimus.com/avatar/subject-1.gif"
     assert token.header.aud == ANCHOR
 
 
 def test_verify_access_token_consent_gated_claims_absent() -> None:
-    # firstName / lastName / emailAddress / avatarUrl are consent-gated and may
+    # firstName / lastName / emailAddress / avatar URLs are consent-gated and may
     # be absent; a token carrying only `subject` must still parse.
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem, body={"subject": "subject-1"})
@@ -85,7 +87,8 @@ def test_verify_access_token_consent_gated_claims_absent() -> None:
     assert token.body.firstName is None
     assert token.body.lastName is None
     assert token.body.emailAddress is None
-    assert token.body.avatarUrl is None
+    assert token.body.staticAvatarUrl is None
+    assert token.body.animatedAvatarUrl is None
 
 
 def test_verify_refresh_token_happy_path() -> None:

@@ -38,7 +38,8 @@ def _token_response(request: httpx.Request) -> httpx.Response:
                 "email": {"requirement": "OFF", "state": "UNKNOWN"},
                 "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                 "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
             },
         },
     )
@@ -207,7 +208,8 @@ def test_create_errand() -> None:
                     "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
                     "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                     "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                    "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
                 },
             },
         )
@@ -251,7 +253,8 @@ def test_async_create_errand() -> None:
                         "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
                         "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                         "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                        "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
                     },
                 },
             )

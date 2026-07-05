@@ -140,7 +140,7 @@ class ClaimRequirementStateView(BaseModel):
 
 class ClaimsStateView(BaseModel):
     """
-    Per-claim view across the four shareable claims - why a claim is or is
+    Per-claim view across the five shareable claims - why a claim is or is
     not present in the minted token.
 
     """
@@ -148,7 +148,8 @@ class ClaimsStateView(BaseModel):
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    avatar: ClaimRequirementStateView
+    staticAvatar: ClaimRequirementStateView
+    animatedAvatar: ClaimRequirementStateView
 
 
 class Error1(BaseModel):
@@ -166,7 +167,7 @@ class DeviceTokenResponse(BaseModel):
     applicationAnchor: ApplicationAnchor
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). The application-visible user key is\nthe `subject` (sector subject) claim. Claim fields such as\n`emailAddress`, `firstName`, `lastName`, and `avatarUrl` are minted\naccording to the application's claim policy and the user's standing grant.\n",
+        description="Short-lived access token (JWT). The application-visible user key is\nthe `subject` (sector subject) claim. Claim fields such as\n`emailAddress`, `firstName`, `lastName`, `staticAvatarUrl`, and\n`animatedAvatarUrl` are minted\naccording to the application's claim policy and the user's standing grant.\n",
     )
     refreshToken: str = Field(
         ...,

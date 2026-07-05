@@ -100,7 +100,7 @@ class ClaimRequirementStateView(BaseModel):
 
 class ClaimsStateView(BaseModel):
     """
-    Per-claim view across the four shareable claims — why a claim is
+    Per-claim view across the five shareable claims — why a claim is
     or is not present in the minted token (policy OFF, never asked,
     declined, or granted).
 
@@ -109,7 +109,8 @@ class ClaimsStateView(BaseModel):
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    avatar: ClaimRequirementStateView
+    staticAvatar: ClaimRequirementStateView
+    animatedAvatar: ClaimRequirementStateView
 
 
 class RedeemResponse(BaseModel):
@@ -131,7 +132,7 @@ class AccessTokenBody(BaseModel):
     JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
     `sub`) live in the JWT *header*; this object is the body. The
     application keys its users on `subject`. The `firstName`,
-    `lastName`, `emailAddress`, and `avatarUrl` claims are consent-gated (claim
+    `lastName`, `emailAddress`, `staticAvatarUrl`, and `animatedAvatarUrl` claims are consent-gated (claim
     sharing): each is minted only when the application's claim policy
     permits it AND the user has granted that claim, so any of them may
     be absent. Synthetic modes are the exception: `SYNTHETIC_ONLY` always
@@ -153,11 +154,15 @@ class AccessTokenBody(BaseModel):
     )
     emailAddress: str | None = Field(
         None,
-        description="Email associated with this login. Consent-gated like\n`firstName` / `lastName` / `avatarUrl` (minted only when policy permits AND\nthe user granted the EMAIL claim). When a real value is included:\nthe exact email typed for email-OTP logins, otherwise the\naccount's primary email; omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only). Synthetic email policies\nare the exception: the field is then always present — a real\nverified email only under `SYNTHETIC_FALLBACK` when shared,\notherwise a `…@proxy.sudomimus.email` proxy address (best-effort\nforwarding, not guaranteed; not a verified mailbox).\n",
+        description="Email associated with this login. Consent-gated like\n`firstName` / `lastName` / avatar URLs (minted only when policy permits AND\nthe user granted the EMAIL claim). When a real value is included:\nthe exact email typed for email-OTP logins, otherwise the\naccount's primary email; omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only). Synthetic email policies\nare the exception: the field is then always present — a real\nverified email only under `SYNTHETIC_FALLBACK` when shared,\notherwise a `…@proxy.sudomimus.email` proxy address (best-effort\nforwarding, not guaranteed; not a verified mailbox).\n",
     )
-    avatarUrl: AnyUrl | None = Field(
+    staticAvatarUrl: AnyUrl | None = Field(
         None,
-        description="Sector-scoped public avatar URL. Consent-gated like the other\nshareable claims and minted as `AVATAR` when policy and grant allow\nit. The URL is pairwise to this account / sector delivery handle,\neven when it resolves to the user's global avatar image. Synthetic\navatar policies return a generated sector placeholder image.\n",
+        description="Sector-scoped static public avatar URL. Consent-gated like the other\nshareable claims and minted as `STATIC_AVATAR` when policy and grant\nallow it. The URL is pairwise to this account / sector delivery\nhandle, even when it resolves to the user's global avatar image.\nSynthetic avatar policies return a generated sector placeholder image.\n",
+    )
+    animatedAvatarUrl: AnyUrl | None = Field(
+        None,
+        description="Sector-scoped animated public avatar URL. Consent-gated separately\nfrom `staticAvatarUrl` and minted as `ANIMATED_AVATAR` when policy\nand grant allow it. If the selected avatar has no animation, this\nfield is the same URL as `staticAvatarUrl`.\n",
     )
 
 

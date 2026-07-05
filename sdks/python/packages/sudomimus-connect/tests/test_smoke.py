@@ -130,7 +130,8 @@ def test_redeem_happy_path() -> None:
                     "email": {"requirement": "OFF", "state": "UNKNOWN"},
                     "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                     "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                    "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
                 },
             },
         )
@@ -313,7 +314,8 @@ def test_async_redeem_and_info() -> None:
                     "email": {"requirement": "OFF", "state": "UNKNOWN"},
                     "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                     "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                    "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
                 },
             },
         )
