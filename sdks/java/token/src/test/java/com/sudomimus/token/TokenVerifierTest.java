@@ -31,7 +31,8 @@ class TokenVerifierTest {
 
         assertEquals("subject-1", token.getBody().subject);
         assertEquals("Ada", token.getBody().firstName);
-        assertEquals("https://cdn.sudomimus.com/avatar/subject-1.png", token.getBody().avatarUrl);
+        assertEquals("https://cdn.sudomimus.com/avatar/subject-1.png", token.getBody().staticAvatarUrl);
+        assertEquals("https://cdn.sudomimus.com/avatar/subject-1.gif", token.getBody().animatedAvatarUrl);
     }
 
     @Test

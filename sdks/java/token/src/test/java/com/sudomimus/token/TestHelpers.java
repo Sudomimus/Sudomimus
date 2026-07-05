@@ -80,7 +80,8 @@ final class TestHelpers {
         body.put("firstName", "Ada");
         body.put("lastName", "Lovelace");
         body.put("emailAddress", "ada@example.com");
-        body.put("avatarUrl", "https://cdn.sudomimus.com/avatar/subject-1.png");
+        body.put("staticAvatarUrl", "https://cdn.sudomimus.com/avatar/subject-1.png");
+        body.put("animatedAvatarUrl", "https://cdn.sudomimus.com/avatar/subject-1.gif");
 
         return mintToken(header, body, priv);
     }
