@@ -144,7 +144,8 @@ export interface components {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            avatar: components["schemas"]["ClaimRequirementStateView"];
+            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
+            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
         };
         RefreshRequest: {
             refreshToken: string;

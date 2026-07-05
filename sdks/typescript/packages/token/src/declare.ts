@@ -34,7 +34,7 @@ export type AccessTokenBody = {
 
     /**
      * Verified email associated with this login. Consent-gated like
-     * `firstName` / `lastName` / `avatarUrl` (minted only when policy permits
+     * `firstName` / `lastName` / avatar URLs (minted only when policy permits
      * AND the user granted the EMAIL claim). When included: the exact email
      * typed for email-OTP logins, otherwise the account's primary email.
      * Always omitted for accounts with no verified email (e.g. Steam-only or
@@ -43,11 +43,18 @@ export type AccessTokenBody = {
     readonly emailAddress?: string;
 
     /**
-     * Sector-scoped public avatar URL. Consent-gated like the other shareable
-     * claims and minted only when policy and grant allow it. Synthetic avatar
-     * policies may emit a generated sector placeholder image.
+     * Sector-scoped static public avatar URL. Consent-gated like the other
+     * shareable claims and minted only when policy and grant allow it. Synthetic
+     * avatar policies may emit a generated sector placeholder image.
      */
-    readonly avatarUrl?: string;
+    readonly staticAvatarUrl?: string;
+
+    /**
+     * Sector-scoped animated public avatar URL. Consent-gated separately from
+     * `staticAvatarUrl`. If the selected avatar has no animation, this is the
+     * same URL as `staticAvatarUrl`.
+     */
+    readonly animatedAvatarUrl?: string;
 };
 
 export type RefreshTokenHeader = Record<string, never>;

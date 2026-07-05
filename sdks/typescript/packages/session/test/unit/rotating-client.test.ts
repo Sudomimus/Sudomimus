@@ -18,7 +18,8 @@ const claims = {
     email: { requirement: "OFF", state: "UNKNOWN" },
     firstName: { requirement: "OPTIONAL", state: "GRANTED" },
     lastName: { requirement: "OFF", state: "UNKNOWN" },
-    avatar: { requirement: "OFF", state: "UNKNOWN" },
+    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
+    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
 } as const;
 
 const newClient = (fetch: jest.Mock): SessionClient =>

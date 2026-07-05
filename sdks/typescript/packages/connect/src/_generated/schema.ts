@@ -191,7 +191,7 @@ export interface components {
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the four shareable claims — why a claim is
+         * @description Per-claim view across the five shareable claims — why a claim is
          *     or is not present in the minted token (policy OFF, never asked,
          *     declined, or granted).
          */
@@ -199,7 +199,8 @@ export interface components {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            avatar: components["schemas"]["ClaimRequirementStateView"];
+            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
+            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
         };
         RedeemResponse: {
             claims: components["schemas"]["ClaimsStateView"];
@@ -223,7 +224,7 @@ export interface components {
          *     JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
          *     `sub`) live in the JWT *header*; this object is the body. The
          *     application keys its users on `subject`. The `firstName`,
-         *     `lastName`, `emailAddress`, and `avatarUrl` claims are consent-gated (claim
+         *     `lastName`, `emailAddress`, `staticAvatarUrl`, and `animatedAvatarUrl` claims are consent-gated (claim
          *     sharing): each is minted only when the application's claim policy
          *     permits it AND the user has granted that claim, so any of them may
          *     be absent. Synthetic modes are the exception: `SYNTHETIC_ONLY` always
@@ -250,7 +251,7 @@ export interface components {
             lastName?: string;
             /**
              * @description Email associated with this login. Consent-gated like
-             *     `firstName` / `lastName` / `avatarUrl` (minted only when policy permits AND
+             *     `firstName` / `lastName` / avatar URLs (minted only when policy permits AND
              *     the user granted the EMAIL claim). When a real value is included:
              *     the exact email typed for email-OTP logins, otherwise the
              *     account's primary email; omitted for accounts with no verified
@@ -263,13 +264,21 @@ export interface components {
             emailAddress?: string;
             /**
              * Format: uri
-             * @description Sector-scoped public avatar URL. Consent-gated like the other
-             *     shareable claims and minted as `AVATAR` when policy and grant allow
-             *     it. The URL is pairwise to this account / sector delivery handle,
-             *     even when it resolves to the user's global avatar image. Synthetic
-             *     avatar policies return a generated sector placeholder image.
+             * @description Sector-scoped static public avatar URL. Consent-gated like the other
+             *     shareable claims and minted as `STATIC_AVATAR` when policy and grant
+             *     allow it. The URL is pairwise to this account / sector delivery
+             *     handle, even when it resolves to the user's global avatar image.
+             *     Synthetic avatar policies return a generated sector placeholder image.
              */
-            avatarUrl?: string;
+            staticAvatarUrl?: string;
+            /**
+             * Format: uri
+             * @description Sector-scoped animated public avatar URL. Consent-gated separately
+             *     from `staticAvatarUrl` and minted as `ANIMATED_AVATAR` when policy
+             *     and grant allow it. If the selected avatar has no animation, this
+             *     field is the same URL as `staticAvatarUrl`.
+             */
+            animatedAvatarUrl?: string;
         };
         /**
          * @description Decoded body (payload) of a Sudomimus refresh token. Carries the
@@ -681,7 +690,7 @@ export interface operations {
              *     - `AccountDisabled` — the realizing account is disabled.
              *     - `AccountDeleted` — the realizing account has been erased.
              *     - `ClaimConsentRequired` — the application requires a claim
-             *       (email / first name / last name / avatar) the user has not granted;
+             *       (email / first name / last name / static avatar / animated avatar) the user has not granted;
              *       the standing grant must be (re)established through an
              *       interactive browser login before tokens can be issued.
              *     - `EmailDomainBlocked` — one of the account's verified email

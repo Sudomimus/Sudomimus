@@ -20,7 +20,8 @@ const SAMPLE_CLAIMS: ClaimsStateView = {
     email: { requirement: "REQUIRED", state: "GRANTED" },
     firstName: { requirement: "OFF", state: "UNKNOWN" },
     lastName: { requirement: "OFF", state: "UNKNOWN" },
-    avatar: { requirement: "OFF", state: "UNKNOWN" },
+    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
+    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
 };
 
 describe("Native schema-derived types", () => {

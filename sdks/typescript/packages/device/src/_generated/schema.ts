@@ -133,7 +133,8 @@ export interface components {
             /**
              * @description Short-lived access token (JWT). The application-visible user key is
              *     the `subject` (sector subject) claim. Claim fields such as
-             *     `emailAddress`, `firstName`, `lastName`, and `avatarUrl` are minted
+             *     `emailAddress`, `firstName`, `lastName`, `staticAvatarUrl`, and
+             *     `animatedAvatarUrl` are minted
              *     according to the application's claim policy and the user's standing grant.
              */
             accessToken: string;
@@ -173,14 +174,15 @@ export interface components {
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the four shareable claims - why a claim is or is
+         * @description Per-claim view across the five shareable claims - why a claim is or is
          *     not present in the minted token.
          */
         ClaimsStateView: {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            avatar: components["schemas"]["ClaimRequirementStateView"];
+            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
+            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
         };
         /**
          * @description Error response body for non-polling validation and infrastructure

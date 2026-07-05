@@ -218,7 +218,8 @@ export interface components {
              * @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
-             *     The `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are
+             *     The `firstName` / `lastName` / `emailAddress` / `staticAvatarUrl` /
+             *     `animatedAvatarUrl` claims are
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              */
             accessToken: string;
@@ -251,7 +252,8 @@ export interface components {
              * @description Short-lived access token (JWT). Body shape matches Connect's
              *     `AccessTokenBody`: the application-visible user key is the
              *     `subject` (sector subject) claim, not a raw account identifier.
-             *     The `firstName` / `lastName` / `emailAddress` / `avatarUrl` claims are
+             *     The `firstName` / `lastName` / `emailAddress` / `staticAvatarUrl` /
+             *     `animatedAvatarUrl` claims are
              *     consent-gated and may be absent (see Connect `AccessTokenBody`).
              */
             accessToken: string;
@@ -279,7 +281,7 @@ export interface components {
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the four shareable claims, carried on both
+         * @description Per-claim view across the five shareable claims, carried on both
          *     the 200 (why is a claim absent from the minted token) and the
          *     claim-gate 403 (what is still owed).
          */
@@ -287,7 +289,8 @@ export interface components {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            avatar: components["schemas"]["ClaimRequirementStateView"];
+            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
+            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
         };
         /**
          * @description The browser side-trip that unblocks a claim-gated direct-issue:

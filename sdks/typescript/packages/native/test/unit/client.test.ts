@@ -74,7 +74,8 @@ describe("NativeClient", () => {
                     email: { requirement: "OFF", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
-                    avatar: { requirement: "OFF", state: "UNKNOWN" },
+                    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -117,7 +118,8 @@ describe("NativeClient", () => {
                     email: { requirement: "OFF", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
-                    avatar: { requirement: "OFF", state: "UNKNOWN" },
+                    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -208,7 +210,8 @@ describe("NativeClient", () => {
                     email: { requirement: "REQUIRED", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
-                    avatar: { requirement: "OFF", state: "UNKNOWN" },
+                    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -264,7 +267,8 @@ describe("NativeClient", () => {
                         email: { requirement: "REQUIRED", state: "UNKNOWN" },
                         firstName: { requirement: "OFF", state: "UNKNOWN" },
                         lastName: { requirement: "OFF", state: "UNKNOWN" },
-                        avatar: { requirement: "OFF", state: "UNKNOWN" },
+                        staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                        animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
                     },
                     errand: {
                         errandKey: "ernd_courier-route-abcdef012345-seal",
