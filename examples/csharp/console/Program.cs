@@ -212,10 +212,11 @@ static void PrintClaims(Sudomimus.Native.ClaimsStateView claims)
     PrintClaim("email", claims.Email);
     PrintClaim("firstName", claims.FirstName);
     PrintClaim("lastName", claims.LastName);
-    PrintClaim("avatar", claims.Avatar);
+    PrintClaim("staticAvatar", claims.StaticAvatar);
+    PrintClaim("animatedAvatar", claims.AnimatedAvatar);
 
     static void PrintClaim(string name, Sudomimus.Native.ClaimRequirementStateView claim)
-        => Console.WriteLine($"    {name,-10} requirement={claim.Requirement,-18} state={claim.State}");
+        => Console.WriteLine($"    {name,-16} requirement={claim.Requirement,-18} state={claim.State}");
 }
 
 static Task OpenBrowser(Uri uri, CancellationToken cancellationToken)

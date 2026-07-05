@@ -66,10 +66,11 @@ logs out through Session `/logout`.
   subject:           subject-...
   firstName:         <name or SteamID64>
   claims:
-    email      requirement=REQUIRED           state=GRANTED
-    firstName  requirement=OFF                state=UNKNOWN
-    lastName   requirement=OFF                state=UNKNOWN
-    avatar     requirement=OFF                state=UNKNOWN
+    email            requirement=REQUIRED           state=GRANTED
+    firstName        requirement=OFF                state=UNKNOWN
+    lastName         requirement=OFF                state=UNKNOWN
+    staticAvatar     requirement=OFF                state=UNKNOWN
+    animatedAvatar   requirement=OFF                state=UNKNOWN
 ```
 
 ## Claim-gated logins (errands)

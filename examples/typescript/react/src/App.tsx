@@ -55,7 +55,8 @@ type AccessTokenBody = {
     firstName?: string;
     lastName?: string;
     emailAddress?: string;
-    avatarUrl?: string;
+    staticAvatarUrl?: string;
+    animatedAvatarUrl?: string;
 };
 
 type DoneState =
