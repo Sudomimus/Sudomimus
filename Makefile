@@ -12,6 +12,10 @@ GRADLEW := ./gradlew
 install:
 	pnpm -C $(TS_SDK) install
 
+.PHONY: update-dependencies-typescript
+update-dependencies-typescript:
+	pnpm -C $(TS_SDK) run update-dependencies
+
 # ---------- Workspace-wide (via turbo) ----------
 
 .PHONY: generate
