@@ -14,6 +14,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from sudomimus_connect import (
     PRODUCTION_BASE_URL,
     AsyncConnectClient,
+    AuthenticationRuleDiscordOAuthPayload,
+    AuthenticationRuleGoogleOAuthPayload,
     ConnectApiError,
     ConnectClient,
     ConnectClientAuthWithKey,
@@ -61,6 +63,14 @@ def test_default_base_url_is_production() -> None:
 def test_establish_requires_client_auth() -> None:
     with _client(lambda r: httpx.Response(200)) as client, pytest.raises(ConnectConfigError):
         client.establish(EstablishRequest(applicationAnchor="my-app"))
+
+
+def test_oauth_constraint_payloads_expose_new_allowlists() -> None:
+    google = AuthenticationRuleGoogleOAuthPayload(allowedHostedDomains=["example.com"])
+    discord = AuthenticationRuleDiscordOAuthPayload(allowedDiscordGuilds=["123456789"])
+
+    assert google.model_dump(mode="json") == {"allowedHostedDomains": ["example.com"]}
+    assert discord.model_dump(mode="json") == {"allowedDiscordGuilds": ["123456789"]}
 
 
 def test_establish_signs_request_with_matching_body_hash() -> None:
@@ -220,11 +230,11 @@ def test_close_closes_owned_client() -> None:
 def test_health() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/health"
-        return httpx.Response(200, json={"ready": True, "service": "connect", "version": "1"})
+        return httpx.Response(200, json={"status": "ok", "service": "connect", "version": "1"})
 
     with _client(handler) as client:
         result = client.health()
-    assert result.ready is True
+    assert result.status == "ok"
     assert result.service == "connect"
 
 
@@ -380,21 +390,21 @@ def test_async_health_status_poll() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if path == "/health":
-            return httpx.Response(200, json={"ready": True, "service": "connect", "version": "1"})
+            return httpx.Response(200, json={"status": "ok", "service": "connect", "version": "1"})
         if path == "/status-poll":
             return httpx.Response(200, json={"status": "PENDING"})
         return httpx.Response(404)
 
-    async def run() -> tuple[bool, str]:
+    async def run() -> tuple[str, str]:
         async with AsyncConnectClient(
             http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
         ) as client:
             health = await client.health()
             poll = await client.status_poll(StatusPollRequest(exposureKey="ek", hiddenKey="hk"))
-            return health.ready, poll.root.status
+            return health.status, poll.root.status
 
-    ready, status = asyncio.run(run())
-    assert ready is True
+    health_status, status = asyncio.run(run())
+    assert health_status == "ok"
     assert status == "PENDING"
 
 

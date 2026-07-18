@@ -8,7 +8,6 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from sudomimus_session import AsyncInMemoryTokenStore, InMemoryTokenStore, TokenPair
 from sudomimus_device import (
     PRODUCTION_BASE_URL,
     AsyncDeviceAuthenticator,
@@ -23,6 +22,7 @@ from sudomimus_device import (
     DeviceTokenApiError,
     DeviceTokenRequest,
 )
+from sudomimus_session import AsyncInMemoryTokenStore, InMemoryTokenStore, TokenPair
 
 Handler = Callable[[httpx.Request], httpx.Response]
 DEVICE_CODE = "dvc_" + "a" * 64
@@ -75,13 +75,13 @@ def test_health() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured["url"] = str(request.url)
-        return httpx.Response(200, json={"ready": True, "service": "device", "version": "1.0.0"})
+        return httpx.Response(200, json={"status": "ok", "service": "device", "version": "1.0.0"})
 
     with _sync_client(handler) as client:
         result = client.health()
 
     assert captured["url"].endswith("/health")
-    assert result.ready is True
+    assert result.status == "ok"
 
 
 def test_device_authorize() -> None:

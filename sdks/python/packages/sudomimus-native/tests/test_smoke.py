@@ -8,6 +8,7 @@ from collections.abc import Callable
 
 import httpx
 import pytest
+from pydantic import ValidationError
 from sudomimus_native import (
     PRODUCTION_BASE_URL,
     AsyncNativeClient,
@@ -16,6 +17,7 @@ from sudomimus_native import (
     DirectIssueSteamTicketRequest,
     NativeApiError,
     NativeClient,
+    Status,
 )
 
 Handler = Callable[[httpx.Request], httpx.Response]
@@ -91,6 +93,15 @@ def test_direct_issue_access_key() -> None:
     assert result.accessToken == "a.b.c"
 
 
+def test_access_key_identifier_requires_uuid_v4() -> None:
+    with pytest.raises(ValidationError):
+        DirectIssueAccessKeyRequest(
+            applicationAnchor="my-app",
+            accessKeyIdentifier="acs_k_11111111-1111-1111-8111-111111111111",
+            accessKeySecret=ACCESS_KEY_SECRET,
+        )
+
+
 def test_error_with_reason() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"reason": "AccessKeyDirectDenied"})
@@ -107,9 +118,9 @@ def test_error_with_reason() -> None:
     assert exc.value.reason == "AccessKeyDirectDenied"
 
 
-def test_error_with_empty_body() -> None:
+def test_rate_limit_with_empty_body() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(403, content=b"")
+        return httpx.Response(429, content=b"")
 
     with _client(handler) as client, pytest.raises(NativeApiError) as exc:
         client.direct_issue_steam_ticket(
@@ -117,7 +128,7 @@ def test_error_with_empty_body() -> None:
                 applicationAnchor="my-app", steamTicketHex="ab", steamAppId=1
             )
         )
-    assert exc.value.status == 403
+    assert exc.value.status == 429
     assert exc.value.reason is None
 
 
@@ -235,7 +246,7 @@ def test_errand_status() -> None:
         result = client.errand_status("ernd_xyz")
 
     assert captured["url"].endswith("/errand/ernd_xyz/status")
-    assert result.status == "COMPLETED"
+    assert result.status is Status.COMPLETED
 
 
 def test_async_create_errand() -> None:

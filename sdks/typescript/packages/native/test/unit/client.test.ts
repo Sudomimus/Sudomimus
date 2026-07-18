@@ -346,9 +346,9 @@ describe("NativeClient", () => {
             });
         });
 
-        it("throws NativeApiError with undefined reason on an empty error body", async () => {
+        it("surfaces a bodyless 429 rate-limit response", async () => {
 
-            const fetchMock = makeFetch([{ ok: false, status: 401, rawBody: "" }]);
+            const fetchMock = makeFetch([{ ok: false, status: 429, rawBody: "" }]);
             const client = new NativeClient({
                 baseUrl: "https://native.example.com",
                 fetch: fetchMock as unknown as typeof globalThis.fetch,
@@ -370,7 +370,7 @@ describe("NativeClient", () => {
 
             expect(caught).toBeInstanceOf(NativeApiError);
             const apiError = caught as NativeApiError;
-            expect(apiError.status).toBe(401);
+            expect(apiError.status).toBe(429);
             expect(apiError.reason).toBeUndefined();
             expect(apiError.body).toBeUndefined();
         });

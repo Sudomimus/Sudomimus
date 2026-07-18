@@ -149,11 +149,11 @@ def test_error_with_reason_and_empty_body() -> None:
 def test_health() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/health"
-        return httpx.Response(200, json={"ready": True, "service": "session", "version": "1"})
+        return httpx.Response(200, json={"status": "ok", "service": "session", "version": "1"})
 
     with _client(handler) as client:
         result = client.health()
-    assert result.ready is True
+    assert result.status == "ok"
     assert result.service == "session"
 
 
@@ -185,7 +185,12 @@ def test_async_refresh_introspect_logout_and_revoke_all() -> None:
             introspected = await client.introspect(IntrospectRequest(accessToken="a2"))
             logged_out = await client.logout(LogoutRequest(refreshToken="r2"))
             revoked = await client.revoke_all(RevokeAllRequest(subject="subject-1"))
-            return refreshed.accessToken, introspected.status, logged_out.revoked, revoked.revokedCount
+            return (
+                refreshed.accessToken,
+                introspected.status,
+                logged_out.revoked,
+                revoked.revokedCount,
+            )
 
     access_token, status, revoked, count = asyncio.run(run())
     assert access_token == "a2"

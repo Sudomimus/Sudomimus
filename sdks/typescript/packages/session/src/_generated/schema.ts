@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Liveness probe for the Session service. */
+        /** Report Session invocation health and deployment identity. */
         get: operations["health"];
         put?: never;
         post?: never;
@@ -130,8 +130,14 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         HealthResponse: {
-            ready: boolean;
+            /**
+             * @description The API invocation path completed successfully.
+             * @enum {string}
+             */
+            status: "ok";
+            /** @description Stable runtime service identity. */
             service: string;
+            /** @description Version from the deployed service's version manifest. */
             version: string;
         };
         ClaimRequirementStateView: {
@@ -186,7 +192,12 @@ export interface components {
     responses: never;
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Prevent storage of the credential-bearing response. */
+        CredentialCacheControl: "no-store";
+        /** @description Legacy cache instruction retained for credential responses. */
+        CredentialPragma: "no-cache";
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -200,7 +211,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Service is ready. */
+            /**
+             * @description The API invocation path is operational and reports the deployed
+             *     service identity. This response does not assert dependency,
+             *     configuration, or business-capability readiness.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -231,6 +246,8 @@ export interface operations {
              */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -280,6 +297,7 @@ export interface operations {
              *     - `ClaimConsentRequired` — a REQUIRED claim is no longer satisfied by a standing grant.
              *     - `EmailDomainBlocked` — a verified adopted domain now blocks this account.
              *     - `EmailDomainRequiresSso` — a verified adopted domain now requires SSO and this session was not realized through the required connector.
+             *     - `SsoAuthorityConflict` — verified adopted domains require distinct SSO connectors, so no refresh session can satisfy every domain authority until the conflict is repaired.
              */
             403: {
                 headers: {

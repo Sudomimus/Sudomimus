@@ -3,7 +3,6 @@
 from ._generated.models import (
     ClaimRequirementStateView,
     ClaimsStateView,
-    Error as SessionError,
     HealthResponse,
     IntrospectRequest,
     IntrospectResponse,
@@ -13,6 +12,9 @@ from ._generated.models import (
     RefreshResponse,
     RevokeAllRequest,
     RevokeAllResponse,
+)
+from ._generated.models import (
+    Error as SessionError,
 )
 from .async_client import AsyncSessionClient
 from .client import SessionClient

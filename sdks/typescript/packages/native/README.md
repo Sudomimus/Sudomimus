@@ -73,7 +73,7 @@ try {
 }
 ```
 
-The Native service returns `{ "reason": "<code>" }` for known failures. All access-key credential failures collapse into an opaque `401 AccessKeyDirectDenied`; three-layer rule rejections surface as `403` with `Layer1Denied` / `Layer2Denied` / `Layer3Denied`; a replayed Steam ticket returns `409`. For `PRIVATE_*` symbols the body is empty — in that case `err.reason` and `err.body` are both `undefined` and only `err.status` carries signal.
+The Native service returns `{ "reason": "<code>" }` for known failures. All access-key credential failures collapse into an opaque `401 AccessKeyDirectDenied`; policy rejections surface as `403`; and `409` distinguishes `ReplayProtectionAlreadySeen` from `AuthorizationArtifactStale`. Steam attempt budgets and failure circuits return `429` with an empty body, so callers should back off before acquiring another ticket. For `429` and `PRIVATE_*` symbols, `err.reason` and `err.body` are both `undefined` and only `err.status` carries signal.
 
 ## Claims & errand recovery
 

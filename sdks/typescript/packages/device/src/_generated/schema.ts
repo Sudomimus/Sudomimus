@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Liveness probe for the Device service. */
+        /** Report Device invocation health and deployment identity. */
         get: operations["health"];
         put?: never;
         post?: never;
@@ -83,8 +83,14 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         HealthResponse: {
-            ready: boolean;
+            /**
+             * @description The API invocation path completed successfully.
+             * @enum {string}
+             */
+            status: "ok";
+            /** @description Stable runtime service identity. */
             service: string;
+            /** @description Version from the deployed service's version manifest. */
             version: string;
         };
         /**
@@ -197,7 +203,12 @@ export interface components {
     responses: never;
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Prevent storage of the token or polling response. */
+        CredentialCacheControl: "no-store";
+        /** @description Legacy cache instruction retained for token polling responses. */
+        CredentialPragma: "no-cache";
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -211,7 +222,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Service is ready. */
+            /**
+             * @description The API invocation path is operational and reports the deployed
+             *     service identity. This response does not assert dependency,
+             *     configuration, or business-capability readiness.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -305,6 +320,8 @@ export interface operations {
             /** @description Tokens issued and the device authorization session consumed. */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -318,14 +335,20 @@ export interface operations {
              *       request yet. Continue polling after the current interval.
              *     - `slow_down` - the client is polling too quickly. Use the returned
              *       `interval` value for subsequent polls.
-             *     - `access_denied` - the user denied the request, approval failed, or
-             *       policy no longer allows token issuance.
+             *     - `access_denied` - the user denied the request, approval failed,
+             *       policy no longer allows token issuance, or the exact sector
+             *       binding changed after Layer 2 approved the session. Policy
+             *       denial includes an account whose verified domains require
+             *       distinct SSO connectors; the OAuth device response intentionally
+             *       does not expose a Sudomimus wire reason.
              *     - `expired_token` - the device authorization session expired.
              *     - `invalid_request` - the `deviceCode` is unknown or has already
              *       been consumed.
              */
             400: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -338,6 +361,8 @@ export interface operations {
              */
             500: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {

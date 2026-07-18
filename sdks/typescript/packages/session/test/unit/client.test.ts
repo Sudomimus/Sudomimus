@@ -43,7 +43,7 @@ describe("SessionClient", () => {
 
     it("GETs /health", async () => {
 
-        const expected: HealthResponse = { ready: true, service: "session", version: "1" };
+        const expected: HealthResponse = { status: "ok", service: "session", version: "1" };
         const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
         const client = new SessionClient({
             baseUrl: "https://session.example.com",

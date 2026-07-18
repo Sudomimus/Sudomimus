@@ -5,13 +5,28 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
+from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field
+
+
+class Status(StrEnum):
+    """
+    The API invocation path completed successfully.
+    """
+
+    ok = "ok"
 
 
 class HealthResponse(BaseModel):
-    ready: bool
-    service: str
-    version: str
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    status: Status = Field(
+        ..., description="The API invocation path completed successfully."
+    )
+    service: str = Field(..., description="Stable runtime service identity.")
+    version: str = Field(
+        ..., description="Version from the deployed service's version manifest."
+    )
 
 
 class DirectIssueAccessKeyRequest(BaseModel):
@@ -21,7 +36,7 @@ class DirectIssueAccessKeyRequest(BaseModel):
     accessKeyIdentifier: str = Field(
         ...,
         description="Canonical access-key identifier, including the mandatory\n`acs_k_` prefix followed by its UUID.\n",
-        pattern="^acs_k_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        pattern="^acs_k_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
     )
     accessKeySecret: str = Field(
         ...,
@@ -148,14 +163,14 @@ class CreateErrandResponse(BaseModel):
     claims: ClaimsStateView
 
 
-class Status(StrEnum):
+class Status1(StrEnum):
     PENDING = "PENDING"
     COMPLETED = "COMPLETED"
     EXPIRED = "EXPIRED"
 
 
 class ErrandStatusResponse(BaseModel):
-    status: Status
+    status: Status1
 
 
 class Error(BaseModel):

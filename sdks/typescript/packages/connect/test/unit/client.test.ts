@@ -57,7 +57,7 @@ describe("ConnectClient", () => {
         it("GETs /health and returns the parsed body", async () => {
 
             const expected: HealthResponse = {
-                ready: true,
+                status: "ok",
                 service: "connect",
                 version: "1.2.3",
             };

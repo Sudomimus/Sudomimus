@@ -70,7 +70,9 @@ def test_refresh_rotates_and_persists() -> None:
 
 
 def test_refresh_requires_seed() -> None:
-    rotating = RotatingSessionClient(_sync_client(lambda r: httpx.Response(404)), InMemoryTokenStore())
+    rotating = RotatingSessionClient(
+        _sync_client(lambda r: httpx.Response(404)), InMemoryTokenStore()
+    )
     with pytest.raises(SessionConfigError):
         rotating.refresh()
 

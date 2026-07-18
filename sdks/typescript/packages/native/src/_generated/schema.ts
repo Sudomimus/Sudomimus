@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Liveness probe for the Native service. */
+        /** Report Native invocation health and deployment identity. */
         get: operations["health"];
         put?: never;
         post?: never;
@@ -84,16 +84,25 @@ export interface paths {
          *
          *       1. Validates the application's authentication-rule layer admits
          *          `STEAM_TICKET` for this `steamAppId`.
-         *       2. Atomically records `sha256(steamTicketHex.toLowerCase())` for
-         *          replay protection (24-hour window); a duplicate is rejected
-         *          with `409`.
-         *       3. Verifies the ticket with Steam's
+         *       2. Applies fixed-window semantic budgets after local validation:
+         *          150 eligible attempts per application and 200 globally per 10
+         *          seconds. It also opens a 60-second failure circuit at 20
+         *          Steam/upstream failures per application or 60 globally. A
+         *          blocked request returns `429` before replay storage, per-request
+         *          auditing, or Steam verification. Per-IP limiting remains an
+         *          independent edge responsibility.
+         *       3. Atomically creates a 60-second processing reservation for
+         *          `sha256(steamTicketHex.toLowerCase())`; a concurrent duplicate
+         *          is rejected with `409`.
+         *       4. Verifies the ticket with Steam's
          *          `ISteamUserAuth/AuthenticateUserTicket` endpoint, identity
-         *          `"sudomimus"`.
-         *       4. Validates the application's realize-rule layer (`EMAIL` /
+         *          `"sudomimus"`, then promotes that exact live reservation to a
+         *          24-hour replay window. Invalid and upstream-failed attempts keep
+         *          only the short reservation.
+         *       5. Validates the application's realize-rule layer (`EMAIL` /
          *          `STEAM_ID` / `ACCOUNT_ALIAS` / `SECTOR_SUBJECT`) and ensures a
          *          `DIRECT_ISSUE` return rule exists.
-         *       5. Issues access + refresh JWTs signed with the application's
+         *       6. Issues access + refresh JWTs signed with the application's
          *          private key.
          *
          *     Tokens follow the same shape as those issued through other ordinary
@@ -190,8 +199,14 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         HealthResponse: {
-            ready: boolean;
+            /**
+             * @description The API invocation path completed successfully.
+             * @enum {string}
+             */
+            status: "ok";
+            /** @description Stable runtime service identity. */
             service: string;
+            /** @description Version from the deployed service's version manifest. */
             version: string;
         };
         DirectIssueAccessKeyRequest: {
@@ -360,7 +375,12 @@ export interface components {
     responses: never;
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Prevent storage of the credential-bearing response. */
+        CredentialCacheControl: "no-store";
+        /** @description Legacy cache instruction retained for credential responses. */
+        CredentialPragma: "no-cache";
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -374,7 +394,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Service is ready. */
+            /**
+             * @description The API invocation path is operational and reports the deployed
+             *     service identity. This response does not assert dependency,
+             *     configuration, or business-capability readiness.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -401,6 +425,8 @@ export interface operations {
             /** @description Tokens issued. */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -443,6 +469,13 @@ export interface operations {
              *     - `ApplicationDisabled` — the application is disabled.
              *     - `AccountDisabled` — the resolved account is disabled.
              *     - `AccountDeleted` — the resolved account has been erased.
+             *     - `EmailDomainBlocked` — a verified adopted domain blocks the
+             *       account platform-wide.
+             *     - `EmailDomainRequiresSso` — a verified adopted domain requires a
+             *       different SSO connector than this non-interactive proof used.
+             *     - `SsoAuthorityConflict` — verified adopted domains require
+             *       distinct SSO connectors. Direct issue remains blocked until the
+             *       domain policies or account email ownership are repaired.
              *     - `ClaimConsentRequired` — the application requires a claim the
              *       user has not yet granted; direct-issue cannot prompt.
              *     - `RequiredClaimDataMissing` — every required claim is granted,
@@ -472,6 +505,19 @@ export interface operations {
             };
             /** @description Application anchor not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description `AuthorizationArtifactStale` — the exact sector binding changed
+             *     after Layer 2 evaluated the direct-issue attempt. Retry the entire
+             *     request so the current identity is evaluated before issuance.
+             */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -518,6 +564,8 @@ export interface operations {
             /** @description Tokens issued. */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -551,6 +599,13 @@ export interface operations {
              *     - `ApplicationDisabled` — the application is disabled.
              *     - `AccountDisabled` — the resolved account is disabled.
              *     - `AccountDeleted` — the resolved account has been erased.
+             *     - `EmailDomainBlocked` — a verified adopted domain blocks the
+             *       account platform-wide.
+             *     - `EmailDomainRequiresSso` — a verified adopted domain requires a
+             *       different SSO connector than this non-interactive proof used.
+             *     - `SsoAuthorityConflict` — verified adopted domains require
+             *       distinct SSO connectors. Direct issue remains blocked until the
+             *       domain policies or account email ownership are repaired.
              *     - `ClaimConsentRequired` — the application requires a claim the
              *       user has not yet granted; direct-issue cannot prompt.
              *     - `RequiredClaimDataMissing` — every required claim is granted,
@@ -588,9 +643,17 @@ export interface operations {
                 };
             };
             /**
-             * @description Replay protection conflict — this Steam ticket has already been
-             *     redeemed within the replay window. Acquire a fresh ticket via
-             *     `GetAuthTicketForWebApi` and retry.
+             * @description Conflict. The response `reason` distinguishes:
+             *
+             *     - `ReplayProtectionAlreadySeen` — this Steam ticket is currently
+             *       being verified, was already Steam-verified within the 24-hour
+             *       replay window, or its processing reservation could not be
+             *       promoted safely. Acquire a fresh ticket via
+             *       `GetAuthTicketForWebApi` and retry.
+             *     - `AuthorizationArtifactStale` — the exact sector binding changed
+             *       after Layer 2 evaluated the direct-issue attempt. Acquire a fresh
+             *       ticket and retry the entire request so the current identity is
+             *       evaluated before issuance.
              */
             409: {
                 headers: {
@@ -599,6 +662,19 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /**
+             * @description The Steam route's per-application/global attempt budget or failure
+             *     circuit is exhausted. The response intentionally has no stable
+             *     reason body; back off before acquiring and submitting another
+             *     Steam ticket. No replay/audit row or Steam Partner API request is
+             *     made for this rejection.
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Steam's verification endpoint was unreachable or returned an unparseable response. */
             502: {

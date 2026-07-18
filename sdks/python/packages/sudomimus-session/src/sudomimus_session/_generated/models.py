@@ -5,13 +5,28 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class Status(StrEnum):
+    """
+    The API invocation path completed successfully.
+    """
+
+    ok = "ok"
 
 
 class HealthResponse(BaseModel):
-    ready: bool
-    service: str
-    version: str
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    status: Status = Field(
+        ..., description="The API invocation path completed successfully."
+    )
+    service: str = Field(..., description="Stable runtime service identity.")
+    version: str = Field(
+        ..., description="Version from the deployed service's version manifest."
+    )
 
 
 class Requirement(StrEnum):
@@ -60,7 +75,7 @@ class IntrospectRequest(BaseModel):
     accessToken: str
 
 
-class Status(StrEnum):
+class Status1(StrEnum):
     active = "active"
     revoked = "revoked"
     expired = "expired"
@@ -68,7 +83,7 @@ class Status(StrEnum):
 
 
 class IntrospectResponse(BaseModel):
-    status: Status
+    status: Status1
     recommendedRecheckSeconds: int
 
 

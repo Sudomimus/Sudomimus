@@ -35,7 +35,9 @@ class RotatingSessionClient:
 
     def seed(self, tokens: TokenPair) -> None:
         """Persist the initial pair returned by an ordinary login flow."""
-        self._store.save(TokenPair(access_token=tokens.access_token, refresh_token=tokens.refresh_token))
+        self._store.save(
+            TokenPair(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
+        )
 
     def get_access_token(self) -> str | None:
         """Return the currently-persisted access token, or ``None``."""

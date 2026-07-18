@@ -23,8 +23,8 @@ from ._generated.models import Error as DeviceError
 from .async_client import AsyncDeviceClient
 from .authenticator import (
     AsyncDeviceAuthenticator,
-    DeviceAuthorizationResult,
     DeviceAuthenticator,
+    DeviceAuthorizationResult,
     DevicePollProgress,
 )
 from .client import DeviceClient

@@ -20,9 +20,11 @@ from ._generated.models import (
     ErrandStatusResponse,
     Requirement,
     State,
-    Status,
 )
 from ._generated.models import Error as NativeError
+from ._generated.models import (
+    Status1 as Status,
+)
 from .async_client import AsyncNativeClient
 from .client import NativeClient
 from .constants import PRODUCTION_BASE_URL, STEAM_TICKET_IDENTITY

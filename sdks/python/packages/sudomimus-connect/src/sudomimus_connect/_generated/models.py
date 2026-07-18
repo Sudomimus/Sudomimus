@@ -9,10 +9,25 @@ from typing import Any, Literal
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 
 
+class Status(StrEnum):
+    """
+    The API invocation path completed successfully.
+    """
+
+    ok = "ok"
+
+
 class HealthResponse(BaseModel):
-    ready: bool
-    service: str
-    version: str
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    status: Status = Field(
+        ..., description="The API invocation path completed successfully."
+    )
+    service: str = Field(..., description="Stable runtime service identity.")
+    version: str = Field(
+        ..., description="Version from the deployed service's version manifest."
+    )
 
 
 class EstablishResponse(BaseModel):
@@ -32,7 +47,7 @@ class StatusPollRequest(BaseModel):
     hiddenKey: str
 
 
-class Status(StrEnum):
+class Status1(StrEnum):
     PENDING = "PENDING"
 
 
@@ -40,7 +55,7 @@ class StatusPollPendingResponse(BaseModel):
     status: Literal["PENDING"]
 
 
-class Status1(StrEnum):
+class Status2(StrEnum):
     REALIZED = "REALIZED"
 
 
@@ -268,7 +283,9 @@ class AuthenticationRuleSteamTicketPayload(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    allowedSteamAppIds: list[AllowedSteamAppId] = Field(..., min_length=1)
+    allowedSteamAppIds: list[AllowedSteamAppId] = Field(
+        ..., max_length=128, min_length=1
+    )
 
 
 class AuthenticationRuleSteamOpenIdPayload(BaseModel):
@@ -297,22 +314,27 @@ class AuthenticationRuleAccessKeyDirectPayload(BaseModel):
     )
 
 
+class AllowedHostedDomain(RootModel[str]):
+    root: str = Field(..., max_length=2048, min_length=1)
+
+
 class AuthenticationRuleGoogleOAuthPayload(BaseModel):
     """
-    Phase 1: any Google account is accepted as long as the
-    application's rule set allows GOOGLE_OAUTH at all. A later
-    phase will add `allowedHostedDomains: string[]` for Google
-    Workspace gating.
+    Empty `allowedHostedDomains` means no hosted-domain gating. A
+    non-empty list requires an exact, case-insensitive match against the
+    Google Workspace `hd` claim. The server lowercases and deduplicates
+    entries before persistence.
 
     """
 
     model_config = ConfigDict(
         extra="forbid",
     )
+    allowedHostedDomains: list[AllowedHostedDomain] | None = Field(None, max_length=128)
 
 
 class AllowedGitHubOrg(RootModel[str]):
-    root: str = Field(..., min_length=1)
+    root: str = Field(..., max_length=2048, min_length=1)
 
 
 class AuthenticationRuleGitHubOAuthPayload(BaseModel):
@@ -330,22 +352,26 @@ class AuthenticationRuleGitHubOAuthPayload(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    allowedGitHubOrgs: list[AllowedGitHubOrg]
+    allowedGitHubOrgs: list[AllowedGitHubOrg] = Field(..., max_length=128)
+
+
+class AllowedDiscordGuild(RootModel[str]):
+    root: str = Field(..., max_length=2048, min_length=1)
 
 
 class AuthenticationRuleDiscordOAuthPayload(BaseModel):
     """
-    Phase 1: any Discord account is accepted as long as the
-    application's rule set allows DISCORD_OAUTH at all. Phase 1.5
-    will add `allowedDiscordGuilds: string[]` for guild (server)
-    gating, which will additionally request the `guilds` OAuth
-    scope and fetch `GET /users/@me/guilds`.
+    Empty `allowedDiscordGuilds` means no guild gating. A non-empty list
+    requires membership in at least one listed Discord guild and causes
+    the authentication flow to request the `guilds` scope. Entries are
+    trimmed and deduplicated before persistence.
 
     """
 
     model_config = ConfigDict(
         extra="forbid",
     )
+    allowedDiscordGuilds: list[AllowedDiscordGuild] | None = Field(None, max_length=128)
 
 
 class AuthenticationRuleBattleNetOAuthPayload(BaseModel):
@@ -388,10 +414,16 @@ class ConstraintType(StrEnum):
     SECTOR_SUBJECT = "SECTOR_SUBJECT"
 
 
+class AllowedEmail(RootModel[str]):
+    root: str = Field(..., max_length=254)
+
+
 class RealizeRuleEmailPayload(BaseModel):
-    allowedEmails: list[str] = Field(
+    allowedEmails: list[AllowedEmail] = Field(
         ...,
         description="List of email addresses or glob patterns the realized identity\nmust match. Glob patterns are bounded by server-side limits to\nprevent regex backtracking attacks.\n",
+        max_length=128,
+        min_length=1,
     )
 
 
@@ -407,7 +439,7 @@ class RealizeRuleSteamIdPayload(BaseModel):
 
     """
 
-    allowedSteamIds: list[AllowedSteamId]
+    allowedSteamIds: list[AllowedSteamId] = Field(..., max_length=128, min_length=1)
 
 
 class AllowedAccountAliase(RootModel[str]):
@@ -426,7 +458,9 @@ class RealizeRuleAccountAliasPayload(BaseModel):
 
     """
 
-    allowedAccountAliases: list[AllowedAccountAliase]
+    allowedAccountAliases: list[AllowedAccountAliase] = Field(
+        ..., max_length=128, min_length=1
+    )
 
 
 class AllowedSectorSubject(RootModel[str]):
@@ -445,7 +479,9 @@ class RealizeRuleSectorSubjectPayload(BaseModel):
 
     """
 
-    allowedSectorSubjects: list[AllowedSectorSubject]
+    allowedSectorSubjects: list[AllowedSectorSubject] = Field(
+        ..., max_length=128, min_length=1
+    )
 
 
 class Type(StrEnum):
@@ -455,7 +491,8 @@ class Type(StrEnum):
 class Payload(BaseModel):
     callbackUrl: str = Field(
         ...,
-        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains.\n",
+        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains. The scheme\nMUST be HTTPS except loopback HTTP for local development\n(`localhost`, `127.0.0.1`, `[::1]`). The server enforces the\nlength limit in UTF-8 bytes.\n",
+        max_length=2048,
     )
 
 
@@ -485,30 +522,6 @@ class ReturnMethodReveal(BaseModel):
     payload: dict[str, Any] = Field(
         ...,
         description="Empty payload. Tokens are surfaced directly in the UI at\nrealize time and the inquiry is marked redeemed immediately;\nany subsequent `/redeem` for the same inquiry fails with\n`InquiryAlreadyRedeemed`.\n",
-    )
-
-
-class Type3(StrEnum):
-    DIRECT_ISSUE = "DIRECT_ISSUE"
-
-
-class ReturnMethodDirectIssue(BaseModel):
-    type: Literal["DIRECT_ISSUE"]
-    payload: dict[str, Any] = Field(
-        ...,
-        description="Empty payload. Opts the application in to native-api's\ndirect-issue flows (`/direct-issue/steam-ticket`,\n`/direct-issue/access-key`). Per-inquiry payload is empty\nbecause direct-issue does not flow through `/establish`.\n",
-    )
-
-
-class Type4(StrEnum):
-    OIDC = "OIDC"
-
-
-class ReturnMethodOidc(BaseModel):
-    type: Literal["OIDC"]
-    payload: dict[str, Any] = Field(
-        ...,
-        description="Accepted on the wire for symmetry, but in practice OIDC is\nnot declared per-inquiry — the OIDC API drives its own\ninquiry against Connect via CALLBACK-to-self. The matching\nper-inquiry payload is therefore empty.\n",
     )
 
 
@@ -580,21 +593,11 @@ class RealizeRuleConstraint(BaseModel):
 
 
 class ReturnMethodDeclaration(
-    RootModel[
-        ReturnMethodCallback
-        | ReturnMethodStatusPoll
-        | ReturnMethodReveal
-        | ReturnMethodDirectIssue
-        | ReturnMethodOidc
-    ]
+    RootModel[ReturnMethodCallback | ReturnMethodStatusPoll | ReturnMethodReveal]
 ):
-    root: (
-        ReturnMethodCallback
-        | ReturnMethodStatusPoll
-        | ReturnMethodReveal
-        | ReturnMethodDirectIssue
-        | ReturnMethodOidc
-    ) = Field(..., discriminator="type")
+    root: ReturnMethodCallback | ReturnMethodStatusPoll | ReturnMethodReveal = Field(
+        ..., discriminator="type"
+    )
 
 
 class EstablishRequest(BaseModel):
@@ -604,12 +607,18 @@ class EstablishRequest(BaseModel):
     authenticationConstraints: list[AuthenticationRuleConstraint] | None = Field(
         None,
         description="Optional per-inquiry narrowing of the application's\nauthentication-rule layer. Absent means no narrowing. If present,\nthe array MUST be non-empty; empty arrays are rejected with 400.\n",
+        max_length=16,
+        min_length=1,
     )
     realizeConstraints: list[RealizeRuleConstraint] | None = Field(
         None,
         description="Optional per-inquiry narrowing of the application's realize-rule\nlayer. Absent means no narrowing. If present, the array MUST be\nnon-empty; empty arrays are rejected with 400.\n",
+        max_length=16,
+        min_length=1,
     )
     returnMethods: list[ReturnMethodDeclaration] | None = Field(
         None,
-        description="Optional per-inquiry return-method declaration. Doubles as the\nconcrete delivery info for CALLBACK (carries the callback URL).\nAbsent means no per-inquiry narrowing (CALLBACK is unreachable\nfor this inquiry because no URL is anchored). If present, the\narray MUST be non-empty; empty arrays are rejected with 400.\n",
+        description="Optional per-inquiry return-method declaration. Connect accepts\nCALLBACK, STATUS_POLL, and REVEAL here; DIRECT_ISSUE, OIDC, and\nDEVICE_CODE are opened by their dedicated APIs after application-\nlevel ReturnRules are configured. CALLBACK doubles as the concrete\ndelivery info (carries the callback URL). Absent means no per-\ninquiry narrowing (CALLBACK is unreachable for this inquiry\nbecause no URL is anchored). If present, the array MUST be non-\nempty; empty arrays are rejected with 400.\n",
+        max_length=3,
+        min_length=1,
     )

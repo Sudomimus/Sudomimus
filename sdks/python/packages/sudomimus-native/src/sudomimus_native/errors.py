@@ -11,7 +11,8 @@ class NativeApiError(Exception):
     Distinguish failure modes by :attr:`status` and :attr:`reason`. All
     access-key credential failures collapse into a single opaque
     ``AccessKeyDirectDenied`` 401 reason; Steam-ticket replays surface as 409.
-    For ``PRIVATE`` reasons the body is empty and :attr:`reason` is ``None``.
+    For ``PRIVATE`` reasons and Steam rate-limit responses, the body is empty
+    and :attr:`reason` is ``None``.
     """
 
     def __init__(

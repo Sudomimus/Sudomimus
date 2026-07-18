@@ -14,7 +14,7 @@ from ._generated.models import (
     DeviceTokenResponse,
     HealthResponse,
 )
-from .client import _JSON_HEADERS, _ResponseT, _handle
+from .client import _JSON_HEADERS, _handle, _ResponseT
 from .constants import PRODUCTION_BASE_URL
 
 

@@ -8,10 +8,25 @@ from enum import StrEnum
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 
 
+class Status(StrEnum):
+    """
+    The API invocation path completed successfully.
+    """
+
+    ok = "ok"
+
+
 class HealthResponse(BaseModel):
-    ready: bool
-    service: str
-    version: str
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    status: Status = Field(
+        ..., description="The API invocation path completed successfully."
+    )
+    service: str = Field(..., description="Stable runtime service identity.")
+    version: str = Field(
+        ..., description="Version from the deployed service's version manifest."
+    )
 
 
 class ApplicationAnchor(RootModel[str]):

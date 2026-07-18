@@ -14,7 +14,11 @@ class SessionApiError(Exception):
         self.status = status
         self.reason = reason
         self.body = body
-        phrase = http.HTTPStatus(status).phrase if status in http.HTTPStatus._value2member_map_ else ""
+        phrase = (
+            http.HTTPStatus(status).phrase
+            if status in http.HTTPStatus._value2member_map_
+            else ""
+        )
         suffix = f" ({reason})" if reason else ""
         super().__init__(f"Sudomimus Session API error: HTTP {status} {phrase}{suffix}".strip())
 

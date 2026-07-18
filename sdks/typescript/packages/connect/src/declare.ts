@@ -47,8 +47,6 @@ export type ReturnMethodDeclaration = components["schemas"]["ReturnMethodDeclara
 export type ReturnMethodCallback = components["schemas"]["ReturnMethodCallback"];
 export type ReturnMethodStatusPoll = components["schemas"]["ReturnMethodStatusPoll"];
 export type ReturnMethodReveal = components["schemas"]["ReturnMethodReveal"];
-export type ReturnMethodDirectIssue = components["schemas"]["ReturnMethodDirectIssue"];
-export type ReturnMethodOidc = components["schemas"]["ReturnMethodOidc"];
 
 export type ConnectErrorBody = components["schemas"]["Error"];
 
@@ -85,8 +83,6 @@ export const RETURN_METHOD = {
     CALLBACK: "CALLBACK",
     STATUS_POLL: "STATUS_POLL",
     REVEAL: "REVEAL",
-    DIRECT_ISSUE: "DIRECT_ISSUE",
-    OIDC: "OIDC",
 } as const;
 export type ReturnMethod = ReturnMethodDeclaration["type"];
 

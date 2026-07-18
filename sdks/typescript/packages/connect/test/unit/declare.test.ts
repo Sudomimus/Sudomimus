@@ -29,6 +29,14 @@ describe("Connect schema-derived types", () => {
             applicationAnchor: "anchor-1",
             authenticationConstraints: [
                 { method: AUTHENTICATION_METHOD.PASSKEY_USERNAMELESS, payload: {} },
+                {
+                    method: AUTHENTICATION_METHOD.GOOGLE_OAUTH,
+                    payload: { allowedHostedDomains: ["example.com"] },
+                },
+                {
+                    method: AUTHENTICATION_METHOD.DISCORD_OAUTH,
+                    payload: { allowedDiscordGuilds: ["123456789"] },
+                },
             ],
             realizeConstraints: [
                 {
@@ -43,7 +51,7 @@ describe("Connect schema-derived types", () => {
             ],
         };
 
-        expect(request.authenticationConstraints).toHaveLength(1);
+        expect(request.authenticationConstraints).toHaveLength(3);
         expect(request.realizeConstraints?.[0].constraintType).toBe("EMAIL");
         expect(request.returnMethods?.[0].type).toBe("CALLBACK");
     });

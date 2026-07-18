@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Liveness probe for the Connect service. */
+        /** Report Connect invocation health and deployment identity. */
         get: operations["health"];
         put?: never;
         post?: never;
@@ -44,7 +44,11 @@ export interface paths {
          *     `realizeConstraints`, `returnMethods`) are optional. When absent the
          *     inquiry imposes no per-inquiry narrowing on that layer. When present
          *     the array MUST be non-empty — an empty array is explicitly rejected
-         *     with HTTP 400.
+         *     with HTTP 400. Authentication and realize arrays are limited to 16
+         *     constraints each, return methods to 3 entries, nested allowlists to
+         *     128 entries, and the combined stored Inquiry configuration to 65,536
+         *     serialized UTF-8 bytes. Individual configuration strings are limited
+         *     to 2,048 UTF-8 bytes.
          */
         post: operations["establish"];
         delete?: never;
@@ -109,8 +113,14 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         HealthResponse: {
-            ready: boolean;
+            /**
+             * @description The API invocation path completed successfully.
+             * @enum {string}
+             */
+            status: "ok";
+            /** @description Stable runtime service identity. */
             service: string;
+            /** @description Version from the deployed service's version manifest. */
             version: string;
         };
         EstablishRequest: {
@@ -129,11 +139,14 @@ export interface components {
              */
             realizeConstraints?: components["schemas"]["RealizeRuleConstraint"][];
             /**
-             * @description Optional per-inquiry return-method declaration. Doubles as the
-             *     concrete delivery info for CALLBACK (carries the callback URL).
-             *     Absent means no per-inquiry narrowing (CALLBACK is unreachable
-             *     for this inquiry because no URL is anchored). If present, the
-             *     array MUST be non-empty; empty arrays are rejected with 400.
+             * @description Optional per-inquiry return-method declaration. Connect accepts
+             *     CALLBACK, STATUS_POLL, and REVEAL here; DIRECT_ISSUE, OIDC, and
+             *     DEVICE_CODE are opened by their dedicated APIs after application-
+             *     level ReturnRules are configured. CALLBACK doubles as the concrete
+             *     delivery info (carries the callback URL). Absent means no per-
+             *     inquiry narrowing (CALLBACK is unreachable for this inquiry
+             *     because no URL is anchored). If present, the array MUST be non-
+             *     empty; empty arrays are rejected with 400.
              */
             returnMethods?: components["schemas"]["ReturnMethodDeclaration"][];
         };
@@ -353,12 +366,14 @@ export interface components {
          */
         AuthenticationRuleAccessKeyDirectPayload: Record<string, never>;
         /**
-         * @description Phase 1: any Google account is accepted as long as the
-         *     application's rule set allows GOOGLE_OAUTH at all. A later
-         *     phase will add `allowedHostedDomains: string[]` for Google
-         *     Workspace gating.
+         * @description Empty `allowedHostedDomains` means no hosted-domain gating. A
+         *     non-empty list requires an exact, case-insensitive match against the
+         *     Google Workspace `hd` claim. The server lowercases and deduplicates
+         *     entries before persistence.
          */
-        AuthenticationRuleGoogleOAuthPayload: Record<string, never>;
+        AuthenticationRuleGoogleOAuthPayload: {
+            allowedHostedDomains?: string[];
+        };
         /**
          * @description Empty `allowedGitHubOrgs` array means no org gating — any
          *     GitHub account is accepted. Non-empty means the user must be a
@@ -372,13 +387,14 @@ export interface components {
             allowedGitHubOrgs: string[];
         };
         /**
-         * @description Phase 1: any Discord account is accepted as long as the
-         *     application's rule set allows DISCORD_OAUTH at all. Phase 1.5
-         *     will add `allowedDiscordGuilds: string[]` for guild (server)
-         *     gating, which will additionally request the `guilds` OAuth
-         *     scope and fetch `GET /users/@me/guilds`.
+         * @description Empty `allowedDiscordGuilds` means no guild gating. A non-empty list
+         *     requires membership in at least one listed Discord guild and causes
+         *     the authentication flow to request the `guilds` scope. Entries are
+         *     trimmed and deduplicated before persistence.
          */
-        AuthenticationRuleDiscordOAuthPayload: Record<string, never>;
+        AuthenticationRuleDiscordOAuthPayload: {
+            allowedDiscordGuilds?: string[];
+        };
         /**
          * @description Battle.net (Blizzard) has no per-application gating concept, so any
          *     Battle.net account is accepted as long as the application's rule set
@@ -446,7 +462,7 @@ export interface components {
         RealizeRuleSectorSubjectPayload: {
             allowedSectorSubjects: string[];
         };
-        ReturnMethodDeclaration: components["schemas"]["ReturnMethodCallback"] | components["schemas"]["ReturnMethodStatusPoll"] | components["schemas"]["ReturnMethodReveal"] | components["schemas"]["ReturnMethodDirectIssue"] | components["schemas"]["ReturnMethodOidc"];
+        ReturnMethodDeclaration: components["schemas"]["ReturnMethodCallback"] | components["schemas"]["ReturnMethodStatusPoll"] | components["schemas"]["ReturnMethodReveal"];
         ReturnMethodCallback: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -456,7 +472,10 @@ export interface components {
             payload: {
                 /**
                  * @description Concrete callback URL for this inquiry. The host MUST match
-                 *     one of the application's allowed callback domains.
+                 *     one of the application's allowed callback domains. The scheme
+                 *     MUST be HTTPS except loopback HTTP for local development
+                 *     (`localhost`, `127.0.0.1`, `[::1]`). The server enforces the
+                 *     length limit in UTF-8 bytes.
                  */
                 callbackUrl: string;
             };
@@ -484,34 +503,6 @@ export interface components {
              */
             payload: Record<string, never>;
         };
-        ReturnMethodDirectIssue: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "DIRECT_ISSUE";
-            /**
-             * @description Empty payload. Opts the application in to native-api's
-             *     direct-issue flows (`/direct-issue/steam-ticket`,
-             *     `/direct-issue/access-key`). Per-inquiry payload is empty
-             *     because direct-issue does not flow through `/establish`.
-             */
-            payload: Record<string, never>;
-        };
-        ReturnMethodOidc: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "OIDC";
-            /**
-             * @description Accepted on the wire for symmetry, but in practice OIDC is
-             *     not declared per-inquiry — the OIDC API drives its own
-             *     inquiry against Connect via CALLBACK-to-self. The matching
-             *     per-inquiry payload is therefore empty.
-             */
-            payload: Record<string, never>;
-        };
         /**
          * @description Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
          *     for known failure modes. When the reason symbol's description begins with
@@ -526,7 +517,12 @@ export interface components {
     responses: never;
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Prevent storage of the credential-bearing response. */
+        CredentialCacheControl: "no-store";
+        /** @description Legacy cache instruction retained for credential responses. */
+        CredentialPragma: "no-cache";
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -540,7 +536,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Service is ready. */
+            /**
+             * @description The API invocation path is operational and reports the deployed
+             *     service identity. This response does not assert dependency,
+             *     configuration, or business-capability readiness.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -654,6 +654,8 @@ export interface operations {
             /** @description Tokens issued. */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -698,8 +700,28 @@ export interface operations {
              *     - `EmailDomainRequiresSso` — one of the account's verified email
              *       domains requires SSO and the inquiry was not realized through
              *       the currently required connector.
+             *     - `SsoAuthorityConflict` — verified email domains on the account
+             *       require distinct SSO connectors. No one connector can satisfy
+             *       every domain authority, so issuance remains blocked until the
+             *       domain policies or account email ownership are repaired.
              */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description The realized authorization is stale.
+             *
+             *     - `AuthorizationArtifactStale` — the exact sector binding stopped
+             *       being authoritative after Layer 2 authorized the Inquiry because
+             *       the assignment changed or the subject rotated. Start a new
+             *       Inquiry so the current identity is evaluated before issuance.
+             */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

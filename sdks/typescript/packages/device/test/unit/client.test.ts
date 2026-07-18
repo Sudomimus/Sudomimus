@@ -60,7 +60,7 @@ describe("DeviceClient", () => {
     it("GETs /health", async () => {
 
         const expected: HealthResponse = {
-            ready: true,
+            status: "ok",
             service: "device",
             version: "1.0.0",
         };

@@ -35,7 +35,7 @@ from sudomimus_native import DirectIssueAccessKeyRequest
 tokens = client.direct_issue_access_key(
         DirectIssueAccessKeyRequest(
             applicationAnchor="my-app",
-            accessKeyIdentifier="acs_k_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+            accessKeyIdentifier="acs_k_01890c5e-1234-4abc-9def-0123456789ab",
             accessKeySecret="acs_t_<64 lowercase hex chars>",
         )
 )
@@ -43,7 +43,8 @@ tokens = client.direct_issue_access_key(
 
 An `AsyncNativeClient` with the same methods is available for `asyncio`
 callers. Non-2xx responses raise `NativeApiError` (inspect `.status` and
-`.reason`). Issued tokens are opaque to this SDK; verify them with
+`.reason`). Steam rate limiting returns `429` with no reason body; back off
+before acquiring and submitting another ticket. Issued tokens are opaque to this SDK; verify them with
 [`sudomimus-token`](../sudomimus-token).
 
 ## Models
