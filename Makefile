@@ -7,6 +7,8 @@ JAVA_SDK := sdks/java
 NUGET_SOURCE := https://api.nuget.org/v3/index.json
 NUGET_PACK_DIR := $(CSHARP_SDK)/artifacts
 GRADLEW := ./gradlew
+BUMP_VERSION := node scripts/operation/bump-version.js
+BUMP ?= patch
 
 .PHONY: install
 install:
@@ -15,6 +17,40 @@ install:
 .PHONY: update-dependencies-typescript
 update-dependencies-typescript:
 	pnpm -C $(TS_SDK) run update-dependencies
+
+# ---------- Version bump (TypeScript) ----------
+#
+# Usage:
+#   make bump-token                     # patch bump @sudomimus/token
+#   make bump-connect BUMP=minor        # minor bump @sudomimus/connect
+#   make bump-all-typescript BUMP=major # major bump every TypeScript package
+#   make bump-all-typescript BUMP=none  # leave every version unchanged
+#
+# Reserved versions follow Sudomimus Core: uniform-digit and ascending or
+# descending staircase-digit versions are skipped with additional patch bumps.
+
+.PHONY: bump-all-typescript
+bump-all-typescript: bump-token bump-connect bump-device bump-native bump-session
+
+.PHONY: bump-token
+bump-token:
+	$(BUMP_VERSION) $(TS_SDK)/packages/token/package.json $(BUMP)
+
+.PHONY: bump-connect
+bump-connect:
+	$(BUMP_VERSION) $(TS_SDK)/packages/connect/package.json $(BUMP)
+
+.PHONY: bump-device
+bump-device:
+	$(BUMP_VERSION) $(TS_SDK)/packages/device/package.json $(BUMP)
+
+.PHONY: bump-native
+bump-native:
+	$(BUMP_VERSION) $(TS_SDK)/packages/native/package.json $(BUMP)
+
+.PHONY: bump-session
+bump-session:
+	$(BUMP_VERSION) $(TS_SDK)/packages/session/package.json $(BUMP)
 
 # ---------- Workspace-wide (via turbo) ----------
 
@@ -298,6 +334,31 @@ publish-session-py: build-session-py
 # ---------- C# SDK (Sudomimus.Connect + Sudomimus.Native + Sudomimus.Session + Sudomimus.Token) ----------
 # All -cs targets operate on sdks/csharp/. NuGet pushes require
 # NUGET_API_KEY to be set (see docs/csharp-nuget-publish.md).
+#
+# Usage:
+#   make bump-token-cs                  # patch bump Sudomimus.Token
+#   make bump-connect-cs BUMP=minor     # minor bump Sudomimus.Connect
+#   make bump-all-csharp BUMP=major     # major bump every C# package
+#   make bump-all-csharp BUMP=none      # leave every version unchanged
+
+.PHONY: bump-all-csharp
+bump-all-csharp: bump-token-cs bump-connect-cs bump-native-cs bump-session-cs
+
+.PHONY: bump-token-cs
+bump-token-cs:
+	$(BUMP_VERSION) $(CSHARP_SDK)/src/Sudomimus.Token/Sudomimus.Token.csproj $(BUMP)
+
+.PHONY: bump-connect-cs
+bump-connect-cs:
+	$(BUMP_VERSION) $(CSHARP_SDK)/src/Sudomimus.Connect/Sudomimus.Connect.csproj $(BUMP)
+
+.PHONY: bump-native-cs
+bump-native-cs:
+	$(BUMP_VERSION) $(CSHARP_SDK)/src/Sudomimus.Native/Sudomimus.Native.csproj $(BUMP)
+
+.PHONY: bump-session-cs
+bump-session-cs:
+	$(BUMP_VERSION) $(CSHARP_SDK)/src/Sudomimus.Session/Sudomimus.Session.csproj $(BUMP)
 
 .PHONY: restore-csharp
 restore-csharp:
