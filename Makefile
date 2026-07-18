@@ -194,6 +194,16 @@ coverage-py:
 		--cov-report=term-missing
 
 # ---------- Publish (npm) ----------
+# Publish in dependency order. Recursive make calls keep the sequence stable
+# even when the parent make process has parallel jobs enabled.
+
+.PHONY: deploy-all-typescript
+deploy-all-typescript:
+	$(MAKE) publish-token
+	$(MAKE) publish-session
+	$(MAKE) publish-connect
+	$(MAKE) publish-device
+	$(MAKE) publish-native
 
 .PHONY: publish-dry-run-token
 publish-dry-run-token:
@@ -243,6 +253,16 @@ publish-session:
 # Dry-run targets only build + list the artifacts so you can inspect them.
 
 PYTHON_DIST_DIR := $(PYTHON_SDK)/dist
+
+# Check credentials before the first package, then publish in dependency order.
+.PHONY: deploy-all-python
+deploy-all-python:
+	@test -n "$(UV_PUBLISH_TOKEN)" || (echo "ERROR: UV_PUBLISH_TOKEN env var not set" && exit 1)
+	$(MAKE) publish-token-py
+	$(MAKE) publish-session-py
+	$(MAKE) publish-connect-py
+	$(MAKE) publish-device-py
+	$(MAKE) publish-native-py
 
 .PHONY: clean-build-py
 clean-build-py:
@@ -453,6 +473,15 @@ pack-session-cs:
 # ---------- C# Publish (NuGet) ----------
 # Dry-run targets just pack the .nupkg into $(NUGET_PACK_DIR) so you can
 # inspect it before pushing. Push targets require NUGET_API_KEY.
+
+# Check credentials before the first package, then publish dependencies first.
+.PHONY: deploy-all-csharp
+deploy-all-csharp:
+	@test -n "$(NUGET_API_KEY)" || (echo "ERROR: NUGET_API_KEY env var not set" && exit 1)
+	$(MAKE) publish-token-cs
+	$(MAKE) publish-connect-cs
+	$(MAKE) publish-session-cs
+	$(MAKE) publish-native-cs
 
 .PHONY: publish-dry-run-token-cs
 publish-dry-run-token-cs: pack-token-cs
