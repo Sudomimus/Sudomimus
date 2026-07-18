@@ -109,10 +109,12 @@ public sealed class ModelContractTests
 
     public static TheoryData<string, string, string, Type> MappedEnums() => new()
     {
+        { "connect", "HealthResponse", "status", typeof(Connect.HealthStatus) },
         { "connect", "AuthenticationRuleConstraint", "method", typeof(Connect.AuthenticationMethod) },
         { "connect", "ClaimRequirementStateView", "requirement", typeof(Connect.ClaimRequirement) },
         { "connect", "ClaimRequirementStateView", "state", typeof(Connect.ClaimGrantState) },
         { "session", "IntrospectResponse", "status", typeof(Session.IntrospectStatus) },
+        { "session", "HealthResponse", "status", typeof(Session.HealthStatus) },
         { "session", "ClaimRequirementStateView", "requirement", typeof(Session.ClaimRequirement) },
         { "session", "ClaimRequirementStateView", "state", typeof(Session.ClaimGrantState) },
         { "native", "ClaimRequirementStateView", "requirement", typeof(Native.ClaimRequirement) },

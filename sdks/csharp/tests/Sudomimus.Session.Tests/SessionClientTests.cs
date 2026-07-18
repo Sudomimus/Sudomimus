@@ -64,12 +64,12 @@ public class SessionClientTests
     public async Task HealthAsync_ParsesResponse()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "ready": true, "service": "session", "version": "1" }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "status": "ok", "service": "session", "version": "1" }""");
         var client = NewClient(handler);
 
         var resp = await client.HealthAsync();
 
-        Assert.True(resp.Ready);
+        Assert.Equal(HealthStatus.Ok, resp.Status);
         Assert.Equal("session", resp.Service);
     }
 

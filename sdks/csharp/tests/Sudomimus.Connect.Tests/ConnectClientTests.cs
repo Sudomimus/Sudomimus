@@ -23,13 +23,13 @@ public class ConnectClientTests
     {
         var handler = new FakeHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.OK, """
-            { "ready": true, "service": "connect", "version": "0.2.0" }
+            { "status": "ok", "service": "connect", "version": "0.2.0" }
             """);
         var client = NewClient(handler);
 
         var resp = await client.HealthAsync();
 
-        Assert.True(resp.Ready);
+        Assert.Equal(HealthStatus.Ok, resp.Status);
         Assert.Equal("connect", resp.Service);
         Assert.Equal("0.2.0", resp.Version);
 

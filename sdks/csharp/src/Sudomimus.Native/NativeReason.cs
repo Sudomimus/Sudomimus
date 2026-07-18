@@ -31,6 +31,10 @@ public static class NativeReason
     public const string ApplicationNotFound = "ApplicationNotFound";
     public const string AccountDisabled = "AccountDisabled";
     public const string AccountDeleted = "AccountDeleted";
+    public const string EmailDomainBlocked = "EmailDomainBlocked";
+    public const string EmailDomainRequiresSso = "EmailDomainRequiresSso";
+    public const string SsoAuthorityConflict = "SsoAuthorityConflict";
+    public const string AuthorizationArtifactStale = "AuthorizationArtifactStale";
 
     // -- Steam credential (steam-ticket flow) --
 

@@ -112,7 +112,7 @@ public class NativeClientTests
     public async Task DirectIssueSteamTicketAsync_ReasonIsNull_WhenErrorBodyEmpty()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.Unauthorized, null);
+        handler.Enqueue(HttpStatusCode.TooManyRequests, null);
         using var http = new HttpClient(handler);
         var client = new NativeClient("https://native.example.com", http);
 
@@ -124,7 +124,7 @@ public class NativeClientTests
                 SteamAppId = 480,
             }));
 
-        Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, ex.StatusCode);
         Assert.Null(ex.Reason);
         Assert.Null(ex.Body);
     }

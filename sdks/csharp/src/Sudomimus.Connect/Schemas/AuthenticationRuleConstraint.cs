@@ -46,10 +46,11 @@ public sealed record AuthenticationRuleConstraint
 /// <list type="bullet">
 ///   <item><c>PASSKEY</c>: <see cref="AllowUsernameless"/></item>
 ///   <item><c>STEAM_TICKET</c>: <see cref="AllowedSteamAppIds"/></item>
+///   <item><c>GOOGLE_OAUTH</c>: <see cref="AllowedHostedDomains"/></item>
 ///   <item><c>GITHUB_OAUTH</c>: <see cref="AllowedGitHubOrgs"/></item>
+///   <item><c>DISCORD_OAUTH</c>: <see cref="AllowedDiscordGuilds"/></item>
 ///   <item><c>EMAIL_VERIFICATION</c>, <c>STEAM_OPENID</c>, <c>ACCESS_KEY_DIRECT</c>,
-///     <c>GOOGLE_OAUTH</c>, <c>DISCORD_OAUTH</c>, <c>BATTLENET_OAUTH</c>,
-///     <c>X_OAUTH</c>: empty payload.</item>
+///     <c>BATTLENET_OAUTH</c>, <c>X_OAUTH</c>: empty payload.</item>
 /// </list>
 /// </summary>
 public sealed record AuthenticationRulePayload
@@ -65,6 +66,14 @@ public sealed record AuthenticationRulePayload
     public IReadOnlyList<long>? AllowedSteamAppIds { get; init; }
 
     /// <summary>
+    /// GOOGLE_OAUTH: exact, case-insensitive Google Workspace hosted domains.
+    /// Empty or absent means no hosted-domain gating.
+    /// </summary>
+    [JsonPropertyName("allowedHostedDomains")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? AllowedHostedDomains { get; init; }
+
+    /// <summary>
     /// GITHUB_OAUTH: case-insensitive list of GitHub org <c>login</c>
     /// values. Empty array means no org gating; non-empty requires
     /// membership in at least one listed org.
@@ -72,4 +81,12 @@ public sealed record AuthenticationRulePayload
     [JsonPropertyName("allowedGitHubOrgs")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<string>? AllowedGitHubOrgs { get; init; }
+
+    /// <summary>
+    /// DISCORD_OAUTH: guild IDs accepted by the rule. Empty or absent means
+    /// no guild gating; non-empty requires membership in at least one guild.
+    /// </summary>
+    [JsonPropertyName("allowedDiscordGuilds")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? AllowedDiscordGuilds { get; init; }
 }

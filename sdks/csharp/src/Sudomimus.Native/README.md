@@ -29,6 +29,14 @@ For tickets to verify, the calling Steam client SDK **must** pass identity
 ticket to the identity string and the server hardcodes the same value. See
 [`NativeConstants.SteamTicketIdentity`](./NativeConstants.cs).
 
+## Error handling
+
+Non-success responses throw `NativeApiException`; inspect `StatusCode` and
+`Reason`. A `409` distinguishes `NativeReason.ReplayProtectionAlreadySeen`
+from `NativeReason.AuthorizationArtifactStale`. Steam attempt budgets and
+failure circuits return `429` with an empty body, so `Reason` is `null` and the
+caller should back off before acquiring another ticket.
+
 ## Claims on every response
 
 Every direct-issue `200` carries a `claims` view — the per-claim policy joined
