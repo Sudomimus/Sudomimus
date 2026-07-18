@@ -3,6 +3,11 @@
 .NET SDK for the Sudomimus Session API. Use it after Connect, Device, or Native
 has issued an ordinary access/refresh token pair.
 
+The Session `/refresh` endpoint accepts only `APPLICATION` refresh-token
+families. OIDC refresh tokens must use the OIDC `/token` endpoint; passing one
+here throws `SessionApiException` with status `401` and reason
+`RefreshTokenInvalidType`.
+
 ```csharp
 using Sudomimus.Session;
 

@@ -3,6 +3,11 @@
 Python SDK for the Sudomimus Session API. Use it after Connect, Device, or
 Native has issued an ordinary access/refresh token pair.
 
+The Session `/refresh` endpoint accepts only `APPLICATION` refresh-token
+families. OIDC refresh tokens must use the OIDC `/token` endpoint; passing one
+here raises `SessionApiError` with status `401` and reason
+`RefreshTokenInvalidType`.
+
 ```python
 from sudomimus_session import InMemoryTokenStore, RotatingSessionClient, SessionClient, TokenPair
 

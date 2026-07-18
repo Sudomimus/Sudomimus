@@ -1,7 +1,11 @@
 # @sudomimus/session
 
-TypeScript SDK for the Sudomimus Session API. Use it after an initial login
-flow has issued an access/refresh token pair.
+TypeScript SDK for the Sudomimus Session API. Use it after Connect, Device, or
+Native has issued an ordinary application access/refresh token pair.
+
+The Session `/refresh` endpoint accepts only `APPLICATION` refresh-token
+families. OIDC refresh tokens must use the OIDC `/token` endpoint; passing one
+here fails with `401 RefreshTokenInvalidType`.
 
 ```ts
 import {

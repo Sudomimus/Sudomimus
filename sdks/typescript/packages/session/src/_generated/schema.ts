@@ -46,6 +46,11 @@ export interface paths {
          *     entire refresh-token family is revoked and the caller must restart with
          *     its initial login flow: Connect inquiry, device authorization, native
          *     direct-issue, or another ordinary application-token issuance path.
+         *
+         *     This endpoint accepts only refresh-token families whose required
+         *     issuance protocol is `APPLICATION`. OIDC refresh-token families are
+         *     rejected before account, authority, grace-adoption, or rotation work
+         *     and must use the OIDC `/token` endpoint.
          */
         post: operations["refresh"];
         delete?: never;
@@ -269,7 +274,8 @@ export interface operations {
              *     - `RefreshTokenInvalid` — the JWT is malformed, has an unsupported
              *       algorithm or issuer, lacks required claims, names an unknown
              *       application, or no longer resolves to a stored token row.
-             *     - `RefreshTokenInvalidType` — the JWT is not a refresh token.
+             *     - `RefreshTokenInvalidType` — the JWT is not a refresh token, or
+             *       the stored family belongs to the OIDC issuance protocol.
              *     - `RefreshTokenInvalidSignature` — signature verification failed.
              *     - `RefreshTokenSuspended` — the refresh-token session is suspended.
              *     - `RefreshTokenExpired` — the token is past its `exp`.
