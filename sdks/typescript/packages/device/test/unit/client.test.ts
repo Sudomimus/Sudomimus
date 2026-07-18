@@ -149,6 +149,26 @@ describe("DeviceClient", () => {
             .toBeInstanceOf(DeviceApiError);
     });
 
+    it("surfaces bodyless admission errors", async () => {
+
+        const fetchMock = makeFetch([
+            { ok: false, status: 429, rawBody: "" },
+        ]);
+        const client = new DeviceClient({
+            baseUrl: "https://device.example.com",
+            fetch: fetchMock as unknown as typeof globalThis.fetch,
+        });
+
+        await expect(client.deviceAuthorize({ applicationAnchor: "my-app" }))
+            .rejects
+            .toMatchObject({
+                name: "DeviceApiError",
+                status: 429,
+                reason: undefined,
+                body: undefined,
+            });
+    });
+
     it("exports the token error class", () => {
 
         expect(new DeviceTokenApiError(400, { error: "authorization_pending" }))

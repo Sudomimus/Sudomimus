@@ -374,5 +374,25 @@ describe("NativeClient", () => {
             expect(apiError.reason).toBeUndefined();
             expect(apiError.body).toBeUndefined();
         });
+
+        it("surfaces a bodyless 503 admission-counter failure", async () => {
+
+            const fetchMock = makeFetch([{ ok: false, status: 503, rawBody: "" }]);
+            const client = new NativeClient({
+                baseUrl: "https://native.example.com",
+                fetch: fetchMock as unknown as typeof globalThis.fetch,
+            });
+
+            await expect(client.directIssueAccessKey({
+                applicationAnchor: "anchor-1",
+                accessKeyIdentifier: "acs_k_01890c5e-1234-4abc-9def-0123456789ab",
+                accessKeySecret: `acs_t_${"a".repeat(64)}`,
+            })).rejects.toMatchObject({
+                name: "NativeApiError",
+                status: 503,
+                reason: undefined,
+                body: undefined,
+            });
+        });
     });
 });

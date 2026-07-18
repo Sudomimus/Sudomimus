@@ -40,17 +40,18 @@ export interface paths {
          *
          *     The server:
          *
-         *       1. Validates the application's authentication-rule layer admits
+         *       1. Applies global and per-application semantic admission budgets.
+         *       2. Validates the application's authentication-rule layer admits
          *          `ACCESS_KEY_DIRECT`.
-         *       2. Looks up the credential by `accessKeyIdentifier`.
-         *       3. Cross-checks that the credential belongs to the application
+         *       3. Looks up the credential by `accessKeyIdentifier`.
+         *       4. Cross-checks that the credential belongs to the application
          *          named in `applicationAnchor`, is not revoked, and has not
          *          expired.
-         *       4. Timing-safe-verifies `accessKeySecret`.
-         *       5. Validates the realize-rule layer (`EMAIL` / `STEAM_ID` /
+         *       5. Timing-safe-verifies `accessKeySecret`.
+         *       6. Validates the realize-rule layer (`EMAIL` / `STEAM_ID` /
          *          `ACCOUNT_ALIAS` / `SECTOR_SUBJECT`) and ensures a
          *          `DIRECT_ISSUE` return rule exists.
-         *       6. Issues access + refresh JWTs and best-effort touches the
+         *       7. Issues access + refresh JWTs and best-effort touches the
          *          credential's `lastUsedAt` timestamp.
          *
          *     All credential-level failures (unknown identifier, app mismatch,
@@ -526,6 +527,18 @@ export interface operations {
                 };
             };
             /**
+             * @description The AccessKey route's per-application/global attempt budget or
+             *     credential-failure circuit is exhausted. The response
+             *     intentionally has no stable reason body. No rule, credential, or
+             *     per-attempt audit work is performed for this rejection.
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
              * @description Server error while resolving the credential's account. Reason
              *     `AccessKeyCredentialAccountMissing`.
              */
@@ -536,6 +549,17 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /**
+             * @description The semantic admission or credential-failure counter is
+             *     unavailable. The request fails closed and intentionally has no
+             *     stable reason body.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error response. */
             default: {

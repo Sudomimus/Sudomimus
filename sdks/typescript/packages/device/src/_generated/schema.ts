@@ -293,6 +293,28 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /**
+             * @description The global or per-application Device creation budget is exhausted.
+             *     The response intentionally has no stable reason body. No
+             *     authorization session, code reservation, or audit row is created.
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description The semantic admission counter is unavailable. The request fails
+             *     closed before application, rule, session, reservation, or audit
+             *     work and intentionally has no stable reason body.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Error response. */
             default: {
                 headers: {
