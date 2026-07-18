@@ -7,6 +7,11 @@ The Device API does not refresh tokens itself. A successful `/device-token`
 returns a normal Sudomimus access/refresh pair; use `sudomimus-session` for
 later `/refresh`, `/logout`, `/introspect`, and `/revoke-all`.
 
+`device_authorize` may reject admission with a bodyless `429` when creation
+budgets are exhausted or a bodyless `503` when admission counters are
+unavailable. Both raise `DeviceApiError` with `reason` and `body` set to
+`None`; back off before retrying.
+
 ## Manual polling and manual storage
 
 ```python

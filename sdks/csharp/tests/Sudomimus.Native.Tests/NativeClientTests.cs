@@ -130,6 +130,27 @@ public class NativeClientTests
     }
 
     [Fact]
+    public async Task DirectIssueAccessKeyAsync_ReasonIsNull_WhenAdmissionCounterUnavailable()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.ServiceUnavailable, null);
+        using var http = new HttpClient(handler);
+        var client = new NativeClient("https://native.example.com", http);
+
+        var ex = await Assert.ThrowsAsync<NativeApiException>(() =>
+            client.DirectIssueAccessKeyAsync(new DirectIssueAccessKeyRequest
+            {
+                ApplicationAnchor = "anchor-1",
+                AccessKeyIdentifier = ValidAccessKeyIdentifier,
+                AccessKeySecret = ValidAccessKeySecret,
+            }));
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+        Assert.Null(ex.Reason);
+        Assert.Null(ex.Body);
+    }
+
+    [Fact]
     public async Task DirectIssueAccessKeyAsync_PostsExpectedRequestAndParsesResponse()
     {
         var handler = new FakeHttpMessageHandler();

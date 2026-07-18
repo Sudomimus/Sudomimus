@@ -132,6 +132,23 @@ def test_rate_limit_with_empty_body() -> None:
     assert exc.value.reason is None
 
 
+def test_access_key_admission_counter_unavailable() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, content=b"")
+
+    with _client(handler) as client, pytest.raises(NativeApiError) as exc:
+        client.direct_issue_access_key(
+            DirectIssueAccessKeyRequest(
+                applicationAnchor="my-app",
+                accessKeyIdentifier=ACCESS_KEY_IDENTIFIER,
+                accessKeySecret=ACCESS_KEY_SECRET,
+            )
+        )
+    assert exc.value.status == 503
+    assert exc.value.reason is None
+    assert exc.value.body is None
+
+
 def test_close_closes_owned_client() -> None:
     client = NativeClient()  # owns its httpx.Client
     client.close()

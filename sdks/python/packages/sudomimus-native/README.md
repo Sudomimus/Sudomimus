@@ -43,8 +43,9 @@ tokens = client.direct_issue_access_key(
 
 An `AsyncNativeClient` with the same methods is available for `asyncio`
 callers. Non-2xx responses raise `NativeApiError` (inspect `.status` and
-`.reason`). Steam rate limiting returns `429` with no reason body; back off
-before acquiring and submitting another ticket. Issued tokens are opaque to this SDK; verify them with
+`.reason`). Steam and access-key admission failures return `429`, or `503`
+when their counters are unavailable, with no reason body. Back off before
+retrying. Issued tokens are opaque to this SDK; verify them with
 [`sudomimus-token`](../sudomimus-token).
 
 ## Models

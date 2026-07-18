@@ -6,7 +6,11 @@ from ._generated.models import DeviceAuthorizeResponse, DeviceTokenError, Error1
 
 
 class DeviceApiError(Exception):
-    """Raised for generic non-2xx responses from the Device API."""
+    """Raised for generic non-2xx responses from the Device API.
+
+    Admission failures use bodyless 429/503 responses, so ``reason`` and
+    ``body`` are ``None`` for those statuses.
+    """
 
     def __init__(self, status: int, reason: str | None, body: Error1 | None) -> None:
         message = f"Device API error {status}: {reason}" if reason else f"Device API error {status}"

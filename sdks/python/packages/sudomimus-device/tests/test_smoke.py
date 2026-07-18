@@ -139,6 +139,19 @@ def test_generic_error() -> None:
     assert exc.value.reason == "Layer3Denied"
 
 
+@pytest.mark.parametrize("status", [429, 503])
+def test_bodyless_admission_error(status: int) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status, content=b"")
+
+    with _sync_client(handler) as client, pytest.raises(DeviceApiError) as exc:
+        client.device_authorize(DeviceAuthorizeRequest(applicationAnchor="my-app"))
+
+    assert exc.value.status == status
+    assert exc.value.reason is None
+    assert exc.value.body is None
+
+
 def test_authorize_and_poll_persists_tokens() -> None:
     responses = [
         httpx.Response(200, json=_auth_json()),

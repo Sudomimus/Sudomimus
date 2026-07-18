@@ -33,9 +33,10 @@ ticket to the identity string and the server hardcodes the same value. See
 
 Non-success responses throw `NativeApiException`; inspect `StatusCode` and
 `Reason`. A `409` distinguishes `NativeReason.ReplayProtectionAlreadySeen`
-from `NativeReason.AuthorizationArtifactStale`. Steam attempt budgets and
-failure circuits return `429` with an empty body, so `Reason` is `null` and the
-caller should back off before acquiring another ticket.
+from `NativeReason.AuthorizationArtifactStale`. Steam and access-key admission
+budgets or failure circuits return `429`; unavailable admission counters
+return `503`. Both use empty bodies, so `Reason` is `null` and the caller
+should back off before retrying.
 
 ## Claims on every response
 
