@@ -6,8 +6,22 @@
  */
 
 import { signSessionClientJwt } from "./client-auth.js";
-import { CLIENT_JWT_AUTH_SCHEME, PRODUCTION_BASE_URL } from "./constants.js";
+import {
+    TokenError,
+    TokenVerifier,
+    rsaJwkToPem,
+    type AccessToken,
+    type RefreshToken,
+} from "@sudomimus/token";
+import {
+    CLIENT_JWT_AUTH_SCHEME,
+    DEFAULT_JWKS_CACHE_SECONDS,
+    PRODUCTION_BASE_URL,
+} from "./constants.js";
 import type {
+    ApplicationJsonWebKey,
+    ApplicationJwksOptions,
+    ApplicationJwksResponse,
     HealthResponse,
     IntrospectRequest,
     IntrospectResponse,
@@ -28,12 +42,18 @@ export class SessionClient {
     private readonly _baseUrl: string;
     private readonly _fetch: typeof globalThis.fetch;
     private readonly _clientAuth: SessionClientAuthConfig | undefined;
+    private readonly _jwksCache: Map<string, { expiresAt: number; value: ApplicationJwksResponse }>;
+    private readonly _tokenVerifier: TokenVerifier;
 
     public constructor(options: SessionClientOptions = {}) {
 
         this._baseUrl = (options.baseUrl ?? PRODUCTION_BASE_URL).replace(/\/+$/, "");
         this._fetch = (options.fetch ?? globalThis.fetch).bind(globalThis);
         this._clientAuth = options.clientAuth;
+        this._jwksCache = new Map();
+        this._tokenVerifier = new TokenVerifier({
+            resolver: (anchor, keyId) => this.resolveApplicationPublicKey(anchor, keyId),
+        });
     }
 
     public get baseUrl(): string {
@@ -49,6 +69,73 @@ export class SessionClient {
     public async health(): Promise<HealthResponse> {
 
         return this._get<HealthResponse>("/health");
+    }
+
+    public async applicationJwks(
+        applicationAnchor: string,
+        options: ApplicationJwksOptions = {},
+    ): Promise<ApplicationJwksResponse> {
+
+        const cached = this._jwksCache.get(applicationAnchor);
+
+        if (!options.force && cached !== undefined && cached.expiresAt > Date.now()) {
+
+            return cached.value;
+        }
+
+        const encodedAnchor = encodeURIComponent(applicationAnchor);
+        const response = await this._fetch(
+            `${this._baseUrl}/applications/${encodedAnchor}/jwks.json`,
+            { method: "GET", headers: { "Accept": "application/json" } },
+        );
+        const value = await this._handle<ApplicationJwksResponse>(response);
+        const maxAge = this._cacheMaxAgeSeconds(response.headers?.get("Cache-Control"));
+        this._jwksCache.set(applicationAnchor, {
+            expiresAt: Date.now() + maxAge * 1000,
+            value,
+        });
+        return value;
+    }
+
+    public clearJwksCache(applicationAnchor?: string): void {
+
+        if (applicationAnchor === undefined) {
+
+            this._jwksCache.clear();
+            return;
+        }
+        this._jwksCache.delete(applicationAnchor);
+    }
+
+    public async resolveApplicationPublicKey(
+        applicationAnchor: string,
+        keyId: string,
+    ): Promise<string> {
+
+        let jwks = await this.applicationJwks(applicationAnchor);
+        let key: ApplicationJsonWebKey | undefined = jwks.keys.find((candidate) => candidate.kid === keyId);
+
+        if (key === undefined) {
+
+            jwks = await this.applicationJwks(applicationAnchor, { force: true });
+            key = jwks.keys.find((candidate) => candidate.kid === keyId);
+        }
+
+        if (key === undefined) {
+
+            throw new TokenError("UNKNOWN_KEY_ID", `No application signing key matches kid "${keyId}".`);
+        }
+        return rsaJwkToPem(key);
+    }
+
+    public verifyAccessToken(jwt: string): Promise<AccessToken> {
+
+        return this._tokenVerifier.verifyAccessToken(jwt);
+    }
+
+    public verifyRefreshToken(jwt: string): Promise<RefreshToken> {
+
+        return this._tokenVerifier.verifyRefreshToken(jwt);
     }
 
     public async refresh(request: RefreshRequest): Promise<RefreshResponse> {
@@ -160,5 +247,13 @@ export class SessionClient {
 
             return undefined;
         }
+    }
+
+    private _cacheMaxAgeSeconds(cacheControl: string | null | undefined): number {
+
+        const match = cacheControl?.match(/(?:^|,)\s*max-age=(\d+)\s*(?:,|$)/i);
+        return match?.[1] === undefined
+            ? DEFAULT_JWKS_CACHE_SECONDS
+            : Number.parseInt(match[1], 10);
     }
 }

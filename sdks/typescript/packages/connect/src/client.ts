@@ -5,16 +5,16 @@
  * @description Connect HTTP client
  */
 
-import { TokenVerifier, type AccessToken, type RefreshToken } from "@sudomimus/token";
+import { SessionClient } from "@sudomimus/session";
+import type { AccessToken, RefreshToken } from "@sudomimus/token";
 import { signEstablishClientJwt } from "./client-auth.js";
-import { CLIENT_JWT_AUTH_SCHEME, DEFAULT_PUBLIC_KEY_LOCALE, PRODUCTION_BASE_URL } from "./constants.js";
+import { CLIENT_JWT_AUTH_SCHEME, PRODUCTION_BASE_URL } from "./constants.js";
 import type {
     ConnectClientAuthConfig,
     ConnectClientOptions,
     ConnectErrorBody,
     EstablishRequest,
     EstablishResponse,
-    GetApplicationPublicKeyOptions,
     HealthResponse,
     InfoRequest,
     InfoResponse,
@@ -29,9 +29,7 @@ export class ConnectClient {
 
     private readonly _baseUrl: string;
     private readonly _fetch: typeof globalThis.fetch;
-    private readonly _publicKeyLocale: string;
-    private readonly _publicKeyCache: Map<string, string>;
-    private readonly _tokenVerifier: TokenVerifier;
+    private readonly _sessionClient: SessionClient;
     private readonly _clientAuth: ConnectClientAuthConfig | undefined;
 
     public constructor(options: ConnectClientOptions = {}) {
@@ -43,10 +41,9 @@ export class ConnectClient {
         // below — which would otherwise drop the binding. Binding here keeps
         // callers from having to pass a pre-bound `fetch`.
         this._fetch = (options.fetch ?? globalThis.fetch).bind(globalThis);
-        this._publicKeyLocale = options.publicKeyFetchLocale ?? DEFAULT_PUBLIC_KEY_LOCALE;
-        this._publicKeyCache = new Map();
-        this._tokenVerifier = new TokenVerifier({
-            resolver: (anchor) => this.getApplicationPublicKey(anchor),
+        this._sessionClient = new SessionClient({
+            baseUrl: options.sessionBaseUrl,
+            fetch: options.fetch,
         });
         this._clientAuth = options.clientAuth;
     }
@@ -86,48 +83,14 @@ export class ConnectClient {
         return this._post<InfoRequest, InfoResponse>("/info", request);
     }
 
-    public async getApplicationPublicKey(
-        applicationAnchor: string,
-        options: GetApplicationPublicKeyOptions = {},
-    ): Promise<string> {
-
-        if (!options.force) {
-
-            const cached: string | undefined = this._publicKeyCache.get(applicationAnchor);
-
-            if (typeof cached === "string") {
-
-                return cached;
-            }
-        }
-
-        const response: InfoResponse = await this.info({
-            applicationAnchor,
-            locale: this._publicKeyLocale,
-        });
-        this._publicKeyCache.set(applicationAnchor, response.applicationPublicKey);
-        return response.applicationPublicKey;
-    }
-
-    public clearPublicKeyCache(applicationAnchor?: string): void {
-
-        if (typeof applicationAnchor === "string") {
-
-            this._publicKeyCache.delete(applicationAnchor);
-            return;
-        }
-
-        this._publicKeyCache.clear();
-    }
-
     public async verifyAccessToken(jwt: string): Promise<AccessToken> {
 
-        return this._tokenVerifier.verifyAccessToken(jwt);
+        return this._sessionClient.verifyAccessToken(jwt);
     }
 
     public async verifyRefreshToken(jwt: string): Promise<RefreshToken> {
 
-        return this._tokenVerifier.verifyRefreshToken(jwt);
+        return this._sessionClient.verifyRefreshToken(jwt);
     }
 
     private async _get<TRes>(path: string): Promise<TRes> {

@@ -147,53 +147,6 @@ public class ConnectClientTests
         Assert.Null(ex.Body);
     }
 
-    // ───────── Public-key cache ─────────
-
-    [Fact]
-    public async Task GetApplicationPublicKeyAsync_CachesAfterFirstCall()
-    {
-        var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, InfoResponseJson("anchor-1", "PEM-A"));
-        var client = NewClient(handler);
-
-        var key1 = await client.GetApplicationPublicKeyAsync("anchor-1");
-        var key2 = await client.GetApplicationPublicKeyAsync("anchor-1");
-
-        Assert.Equal("PEM-A", key1);
-        Assert.Equal("PEM-A", key2);
-        Assert.Single(handler.Requests);
-    }
-
-    [Fact]
-    public async Task GetApplicationPublicKeyAsync_ForceBypassesCache()
-    {
-        var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, InfoResponseJson("anchor-1", "PEM-A"));
-        handler.Enqueue(HttpStatusCode.OK, InfoResponseJson("anchor-1", "PEM-B"));
-        var client = NewClient(handler);
-
-        await client.GetApplicationPublicKeyAsync("anchor-1");
-        var key2 = await client.GetApplicationPublicKeyAsync("anchor-1", force: true);
-
-        Assert.Equal("PEM-B", key2);
-        Assert.Equal(2, handler.Requests.Count);
-    }
-
-    [Fact]
-    public async Task ClearPublicKeyCache_RemovesEntries()
-    {
-        var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, InfoResponseJson("anchor-1", "PEM-A"));
-        handler.Enqueue(HttpStatusCode.OK, InfoResponseJson("anchor-1", "PEM-B"));
-        var client = NewClient(handler);
-
-        await client.GetApplicationPublicKeyAsync("anchor-1");
-        client.ClearPublicKeyCache("anchor-1");
-        var key2 = await client.GetApplicationPublicKeyAsync("anchor-1");
-
-        Assert.Equal("PEM-B", key2);
-    }
-
     // ───────── Client-auth guard ─────────
 
     [Fact]
@@ -219,12 +172,4 @@ public class ConnectClientTests
         });
     }
 
-    private static string InfoResponseJson(string anchor, string pem) =>
-        $$"""
-        {
-            "applicationAnchor": "{{anchor}}",
-            "applicationName": "App",
-            "applicationPublicKey": "{{pem}}"
-        }
-        """;
 }

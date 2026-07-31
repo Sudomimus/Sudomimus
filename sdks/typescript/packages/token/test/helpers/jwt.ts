@@ -16,6 +16,7 @@ import type {
 } from "../../src";
 
 export const APPLICATION_ANCHOR = "anchor-1";
+export const KEY_ID = "key-1";
 
 export const generateRsaKeyPair = (): { privateKey: string; publicKey: string } => {
 
@@ -33,6 +34,7 @@ export const mintAccessToken = (
         expirationAt?: Date;
         keyType?: string;
         audience?: string;
+        keyId?: string;
         body?: AccessTokenBody;
     } = {},
 ): string => {
@@ -51,7 +53,7 @@ export const mintAccessToken = (
         issuer: "sudomimus.com",
         audience: overrides.audience ?? APPLICATION_ANCHOR,
         subject: "refresh-1",
-        header: {},
+        header: { kid: overrides.keyId ?? KEY_ID },
         body: overrides.body ?? {
             subject: "subject-1",
             firstName: "Ada",
@@ -65,7 +67,7 @@ export const mintAccessToken = (
 
 export const mintRefreshToken = (
     privateKey: string,
-    overrides: { keyType?: string; audience?: string } = {},
+    overrides: { keyType?: string; audience?: string; keyId?: string } = {},
 ): string => {
 
     const creator: JWTCreator<RefreshTokenHeader, RefreshTokenBody> =
@@ -80,7 +82,7 @@ export const mintRefreshToken = (
         keyType: overrides.keyType ?? "Refresh",
         issuer: "sudomimus.com",
         audience: overrides.audience ?? APPLICATION_ANCHOR,
-        header: {},
+        header: { kid: overrides.keyId ?? KEY_ID },
         body: { subject: "subject-1" },
     });
 };

@@ -34,6 +34,6 @@ Pass `ConnectClientOptions.ClientAuth` to let the SDK sign it, or provide a
 BYO signer through `ConnectClientAuthWithSigner`.
 
 `ConnectClient` also exposes `VerifyAccessTokenAsync` and
-`VerifyRefreshTokenAsync`, which resolve the application's public key through
-`/info` and cache it per client instance. If you only need JWT verification,
-depend on `Sudomimus.Token` directly.
+`VerifyRefreshTokenAsync`, which delegate to the Session JWKS-backed verifier.
+JWKS responses are cached per client instance and selected using the JWT
+`kid`. If you only need JWT verification, depend on `Sudomimus.Token` directly.

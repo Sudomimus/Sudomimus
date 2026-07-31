@@ -42,5 +42,16 @@ const client = new SessionClient({
 await client.revokeAll({ subject: "sector-subject" });
 ```
 
+The client can also verify issued tokens through the Session JWKS endpoint:
+
+```ts
+const verified = await client.verifyAccessToken(redeemed.accessToken);
+console.log(verified.body.subject, verified.header.kid);
+```
+
+JWKS responses honor `Cache-Control: max-age` (with a 5-minute fallback). If a
+token references an unknown `kid`, the client refreshes JWKS once before
+returning `UNKNOWN_KEY_ID`.
+
 Generated request and response types come from
 [`specs/session.yaml`](../../../../specs/session.yaml).

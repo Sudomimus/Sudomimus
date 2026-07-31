@@ -1,6 +1,6 @@
 {
     "name": "@sudomimus/connect",
-    "version": "3.3.0",
+    "version": "4.0.0",
     "description": "Sudomimus Connect SDK — establish authentication inquiries, poll status, redeem tokens, and fetch application metadata.",
     "license": "MIT",
     "repository": {
@@ -36,6 +36,7 @@
         "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
     },
     "dependencies": {
+        "@sudomimus/session": "workspace:*",
         "@sudomimus/token": "workspace:*",
         "@sudoo/jwt": "catalog:"
     },

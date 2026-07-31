@@ -9,6 +9,8 @@ const (
 	ErrInvalidJWT       ErrorCode = "INVALID_JWT"
 	ErrWrongKeyType     ErrorCode = "WRONG_KEY_TYPE"
 	ErrMissingAudience  ErrorCode = "MISSING_AUDIENCE"
+	ErrMissingKeyID     ErrorCode = "MISSING_KEY_ID"
+	ErrUnknownKeyID     ErrorCode = "UNKNOWN_KEY_ID"
 	ErrExpired          ErrorCode = "EXPIRED"
 	ErrInvalidSignature ErrorCode = "INVALID_SIGNATURE"
 	ErrWrongAudience    ErrorCode = "WRONG_AUDIENCE"

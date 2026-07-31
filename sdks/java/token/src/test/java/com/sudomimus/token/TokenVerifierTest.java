@@ -18,7 +18,7 @@ class TokenVerifierTest {
         Clock clock = fixedNow == null
                 ? Clock.systemUTC()
                 : Clock.fixed(fixedNow, ZoneOffset.UTC);
-        return new TokenVerifier(anchor -> publicPem, clock);
+        return new TokenVerifier((anchor, keyId) -> publicPem, clock);
     }
 
     @Test
@@ -98,18 +98,40 @@ class TokenVerifierTest {
     }
 
     @Test
-    void verifyAccessToken_passesAudienceToResolver() throws Exception {
+    void verifyAccessToken_missingKeyId() throws Exception {
+        TestHelpers.RsaKeyPair keys = TestHelpers.generateRsaKeyPair();
+        long now = Instant.now().getEpochSecond();
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("alg", "RS256");
+        header.put("typ", "JWT");
+        header.put("aud", "anchor-1");
+        header.put("iat", now);
+        header.put("exp", now + 3600);
+        header.put("kty", "Access");
+        Map<String, Object> body = Map.of("subject", "subject-1");
+        String jwt = TestHelpers.mintToken(header, body, keys.privateKey);
+
+        TokenVerifier v = makeVerifier(keys.publicPem, null);
+        TokenException ex = assertThrows(TokenException.class, () -> v.verifyAccessToken(jwt));
+        assertEquals(TokenErrorCode.MISSING_KEY_ID, ex.getCode());
+    }
+
+    @Test
+    void verifyAccessToken_passesAudienceAndKeyIdToResolver() throws Exception {
         TestHelpers.RsaKeyPair keys = TestHelpers.generateRsaKeyPair();
         String jwt = TestHelpers.mintAccessToken(keys.privateKey, "anchor-zzz");
 
-        AtomicReference<String> observed = new AtomicReference<>();
-        TokenVerifier v = new TokenVerifier(anchor -> {
-            observed.set(anchor);
+        AtomicReference<String> observedAnchor = new AtomicReference<>();
+        AtomicReference<String> observedKeyId = new AtomicReference<>();
+        TokenVerifier v = new TokenVerifier((anchor, keyId) -> {
+            observedAnchor.set(anchor);
+            observedKeyId.set(keyId);
             return keys.publicPem;
         });
         v.verifyAccessToken(jwt);
 
-        assertEquals("anchor-zzz", observed.get());
+        assertEquals("anchor-zzz", observedAnchor.get());
+        assertEquals("key-1", observedKeyId.get());
     }
 
     @Test

@@ -10,7 +10,7 @@ public class TokenVerifierTests
     private static TokenVerifier MakeVerifier(string publicKeyPem, DateTimeOffset? now = null)
     {
         var clock = now is { } fixed_ ? () => fixed_ : (Func<DateTimeOffset>)(() => DateTimeOffset.UtcNow);
-        return new TokenVerifier((_, _) => Task.FromResult(publicKeyPem), clock);
+        return new TokenVerifier((_, _, _) => Task.FromResult(publicKeyPem), clock);
     }
 
     [Fact]
@@ -99,9 +99,10 @@ public class TokenVerifierTests
         var jwt = TestHelpers.MintAccessToken(keys.PrivateKeyPem, applicationAnchor: "anchor-zzz");
 
         string? observedAnchor = null;
-        var verifier = new TokenVerifier((anchor, _) =>
+        var verifier = new TokenVerifier((anchor, keyId, _) =>
         {
             observedAnchor = anchor;
+            Assert.Equal("key-1", keyId);
             return Task.FromResult(keys.PublicKeyPem);
         });
 

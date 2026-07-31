@@ -11,6 +11,8 @@ export type SessionSchemas = components["schemas"];
 export type SessionPaths = paths;
 
 export type HealthResponse = components["schemas"]["HealthResponse"];
+export type ApplicationJsonWebKey = components["schemas"]["ApplicationJsonWebKey"];
+export type ApplicationJwksResponse = components["schemas"]["ApplicationJwksResponse"];
 export type RefreshRequest = components["schemas"]["RefreshRequest"];
 export type RefreshResponse = components["schemas"]["RefreshResponse"];
 export type IntrospectRequest = components["schemas"]["IntrospectRequest"];
@@ -68,4 +70,8 @@ export interface SessionClientOptions {
     baseUrl?: string;
     fetch?: typeof globalThis.fetch;
     clientAuth?: SessionClientAuthConfig;
+}
+
+export interface ApplicationJwksOptions {
+    force?: boolean;
 }

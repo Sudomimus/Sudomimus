@@ -39,6 +39,9 @@ public sealed record JwtHeader
     [JsonPropertyName("kty")]
     public string? KeyType { get; init; }
 
+    [JsonPropertyName("kid")]
+    public string? KeyId { get; init; }
+
     [JsonPropertyName("ver")]
     public string? Version { get; init; }
 }

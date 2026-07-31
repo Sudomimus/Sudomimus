@@ -1,6 +1,6 @@
 [project]
 name = "sudomimus-native"
-version = "0.0.1"
+version = "0.1.0"
 description = "Sudomimus Native SDK — native client entry point."
 readme = "README.md"
 requires-python = ">=3.11"

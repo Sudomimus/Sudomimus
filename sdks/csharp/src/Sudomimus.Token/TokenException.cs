@@ -8,6 +8,8 @@ public enum TokenErrorCode
     InvalidJwt,
     WrongKeyType,
     MissingAudience,
+    MissingKeyId,
+    UnknownKeyId,
     Expired,
     InvalidSignature,
     WrongAudience,

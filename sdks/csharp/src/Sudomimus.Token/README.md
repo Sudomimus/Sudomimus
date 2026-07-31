@@ -11,12 +11,10 @@ tokens.
 ```csharp
 using Sudomimus.Token;
 
-var verifier = new TokenVerifier(async (applicationAnchor, ct) =>
+var verifier = new TokenVerifier(async (applicationAnchor, keyId, ct) =>
 {
-    // Resolve the application's PEM public key. Either fetch from
-    // Connect's /info endpoint (cache per anchor), or hard-code it for
-    // demo / single-app deployments.
-    return MY_APPLICATION_PUBLIC_KEY_PEM;
+    // Fetch/cache Session JWKS and return the PEM key matching keyId.
+    return await myJwksCache.ResolveAsync(applicationAnchor, keyId, ct);
 });
 
 var token = await verifier.VerifyAccessTokenAsync(accessTokenJwt);

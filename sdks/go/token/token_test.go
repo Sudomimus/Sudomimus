@@ -59,13 +59,13 @@ func mintAccessToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string {
 	header := map[string]any{
 		"alg": "RS256", "typ": "JWT", "iss": "sudomimus.com",
 		"aud": anchor, "iat": iat, "exp": iat + 3600,
-		"jti": "access-1", "kty": "Access", "sub": "refresh-1",
+		"jti": "access-1", "kid": "key-1", "kty": "Access", "sub": "refresh-1",
 	}
 	body := map[string]any{
-		"subject":      "subject-1",
-		"firstName":    "Ada",
-		"lastName":     "Lovelace",
-		"emailAddress": "ada@example.com",
+		"subject":           "subject-1",
+		"firstName":         "Ada",
+		"lastName":          "Lovelace",
+		"emailAddress":      "ada@example.com",
 		"staticAvatarUrl":   "https://cdn.sudomimus.com/avatar/subject-1.png",
 		"animatedAvatarUrl": "https://cdn.sudomimus.com/avatar/subject-1.gif",
 	}
@@ -77,14 +77,14 @@ func mintRefreshToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string 
 	header := map[string]any{
 		"alg": "RS256", "typ": "JWT", "iss": "sudomimus.com",
 		"aud": anchor, "iat": iat, "exp": iat + 30*24*3600,
-		"jti": "refresh-1", "kty": "Refresh",
+		"jti": "refresh-1", "kid": "key-1", "kty": "Refresh",
 	}
 	body := map[string]any{"subject": "subject-1"}
 	return mintToken(t, header, body, priv)
 }
 
 func staticResolver(pem string) PublicKeyResolver {
-	return func(_ context.Context, _ string) (string, error) { return pem, nil }
+	return func(_ context.Context, _, _ string) (string, error) { return pem, nil }
 }
 
 func TestVerifyAccessToken_RoundTrip(t *testing.T) {
@@ -112,7 +112,7 @@ func TestVerifyAccessToken_ConsentGatedClaimsAbsent(t *testing.T) {
 	header := map[string]any{
 		"alg": "RS256", "typ": "JWT", "iss": "sudomimus.com",
 		"aud": "anchor-1", "iat": iat, "exp": iat + 3600,
-		"jti": "access-1", "kty": "Access", "sub": "refresh-1",
+		"jti": "access-1", "kid": "key-1", "kty": "Access", "sub": "refresh-1",
 	}
 	jwt := mintToken(t, header, map[string]any{"subject": "subject-1"}, keys.privateKey)
 
@@ -187,20 +187,35 @@ func TestVerifyAccessToken_MissingAudience(t *testing.T) {
 	assertCode(t, err, ErrMissingAudience)
 }
 
-func TestVerifyAccessToken_PassesAudienceToResolver(t *testing.T) {
+func TestVerifyAccessToken_MissingKeyID(t *testing.T) {
+	keys := generateRSAKeyPair(t)
+	iat := time.Now().Unix()
+	header := map[string]any{
+		"alg": "RS256", "typ": "JWT", "aud": "anchor-1",
+		"iat": iat, "exp": iat + 3600, "kty": "Access",
+	}
+	jwt := mintToken(t, header, map[string]any{"subject": "subject-1"}, keys.privateKey)
+
+	v := NewVerifier(staticResolver(keys.publicPEM))
+	_, err := v.VerifyAccessToken(context.Background(), jwt)
+	assertCode(t, err, ErrMissingKeyID)
+}
+
+func TestVerifyAccessToken_PassesAudienceAndKeyIDToResolver(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	jwt := mintAccessToken(t, keys.privateKey, "anchor-zzz")
 
-	var seen string
-	v := NewVerifier(func(_ context.Context, anchor string) (string, error) {
-		seen = anchor
+	var seenAnchor, seenKeyID string
+	v := NewVerifier(func(_ context.Context, anchor, keyID string) (string, error) {
+		seenAnchor = anchor
+		seenKeyID = keyID
 		return keys.publicPEM, nil
 	})
 	if _, err := v.VerifyAccessToken(context.Background(), jwt); err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if seen != "anchor-zzz" {
-		t.Fatalf("resolver got %q, want %q", seen, "anchor-zzz")
+	if seenAnchor != "anchor-zzz" || seenKeyID != "key-1" {
+		t.Fatalf("resolver got (%q, %q), want (%q, %q)", seenAnchor, seenKeyID, "anchor-zzz", "key-1")
 	}
 }
 

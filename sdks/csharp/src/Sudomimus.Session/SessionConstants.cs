@@ -8,6 +8,8 @@ public static class SessionConstants
     /// <summary>Production base URL of the Session API.</summary>
     public const string ProductionBaseUrl = "https://session-api.sudomimus.com";
 
+    public const int DefaultJwksCacheSeconds = 300;
+
     /// <summary>
     /// Fixed <c>aud</c> claim value the server requires on client-auth JWTs
     /// for Session API application-authority endpoints.

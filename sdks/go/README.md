@@ -33,16 +33,16 @@ import (
     "github.com/sudomimus/sudomimus-go/token"
 )
 
-verifier := token.NewVerifier(func(ctx context.Context, applicationAnchor string) (string, error) {
-    // Return the PEM-encoded RSA public key for this application.
-    return myCache.Get(applicationAnchor)
+verifier := token.NewVerifier(func(ctx context.Context, applicationAnchor, keyID string) (string, error) {
+    // Fetch/cache Session JWKS and return the PEM key matching keyID.
+    return myCache.Get(applicationAnchor, keyID)
 })
 
 tok, err := verifier.VerifyAccessToken(ctx, jwt)
 if err != nil {
     var terr *token.Error
     if errors.As(err, &terr) {
-        // terr.Code: INVALID_JWT | WRONG_KEY_TYPE | MISSING_AUDIENCE | EXPIRED | INVALID_SIGNATURE
+        // Also includes MISSING_KEY_ID / UNKNOWN_KEY_ID for JWKS selection.
     }
     return err
 }
@@ -50,8 +50,9 @@ fmt.Println(tok.Body.Subject, tok.Body.FirstName, tok.Body.StaticAvatarURL)
 ```
 
 The verifier performs, in order: parse → `kty` matches `"Access"`/`"Refresh"`
-→ `aud` non-empty → expiration in the future → RSA-SHA256 signature against
-`resolver(aud)`. The verifier does not cache resolver results.
+→ `aud` and `kid` non-empty → expiration in the future → RSA-SHA256 signature
+against `resolver(aud, kid)`. `ApplicationJSONWebKey.PublicKeyPEM` converts
+Session RSA JWKs for the resolver. The verifier does not cache results.
 
 ## Development
 

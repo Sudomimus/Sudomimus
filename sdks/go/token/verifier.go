@@ -6,8 +6,8 @@ import (
 )
 
 // Verifier verifies Sudomimus access and refresh tokens end-to-end:
-// structural integrity, expected key type, audience presence, expiration, and
-// RSA signature against a caller-supplied public key.
+// structural integrity, expected key type, audience and key ID presence,
+// expiration, and RSA signature against a caller-supplied public key.
 type Verifier struct {
 	Resolver PublicKeyResolver
 	// Now overrides the clock for tests. Defaults to time.Now.
@@ -56,6 +56,9 @@ func verifyWith[TBody any](
 	if parsed.Header.Audience == "" {
 		return nil, newError(ErrMissingAudience, "token is missing the `aud` (applicationAnchor) header")
 	}
+	if parsed.Header.KeyID == "" {
+		return nil, newError(ErrMissingKeyID, "token is missing the `kid` header")
+	}
 
 	now := time.Now
 	if v.Now != nil {
@@ -65,7 +68,7 @@ func verifyWith[TBody any](
 		return nil, newError(ErrExpired, "token has expired")
 	}
 
-	publicKey, err := v.Resolver(ctx, parsed.Header.Audience)
+	publicKey, err := v.Resolver(ctx, parsed.Header.Audience, parsed.Header.KeyID)
 	if err != nil {
 		return nil, err
 	}

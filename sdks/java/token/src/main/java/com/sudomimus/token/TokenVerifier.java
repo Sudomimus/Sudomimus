@@ -7,8 +7,8 @@ import java.util.function.Function;
 
 /**
  * Verifies Sudomimus access and refresh tokens end-to-end: structural
- * integrity, expected key type, audience presence, expiration, and RSA
- * signature against a caller-supplied public key.
+ * integrity, expected key type, audience and key ID presence, expiration, and
+ * RSA signature against a caller-supplied public key.
  */
 public final class TokenVerifier {
 
@@ -60,6 +60,11 @@ public final class TokenVerifier {
             throw new TokenException(TokenErrorCode.MISSING_AUDIENCE,
                     "Token is missing the `aud` (applicationAnchor) header.");
         }
+        String keyId = parsed.getHeader().keyId;
+        if (keyId == null || keyId.isEmpty()) {
+            throw new TokenException(TokenErrorCode.MISSING_KEY_ID,
+                    "Token is missing the `kid` header.");
+        }
 
         if (!parsed.verifyExpiration(Instant.now(clock))) {
             throw new TokenException(TokenErrorCode.EXPIRED, "Token has expired.");
@@ -67,7 +72,7 @@ public final class TokenVerifier {
 
         String publicKey;
         try {
-            publicKey = resolver.resolve(audience);
+            publicKey = resolver.resolve(audience, keyId);
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {

@@ -21,8 +21,8 @@ import type {
     RefreshResponse,
     RevokeAllResponse,
 } from "../../src";
-import { makeFetch } from "../helpers/fetch";
-import { APPLICATION_ANCHOR, generateRsaKeyPair } from "../helpers/jwt";
+import { buildJwksResponse, makeFetch } from "../helpers/fetch";
+import { APPLICATION_ANCHOR, generateRsaKeyPair, mintAccessToken } from "../helpers/jwt";
 
 const claims = {
     email: { requirement: "OFF", state: "UNKNOWN" },
@@ -113,7 +113,7 @@ describe("SessionClient", () => {
     it("POSTs /revoke-all with a session-audience client-auth JWT", async () => {
 
         const { privateKey, publicKey } = generateRsaKeyPair();
-        const expected: RevokeAllResponse = { revokedCount: 3 };
+        const expected: RevokeAllResponse = { revoked: true, cleanupRowCount: 3 };
         const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
         const client = new SessionClient({
             baseUrl: "https://session.example.com",
@@ -153,5 +153,46 @@ describe("SessionClient", () => {
             status: 401,
             reason: "RefreshTokenExpired",
         } satisfies Partial<SessionApiError>);
+    });
+
+    it("fetches JWKS, caches it, and verifies tokens by kid", async () => {
+
+        const { privateKey, publicKey } = generateRsaKeyPair();
+        const fetchMock = makeFetch([{
+            ok: true,
+            status: 200,
+            body: buildJwksResponse(publicKey),
+            headers: { "Cache-Control": "public, max-age=300" },
+        }]);
+        const client = new SessionClient({
+            baseUrl: "https://session.example.com",
+            fetch: fetchMock as unknown as typeof globalThis.fetch,
+        });
+
+        await expect(client.verifyAccessToken(mintAccessToken(privateKey)))
+            .resolves.toMatchObject({ body: { subject: "subject-1" } });
+        await expect(client.verifyAccessToken(mintAccessToken(privateKey)))
+            .resolves.toMatchObject({ body: { subject: "subject-1" } });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock.mock.calls[0][0]).toBe(
+            "https://session.example.com/applications/anchor-1/jwks.json",
+        );
+    });
+
+    it("refreshes JWKS once when kid is unknown", async () => {
+
+        const { privateKey, publicKey } = generateRsaKeyPair();
+        const fetchMock = makeFetch([
+            { ok: true, status: 200, body: { keys: [] } },
+            { ok: true, status: 200, body: buildJwksResponse(publicKey) },
+        ]);
+        const client = new SessionClient({
+            baseUrl: "https://session.example.com",
+            fetch: fetchMock as unknown as typeof globalThis.fetch,
+        });
+
+        await expect(client.verifyAccessToken(mintAccessToken(privateKey)))
+            .resolves.toMatchObject({ body: { subject: "subject-1" } });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 });

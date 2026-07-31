@@ -193,7 +193,9 @@ export interface components {
         /**
          * @description Error response body for non-polling validation and infrastructure
          *     failures. `/device-token` handler-level polling states use
-         *     `DeviceTokenError` instead.
+         *     `DeviceTokenError` instead. Outside `/device-token`, a missing,
+         *     malformed, or structurally invalid JSON request body returns
+         *     `InvalidBody` without parser or validation-library detail.
          */
         Error: {
             /** @description Stable machine-readable reason code. */
@@ -364,8 +366,9 @@ export interface operations {
              *       distinct SSO connectors; the OAuth device response intentionally
              *       does not expose a Sudomimus wire reason.
              *     - `expired_token` - the device authorization session expired.
-             *     - `invalid_request` - the `deviceCode` is unknown or has already
-             *       been consumed.
+             *     - `invalid_request` - the request body is missing, malformed, or
+             *       structurally invalid; or the `deviceCode` is unknown or has
+             *       already been consumed.
              */
             400: {
                 headers: {

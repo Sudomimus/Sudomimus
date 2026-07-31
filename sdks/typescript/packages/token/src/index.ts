@@ -9,5 +9,6 @@ export * from "./constants.js";
 export * from "./declare.js";
 export * from "./error.js";
 export * from "./id.js";
+export * from "./jwks.js";
 export * from "./parse.js";
 export * from "./verifier.js";

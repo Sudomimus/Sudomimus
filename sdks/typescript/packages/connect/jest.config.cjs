@@ -7,6 +7,7 @@ module.exports = {
         "<rootDir>/test/**/*.test.ts",
     ],
     moduleNameMapper: {
+        "^@sudomimus/session$": "<rootDir>/../session/src/index.ts",
         "^@sudomimus/token$": "<rootDir>/../token/src/index.ts",
         "^(\\.{1,2}/.*)\\.js$": "$1",
     },

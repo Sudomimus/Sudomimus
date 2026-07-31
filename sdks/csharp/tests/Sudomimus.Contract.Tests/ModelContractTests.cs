@@ -44,6 +44,8 @@ public sealed class ModelContractTests
 
         // ---- Session: flat request/response DTOs ----
         { "session", "HealthResponse", typeof(Session.HealthResponse) },
+        { "session", "ApplicationJsonWebKey", typeof(Session.ApplicationJsonWebKey) },
+        { "session", "ApplicationJwksResponse", typeof(Session.ApplicationJwksResponse) },
         { "session", "RefreshRequest", typeof(Session.RefreshRequest) },
         { "session", "RefreshResponse", typeof(Session.RefreshResponse) },
         { "session", "IntrospectRequest", typeof(Session.IntrospectRequest) },

@@ -7,8 +7,12 @@ namespace Sudomimus.Token;
 /// <param name="applicationAnchor">
 /// The token's audience claim — typically the issuing application's anchor.
 /// </param>
+/// <param name="keyId">The JWT JOSE header <c>kid</c> used to select a JWK.</param>
 /// <param name="cancellationToken">Token observed for cooperative cancellation.</param>
-public delegate Task<string> PublicKeyResolver(string applicationAnchor, CancellationToken cancellationToken);
+public delegate Task<string> PublicKeyResolver(
+    string applicationAnchor,
+    string keyId,
+    CancellationToken cancellationToken);
 
 /// <summary>
 /// Verifies Sudomimus access and refresh tokens end-to-end: structural
@@ -76,12 +80,20 @@ public sealed class TokenVerifier
                 "Token is missing the `aud` (applicationAnchor) header.");
         }
 
+        var keyId = parsed.Header.KeyId;
+        if (string.IsNullOrEmpty(keyId))
+        {
+            throw new TokenException(
+                TokenErrorCode.MissingKeyId,
+                "Token is missing the `kid` signing-key identifier.");
+        }
+
         if (!parsed.VerifyExpiration(_clock()))
         {
             throw new TokenException(TokenErrorCode.Expired, "Token has expired.");
         }
 
-        var publicKey = await _resolver(audience, ct).ConfigureAwait(false);
+        var publicKey = await _resolver(audience, keyId, ct).ConfigureAwait(false);
 
         if (!parsed.VerifySignature(publicKey))
         {

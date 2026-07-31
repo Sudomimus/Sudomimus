@@ -20,6 +20,7 @@ public final class JwtHeader {
     @JsonProperty("nbf") public Long notBefore;
     @JsonProperty("jti") public String jwtId;
     @JsonProperty("sub") public String subject;
+    @JsonProperty("kid") public String keyId;
     @JsonProperty("kty") public String keyType;
     @JsonProperty("ver") public String version;
 }

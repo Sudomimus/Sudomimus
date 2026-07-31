@@ -1,6 +1,7 @@
 """Constants for the Sudomimus Session SDK."""
 
 PRODUCTION_BASE_URL = "https://session-api.sudomimus.com"
+DEFAULT_JWKS_CACHE_SECONDS = 300
 
 CLIENT_JWT_AUDIENCE = "sudomimus-session"
 CLIENT_JWT_AUTH_SCHEME = "SudomimusClientJWT"

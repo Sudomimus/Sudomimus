@@ -14,8 +14,8 @@ from .token import JwtToken
 ACCESS_TOKEN_KEY_TYPE = "Access"
 REFRESH_TOKEN_KEY_TYPE = "Refresh"
 
-PublicKeyResolver = Callable[[str], str]
-AsyncPublicKeyResolver = Callable[[str], Awaitable[str]]
+PublicKeyResolver = Callable[[str, str], str]
+AsyncPublicKeyResolver = Callable[[str, str], Awaitable[str]]
 
 _BodyT = TypeVar("_BodyT", AccessTokenBody, RefreshTokenBody)
 
@@ -29,7 +29,7 @@ def _check_before_signature(
     expected_key_type: str,
     parser: Callable[[str], JwtToken[_BodyT]],
     now: datetime,
-) -> tuple[JwtToken[_BodyT], str]:
+) -> tuple[JwtToken[_BodyT], str, str]:
     """Run every check that does not need the public key; return token + audience.
 
     Peek the header first so a wrong-type token surfaces as ``WRONG_KEY_TYPE``
@@ -51,10 +51,17 @@ def _check_before_signature(
             "Token is missing the `aud` (applicationAnchor) header.",
         )
 
+    key_id = parsed.header.kid
+    if not key_id:
+        raise TokenError(
+            TokenErrorCode.MISSING_KEY_ID,
+            "Token is missing the `kid` signing-key identifier.",
+        )
+
     if not parsed.verify_expiration(now):
         raise TokenError(TokenErrorCode.EXPIRED, "Token has expired.")
 
-    return parsed, audience
+    return parsed, audience, key_id
 
 
 def _check_signature(parsed: JwtToken[_BodyT], public_key_pem: str) -> JwtToken[_BodyT]:
@@ -90,10 +97,10 @@ class TokenVerifier:
         expected_key_type: str,
         parser: Callable[[str], JwtToken[_BodyT]],
     ) -> JwtToken[_BodyT]:
-        parsed, audience = _check_before_signature(
+        parsed, audience, key_id = _check_before_signature(
             jwt, expected_key_type, parser, self._clock()
         )
-        return _check_signature(parsed, self._resolver(audience))
+        return _check_signature(parsed, self._resolver(audience, key_id))
 
 
 class AsyncTokenVerifier:
@@ -120,7 +127,7 @@ class AsyncTokenVerifier:
         expected_key_type: str,
         parser: Callable[[str], JwtToken[_BodyT]],
     ) -> JwtToken[_BodyT]:
-        parsed, audience = _check_before_signature(
+        parsed, audience, key_id = _check_before_signature(
             jwt, expected_key_type, parser, self._clock()
         )
-        return _check_signature(parsed, await self._resolver(audience))
+        return _check_signature(parsed, await self._resolver(audience, key_id))

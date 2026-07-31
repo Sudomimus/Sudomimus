@@ -9,6 +9,7 @@ public static class RealizeConstraintType
     public const string SteamId = "STEAM_ID";
     public const string AccountAlias = "ACCOUNT_ALIAS";
     public const string SectorSubject = "SECTOR_SUBJECT";
+    public const string Everyone = "EVERYONE";
 }
 
 public sealed record RealizeRuleConstraint

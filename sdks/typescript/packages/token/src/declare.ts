@@ -7,7 +7,9 @@
 
 import { JWTToken } from "@sudoo/jwt";
 
-export type AccessTokenHeader = Record<string, never>;
+export type AccessTokenHeader = {
+    readonly kid?: string;
+};
 
 export type AccessTokenBody = {
 
@@ -57,7 +59,9 @@ export type AccessTokenBody = {
     readonly animatedAvatarUrl?: string;
 };
 
-export type RefreshTokenHeader = Record<string, never>;
+export type RefreshTokenHeader = {
+    readonly kid?: string;
+};
 
 export type RefreshTokenBody = {
 
@@ -74,7 +78,10 @@ export type RefreshTokenBody = {
 export type AccessToken = JWTToken<AccessTokenHeader, AccessTokenBody>;
 export type RefreshToken = JWTToken<RefreshTokenHeader, RefreshTokenBody>;
 
-export type PublicKeyResolver = (applicationAnchor: string) => Promise<string>;
+export type PublicKeyResolver = (
+    applicationAnchor: string,
+    keyId: string,
+) => Promise<string>;
 
 export interface TokenVerifierOptions {
     resolver: PublicKeyResolver;

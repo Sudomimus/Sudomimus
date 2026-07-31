@@ -30,6 +30,9 @@ class HealthResponse(BaseModel):
 
 
 class DirectIssueAccessKeyRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     applicationAnchor: str = Field(
         ..., description="Public anchor identifying the integrating application."
     )
@@ -46,6 +49,9 @@ class DirectIssueAccessKeyRequest(BaseModel):
 
 
 class DirectIssueSteamTicketRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     applicationAnchor: str = Field(
         ..., description="Public anchor identifying the integrating application."
     )
@@ -149,6 +155,9 @@ class DirectIssueDeniedError(BaseModel):
 
 
 class CreateErrandRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     accessToken: str = Field(
         ...,
         description="An access token (JWT) the application already holds for the user.\nVerified server-side with its expiry enforced, then reverse-resolved\nfrom its `subject` (sector subject) claim to the account — so present\na currently-valid token, not an expired one.\n",
@@ -178,7 +187,9 @@ class Error(BaseModel):
     Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
     for known failure modes. When the reason symbol's description begins with
     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-    signal — both `reason` and the body itself are absent in that case.
+    signal — both `reason` and the body itself are absent in that case. A
+    missing, malformed, or structurally invalid JSON request body returns
+    `InvalidBody` without parser or validation-library detail.
 
     """
 

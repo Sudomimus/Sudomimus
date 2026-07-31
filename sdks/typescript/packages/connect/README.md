@@ -45,8 +45,9 @@ if (status.status === "REALIZED") {
 Pass `clientAuth` to let the SDK sign it, or provide a BYO signer.
 
 `ConnectClient` also exposes `verifyAccessToken` and `verifyRefreshToken`,
-which resolve the application's public key through `/info` and cache it per
-client instance. If you only need JWT verification, depend on
+which delegate to Session's `/{applicationAnchor}/jwks.json`-backed verifier.
+JWKS responses are cached per client instance and selected using the JWT
+`kid`. If you only need JWT verification, depend on
 [`@sudomimus/token`](../token) directly.
 
 Generated request and response types come from

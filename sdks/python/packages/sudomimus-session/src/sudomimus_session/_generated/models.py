@@ -3,9 +3,42 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import Enum, StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class Kty(StrEnum):
+    RSA = "RSA"
+
+
+class Use(StrEnum):
+    sig = "sig"
+
+
+class Alg(StrEnum):
+    RS256 = "RS256"
+
+
+class ApplicationJsonWebKey(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kty: Kty
+    n: str = Field(..., description="Base64url-encoded RSA modulus.")
+    e: str = Field(..., description="Base64url-encoded RSA public exponent.")
+    kid: str = Field(
+        ..., description="Stable signing-key identifier copied into JWT JOSE headers."
+    )
+    use: Use
+    alg: Alg
+
+
+class ApplicationJwksResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    keys: list[ApplicationJsonWebKey]
 
 
 class Status(StrEnum):
@@ -57,6 +90,9 @@ class ClaimsStateView(BaseModel):
 
 
 class RefreshRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     refreshToken: str
 
 
@@ -72,6 +108,9 @@ class RefreshResponse(BaseModel):
 
 
 class IntrospectRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     accessToken: str
 
 
@@ -88,6 +127,9 @@ class IntrospectResponse(BaseModel):
 
 
 class LogoutRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     refreshToken: str
 
 
@@ -96,16 +138,42 @@ class LogoutResponse(BaseModel):
 
 
 class RevokeAllRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     subject: str = Field(
         ...,
         description="Application-visible sector subject (`sub`) for the account to revoke.",
     )
 
 
+class Revoked(Enum):
+    """
+    Authority-safe acknowledgement of the revocation request.
+    """
+
+    boolean_True = True
+
+
 class RevokeAllResponse(BaseModel):
-    revokedCount: int
+    revoked: Revoked = Field(
+        ..., description="Authority-safe acknowledgement of the revocation request."
+    )
+    cleanupRowCount: int = Field(
+        ...,
+        description="Number of currently enumerated refresh-token rows suspended as best-effort cleanup.",
+        ge=0,
+    )
 
 
 class Error(BaseModel):
+    """
+    Error response body. A missing, malformed, or structurally invalid JSON
+    request body returns `InvalidBody` without parser or
+    validation-library detail. A documented status-only private failure has
+    an empty response body instead.
+
+    """
+
     reason: str
     message: str | None = None

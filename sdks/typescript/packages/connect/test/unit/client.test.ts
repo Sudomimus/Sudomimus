@@ -22,7 +22,7 @@ import type {
     RedeemResponse,
     StatusPollResponse,
 } from "../../src";
-import { buildInfoResponse, makeFetch } from "../helpers/fetch";
+import { buildJwksResponse, makeFetch } from "../helpers/fetch";
 import {
     APPLICATION_ANCHOR,
     generateRsaKeyPair,
@@ -263,7 +263,6 @@ describe("ConnectClient", () => {
             const expected: InfoResponse = {
                 applicationAnchor: "anchor-1",
                 applicationName: "Demo App",
-                applicationPublicKey: "-----BEGIN PUBLIC KEY-----",
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
             const client = new ConnectClient({
@@ -360,10 +359,12 @@ describe("ConnectClient", () => {
             const fetchMock = makeFetch([{
                 ok: true,
                 status: 200,
-                body: buildInfoResponse(publicKey),
+                body: buildJwksResponse(publicKey),
+                headers: { "Cache-Control": "public, max-age=300" },
             }]);
             const client = new ConnectClient({
                 baseUrl: "https://connect.example.com",
+                sessionBaseUrl: "https://session.example.com",
                 fetch: fetchMock as unknown as typeof globalThis.fetch,
             });
 
@@ -374,6 +375,9 @@ describe("ConnectClient", () => {
             expect(second.body.subject).toBe("subject-1");
 
             expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(fetchMock.mock.calls[0][0]).toBe(
+                "https://session.example.com/applications/anchor-1/jwks.json",
+            );
         });
 
         it("verifies a valid refresh token", async () => {
@@ -383,10 +387,11 @@ describe("ConnectClient", () => {
             const fetchMock = makeFetch([{
                 ok: true,
                 status: 200,
-                body: buildInfoResponse(publicKey),
+                body: buildJwksResponse(publicKey),
             }]);
             const client = new ConnectClient({
                 baseUrl: "https://connect.example.com",
+                sessionBaseUrl: "https://session.example.com",
                 fetch: fetchMock as unknown as typeof globalThis.fetch,
             });
 
@@ -409,84 +414,4 @@ describe("ConnectClient", () => {
         });
     });
 
-    describe("public key cache", () => {
-
-        it("fetches once and caches by applicationAnchor", async () => {
-
-            const { publicKey } = generateRsaKeyPair();
-            const fetchMock = makeFetch([
-                { ok: true, status: 200, body: buildInfoResponse(publicKey) },
-            ]);
-            const client = new ConnectClient({
-                baseUrl: "https://connect.example.com",
-                fetch: fetchMock as unknown as typeof globalThis.fetch,
-            });
-
-            const first = await client.getApplicationPublicKey(APPLICATION_ANCHOR);
-            const second = await client.getApplicationPublicKey(APPLICATION_ANCHOR);
-            expect(first).toBe(publicKey);
-            expect(second).toBe(publicKey);
-            expect(fetchMock).toHaveBeenCalledTimes(1);
-        });
-
-        it("force refetches when options.force is true", async () => {
-
-            const a = generateRsaKeyPair().publicKey;
-            const b = generateRsaKeyPair().publicKey;
-            const fetchMock = makeFetch([
-                { ok: true, status: 200, body: buildInfoResponse(a) },
-                { ok: true, status: 200, body: buildInfoResponse(b) },
-            ]);
-            const client = new ConnectClient({
-                baseUrl: "https://connect.example.com",
-                fetch: fetchMock as unknown as typeof globalThis.fetch,
-            });
-
-            expect(await client.getApplicationPublicKey(APPLICATION_ANCHOR)).toBe(a);
-            expect(await client.getApplicationPublicKey(APPLICATION_ANCHOR, { force: true })).toBe(b);
-            expect(fetchMock).toHaveBeenCalledTimes(2);
-        });
-
-        it("clearPublicKeyCache(anchor) evicts only that entry", async () => {
-
-            const a = generateRsaKeyPair().publicKey;
-            const aRefetched = generateRsaKeyPair().publicKey;
-            const fetchMock = makeFetch([
-                { ok: true, status: 200, body: buildInfoResponse(a) },
-                { ok: true, status: 200, body: buildInfoResponse(aRefetched) },
-            ]);
-            const client = new ConnectClient({
-                baseUrl: "https://connect.example.com",
-                fetch: fetchMock as unknown as typeof globalThis.fetch,
-            });
-
-            await client.getApplicationPublicKey(APPLICATION_ANCHOR);
-            client.clearPublicKeyCache(APPLICATION_ANCHOR);
-            const after = await client.getApplicationPublicKey(APPLICATION_ANCHOR);
-            expect(after).toBe(aRefetched);
-            expect(fetchMock).toHaveBeenCalledTimes(2);
-        });
-
-        it("uses the configured publicKeyFetchLocale when fetching /info", async () => {
-
-            const { publicKey } = generateRsaKeyPair();
-            const fetchMock = makeFetch([{
-                ok: true,
-                status: 200,
-                body: buildInfoResponse(publicKey),
-            }]);
-            const client = new ConnectClient({
-                baseUrl: "https://connect.example.com",
-                fetch: fetchMock as unknown as typeof globalThis.fetch,
-                publicKeyFetchLocale: "zh-CN",
-            });
-
-            await client.getApplicationPublicKey(APPLICATION_ANCHOR);
-            const [, init] = fetchMock.mock.calls[0];
-            expect(JSON.parse(init.body as string)).toEqual({
-                applicationAnchor: APPLICATION_ANCHOR,
-                locale: "zh-CN",
-            });
-        });
-    });
 });

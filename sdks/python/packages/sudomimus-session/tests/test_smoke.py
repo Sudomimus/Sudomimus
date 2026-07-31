@@ -103,13 +103,13 @@ def test_revoke_all_signs_with_session_audience() -> None:
         captured["auth"] = request.headers["Authorization"]
         captured["raw"] = request.content.decode("utf-8")
         captured["path"] = request.url.path
-        return httpx.Response(200, json={"revokedCount": 2})
+        return httpx.Response(200, json={"revoked": True, "cleanupRowCount": 2})
 
     auth = SessionClientAuthWithKey(application_anchor="my-app", private_key_pem=private_pem)
     with _client(handler, client_auth=auth) as client:
         result = client.revoke_all(RevokeAllRequest(subject="subject-1"))
 
-    assert result.revokedCount == 2
+    assert result.cleanupRowCount == 2
     assert captured["path"] == "/revoke-all"
     scheme, _, jwt = captured["auth"].partition(" ")
     assert scheme == "SudomimusClientJWT"
@@ -122,7 +122,7 @@ def test_revoke_all_signs_with_session_audience() -> None:
 def test_revoke_all_with_byo_signer() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["Authorization"] == "SudomimusClientJWT fixed.jwt.value"
-        return httpx.Response(200, json={"revokedCount": 1})
+        return httpx.Response(200, json={"revoked": True, "cleanupRowCount": 1})
 
     auth = SessionClientAuthWithSigner(
         application_anchor="my-app", signer=lambda _raw: "fixed.jwt.value"
@@ -130,7 +130,7 @@ def test_revoke_all_with_byo_signer() -> None:
     with _client(handler, client_auth=auth) as client:
         result = client.revoke_all(RevokeAllRequest(subject="subject-1"))
 
-    assert result.revokedCount == 1
+    assert result.cleanupRowCount == 1
 
 
 def test_error_with_reason_and_empty_body() -> None:
@@ -172,7 +172,7 @@ def test_async_refresh_introspect_logout_and_revoke_all() -> None:
             return httpx.Response(200, json={"revoked": True})
         assert request.url.path == "/revoke-all"
         assert request.headers["Authorization"].startswith("SudomimusClientJWT ")
-        return httpx.Response(200, json={"revokedCount": 3})
+        return httpx.Response(200, json={"revoked": True, "cleanupRowCount": 3})
 
     auth = SessionClientAuthWithKey(application_anchor="my-app", private_key_pem=private_pem)
 
@@ -189,7 +189,7 @@ def test_async_refresh_introspect_logout_and_revoke_all() -> None:
                 refreshed.accessToken,
                 introspected.status,
                 logged_out.revoked,
-                revoked.revokedCount,
+                revoked.cleanupRowCount,
             )
 
     access_token, status, revoked, count = asyncio.run(run())

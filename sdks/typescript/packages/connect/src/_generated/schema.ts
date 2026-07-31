@@ -316,20 +316,156 @@ export interface components {
             applicationAnchor: string;
             /** @description Localized application display name. */
             applicationName: string;
-            /** @description PEM-encoded application public key used to verify issued JWTs. */
-            applicationPublicKey: string;
         };
-        AuthenticationRuleConstraint: {
-            /**
-             * @description Which authentication method this constraint narrows to.
-             * @enum {string}
-             */
-            method: "PASSKEY_USERNAMELESS" | "PASSKEY_REASONED" | "EMAIL_VERIFICATION" | "STEAM_TICKET" | "STEAM_OPENID" | "ACCESS_KEY_DIRECT" | "GOOGLE_OAUTH" | "GITHUB_OAUTH" | "DISCORD_OAUTH" | "BATTLENET_OAUTH" | "X_OAUTH";
-            payload: components["schemas"]["AuthenticationRulePasskeyUsernamelessPayload"] | components["schemas"]["AuthenticationRulePasskeyReasonedPayload"] | components["schemas"]["AuthenticationRuleEmailVerificationPayload"] | components["schemas"]["AuthenticationRuleSteamTicketPayload"] | components["schemas"]["AuthenticationRuleSteamOpenIdPayload"] | components["schemas"]["AuthenticationRuleAccessKeyDirectPayload"] | components["schemas"]["AuthenticationRuleGoogleOAuthPayload"] | components["schemas"]["AuthenticationRuleGitHubOAuthPayload"] | components["schemas"]["AuthenticationRuleDiscordOAuthPayload"] | components["schemas"]["AuthenticationRuleBattleNetOAuthPayload"] | components["schemas"]["AuthenticationRuleXOAuthPayload"];
+        AuthenticationRuleConstraint: components["schemas"]["AuthenticationRuleConstraintPasskeyUsernameless"] | components["schemas"]["AuthenticationRuleConstraintPasskeyReasoned"] | components["schemas"]["AuthenticationRuleConstraintEmailVerification"] | components["schemas"]["AuthenticationRuleConstraintSteamTicket"] | components["schemas"]["AuthenticationRuleConstraintSteamOpenId"] | components["schemas"]["AuthenticationRuleConstraintAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintGoogleOAuth"] | components["schemas"]["AuthenticationRuleConstraintGitHubOAuth"] | components["schemas"]["AuthenticationRuleConstraintDiscordOAuth"] | components["schemas"]["AuthenticationRuleConstraintBattleNetOAuth"] | components["schemas"]["AuthenticationRuleConstraintXOAuth"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationApplicationManaged"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationDomainManaged"];
+        AuthenticationRuleConstraintCommon: {
             /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
             accessTokenTtlSeconds?: number;
             /** @description Per-constraint override for refresh token lifetime. Resolved at realize time. */
             refreshTokenTtlSeconds?: number;
+        };
+        AuthenticationRuleConstraintPasskeyUsernameless: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "PASSKEY_USERNAMELESS";
+            payload: components["schemas"]["AuthenticationRulePasskeyUsernamelessPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "PASSKEY_USERNAMELESS";
+        };
+        AuthenticationRuleConstraintPasskeyReasoned: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "PASSKEY_REASONED";
+            payload: components["schemas"]["AuthenticationRulePasskeyReasonedPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "PASSKEY_REASONED";
+        };
+        AuthenticationRuleConstraintEmailVerification: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "EMAIL_VERIFICATION";
+            payload: components["schemas"]["AuthenticationRuleEmailVerificationPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "EMAIL_VERIFICATION";
+        };
+        AuthenticationRuleConstraintSteamTicket: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "STEAM_TICKET";
+            payload: components["schemas"]["AuthenticationRuleSteamTicketPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "STEAM_TICKET";
+        };
+        AuthenticationRuleConstraintSteamOpenId: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "STEAM_OPENID";
+            payload: components["schemas"]["AuthenticationRuleSteamOpenIdPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "STEAM_OPENID";
+        };
+        AuthenticationRuleConstraintAccessKeyDirect: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "ACCESS_KEY_DIRECT";
+            payload: components["schemas"]["AuthenticationRuleAccessKeyDirectPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "ACCESS_KEY_DIRECT";
+        };
+        AuthenticationRuleConstraintGoogleOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "GOOGLE_OAUTH";
+            payload: components["schemas"]["AuthenticationRuleGoogleOAuthPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "GOOGLE_OAUTH";
+        };
+        AuthenticationRuleConstraintGitHubOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "GITHUB_OAUTH";
+            payload: components["schemas"]["AuthenticationRuleGitHubOAuthPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "GITHUB_OAUTH";
+        };
+        AuthenticationRuleConstraintDiscordOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "DISCORD_OAUTH";
+            payload: components["schemas"]["AuthenticationRuleDiscordOAuthPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "DISCORD_OAUTH";
+        };
+        AuthenticationRuleConstraintBattleNetOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "BATTLENET_OAUTH";
+            payload: components["schemas"]["AuthenticationRuleBattleNetOAuthPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "BATTLENET_OAUTH";
+        };
+        AuthenticationRuleConstraintXOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "X_OAUTH";
+            payload: components["schemas"]["AuthenticationRuleXOAuthPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "X_OAUTH";
+        };
+        AuthenticationRuleConstraintEnterpriseFederationApplicationManaged: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "ENTERPRISE_FEDERATION_APPLICATION_MANAGED";
+            payload: components["schemas"]["AuthenticationRuleEnterpriseFederationApplicationManagedPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "ENTERPRISE_FEDERATION_APPLICATION_MANAGED";
+        };
+        AuthenticationRuleConstraintEnterpriseFederationDomainManaged: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "ENTERPRISE_FEDERATION_DOMAIN_MANAGED";
+            payload: components["schemas"]["AuthenticationRuleEnterpriseFederationDomainManagedPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "ENTERPRISE_FEDERATION_DOMAIN_MANAGED";
         };
         /**
          * @description Empty payload — narrows to usernameless (discoverable-credential)
@@ -410,17 +546,79 @@ export interface components {
          *     Layer-2 EMAIL rules fail closed against an X-only account.
          */
         AuthenticationRuleXOAuthPayload: Record<string, never>;
-        RealizeRuleConstraint: {
-            /**
-             * @description Which realize-rule kind this constraint narrows to.
-             * @enum {string}
-             */
-            constraintType: "EMAIL" | "STEAM_ID" | "ACCOUNT_ALIAS" | "SECTOR_SUBJECT";
-            payload: components["schemas"]["RealizeRuleEmailPayload"] | components["schemas"]["RealizeRuleSteamIdPayload"] | components["schemas"]["RealizeRuleAccountAliasPayload"] | components["schemas"]["RealizeRuleSectorSubjectPayload"];
+        /**
+         * @description Application-managed enterprise federation. `connectorAnchor` names an
+         *     enabled FederationConnector owned by the application's organization.
+         */
+        AuthenticationRuleEnterpriseFederationApplicationManagedPayload: {
+            connectorAnchor: string;
+        };
+        /**
+         * @description Empty payload — the connector is selected from the verified adopted
+         *     domain's SSO_ONLY policy rather than by the application.
+         */
+        AuthenticationRuleEnterpriseFederationDomainManagedPayload: Record<string, never>;
+        RealizeRuleConstraint: components["schemas"]["RealizeRuleConstraintEmail"] | components["schemas"]["RealizeRuleConstraintSteamId"] | components["schemas"]["RealizeRuleConstraintAccountAlias"] | components["schemas"]["RealizeRuleConstraintSectorSubject"] | components["schemas"]["RealizeRuleConstraintEveryone"];
+        RealizeRuleConstraintCommon: {
             /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
             accessTokenTtlSeconds?: number;
             /** @description Per-constraint override for refresh token lifetime. Resolved at realize time. */
             refreshTokenTtlSeconds?: number;
+        };
+        RealizeRuleConstraintEmail: components["schemas"]["RealizeRuleConstraintCommon"] & {
+            /** @enum {string} */
+            constraintType: "EMAIL";
+            payload: components["schemas"]["RealizeRuleEmailPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            constraintType: "EMAIL";
+        };
+        RealizeRuleConstraintSteamId: components["schemas"]["RealizeRuleConstraintCommon"] & {
+            /** @enum {string} */
+            constraintType: "STEAM_ID";
+            payload: components["schemas"]["RealizeRuleSteamIdPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            constraintType: "STEAM_ID";
+        };
+        RealizeRuleConstraintAccountAlias: components["schemas"]["RealizeRuleConstraintCommon"] & {
+            /** @enum {string} */
+            constraintType: "ACCOUNT_ALIAS";
+            payload: components["schemas"]["RealizeRuleAccountAliasPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            constraintType: "ACCOUNT_ALIAS";
+        };
+        RealizeRuleConstraintSectorSubject: components["schemas"]["RealizeRuleConstraintCommon"] & {
+            /** @enum {string} */
+            constraintType: "SECTOR_SUBJECT";
+            payload: components["schemas"]["RealizeRuleSectorSubjectPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            constraintType: "SECTOR_SUBJECT";
+        };
+        RealizeRuleConstraintEveryone: components["schemas"]["RealizeRuleConstraintCommon"] & {
+            /** @enum {string} */
+            constraintType: "EVERYONE";
+            payload: components["schemas"]["RealizeRuleEveryonePayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            constraintType: "EVERYONE";
         };
         RealizeRuleEmailPayload: {
             /**
@@ -462,6 +660,11 @@ export interface components {
         RealizeRuleSectorSubjectPayload: {
             allowedSectorSubjects: string[];
         };
+        /**
+         * @description Empty payload — the explicit EVERYONE constraint admits any realized
+         *     identity on this side of the Layer-2 AND boundary.
+         */
+        RealizeRuleEveryonePayload: Record<string, never>;
         ReturnMethodDeclaration: components["schemas"]["ReturnMethodCallback"] | components["schemas"]["ReturnMethodStatusPoll"] | components["schemas"]["ReturnMethodReveal"];
         ReturnMethodCallback: {
             /**
@@ -474,8 +677,13 @@ export interface components {
                  * @description Concrete callback URL for this inquiry. The host MUST match
                  *     one of the application's allowed callback domains. The scheme
                  *     MUST be HTTPS except loopback HTTP for local development
-                 *     (`localhost`, `127.0.0.1`, `[::1]`). The server enforces the
-                 *     length limit in UTF-8 bytes.
+                 *     (`localhost`, `127.0.0.1`, `[::1]`). After realization,
+                 *     Connect appends the canonical `exposure-key` and
+                 *     `confirmation-key` query parameters. Existing query parameters
+                 *     and fragments are preserved; caller-supplied or duplicate
+                 *     values for the two canonical names are overwritten. The URL
+                 *     MUST be concrete and MUST NOT contain Inquiry-key templates.
+                 *     The server enforces the length limit in UTF-8 bytes.
                  */
                 callbackUrl: string;
             };
@@ -507,7 +715,9 @@ export interface components {
          * @description Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
          *     for known failure modes. When the reason symbol's description begins with
          *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-         *     signal — both `reason` and the body itself are absent in that case.
+         *     signal — both `reason` and the body itself are absent in that case. A
+         *     missing, malformed, or structurally invalid JSON request body returns
+         *     `InvalidBody` without parser or validation-library detail.
          */
         Error: {
             /** @description Stable machine-readable reason code. */
@@ -676,6 +886,14 @@ export interface operations {
              *       consumed (single-use guard via conditional write; also
              *       fires after a REVEAL realize that surfaces the tokens
              *       in-line and immediately marks the inquiry redeemed).
+             *     - `ApplicationNotFound` — the application bound to the Inquiry no
+             *       longer exists.
+             *     - `AuthenticationNotFound` — the realized Authentication record is
+             *       missing or the Inquiry lacks a valid realized authentication
+             *       binding.
+             *     - `AccountNotFound` — the realized Account no longer exists,
+             *       including when it disappears at the issuance transaction
+             *       boundary.
              */
             400: {
                 headers: {

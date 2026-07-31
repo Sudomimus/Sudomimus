@@ -5,6 +5,8 @@ public enum TokenErrorCode {
     INVALID_JWT,
     WRONG_KEY_TYPE,
     MISSING_AUDIENCE,
+    MISSING_KEY_ID,
+    UNKNOWN_KEY_ID,
     EXPIRED,
     INVALID_SIGNATURE,
     WRONG_AUDIENCE,

@@ -7,7 +7,9 @@ from typing import TypeVar
 
 import httpx
 from pydantic import BaseModel
-from sudomimus_token import AccessToken, RefreshToken, TokenVerifier
+from sudomimus_session import PRODUCTION_BASE_URL as SESSION_PRODUCTION_BASE_URL
+from sudomimus_session import SessionClient
+from sudomimus_token import AccessToken, RefreshToken
 
 from ._generated.models import (
     Error,
@@ -26,11 +28,7 @@ from .client_auth import (
     ConnectClientAuthWithSigner,
     sign_establish_client_jwt,
 )
-from .constants import (
-    CLIENT_JWT_AUTH_SCHEME,
-    DEFAULT_PUBLIC_KEY_LOCALE,
-    PRODUCTION_BASE_URL,
-)
+from .constants import CLIENT_JWT_AUTH_SCHEME, PRODUCTION_BASE_URL
 from .errors import ConnectApiError, ConnectConfigError
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
@@ -46,16 +44,14 @@ class ConnectClient:
         base_url: str = PRODUCTION_BASE_URL,
         *,
         http_client: httpx.Client | None = None,
-        public_key_fetch_locale: str = DEFAULT_PUBLIC_KEY_LOCALE,
+        session_base_url: str = SESSION_PRODUCTION_BASE_URL,
         client_auth: ConnectClientAuth | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._client = http_client if http_client is not None else httpx.Client()
         self._owns_client = http_client is None
-        self._public_key_locale = public_key_fetch_locale
         self._client_auth = client_auth
-        self._public_key_cache: dict[str, str] = {}
-        self._verifier = TokenVerifier(self.get_application_public_key)
+        self._session_client = SessionClient(session_base_url, http_client=self._client)
 
     @property
     def base_url(self) -> str:
@@ -97,32 +93,11 @@ class ConnectClient:
     def info(self, request: InfoRequest) -> InfoResponse:
         return self._post("/info", request, InfoResponse)
 
-    def get_application_public_key(
-        self,
-        application_anchor: str,
-        *,
-        force: bool = False,
-    ) -> str:
-        """Resolve (and cache) an application's PEM public key via ``/info``."""
-        if not force and application_anchor in self._public_key_cache:
-            return self._public_key_cache[application_anchor]
-        response = self.info(
-            InfoRequest(applicationAnchor=application_anchor, locale=self._public_key_locale)
-        )
-        self._public_key_cache[application_anchor] = response.applicationPublicKey
-        return response.applicationPublicKey
-
-    def clear_public_key_cache(self, application_anchor: str | None = None) -> None:
-        if application_anchor is not None:
-            self._public_key_cache.pop(application_anchor, None)
-            return
-        self._public_key_cache.clear()
-
     def verify_access_token(self, jwt: str) -> AccessToken:
-        return self._verifier.verify_access_token(jwt)
+        return self._session_client.verify_access_token(jwt)
 
     def verify_refresh_token(self, jwt: str) -> RefreshToken:
-        return self._verifier.verify_refresh_token(jwt)
+        return self._session_client.verify_refresh_token(jwt)
 
     def _post(
         self,

@@ -34,4 +34,14 @@ client = SessionClient(
 client.revoke_all(RevokeAllRequest(subject="sector-subject"))
 ```
 
+The client can verify issued tokens using the application's Session JWKS:
+
+```python
+verified = client.verify_access_token(access_token)
+print(verified.body.subject, verified.header.kid)
+```
+
+JWKS responses honor `Cache-Control: max-age` (with a 5-minute fallback). An
+unknown `kid` causes one forced refresh before `UNKNOWN_KEY_ID` is raised.
+
 Pydantic v2 models are generated from [`specs/session.yaml`](../../../../specs/session.yaml).

@@ -16,6 +16,8 @@ public static class AuthenticationMethod
     public const string DiscordOAuth = "DISCORD_OAUTH";
     public const string BattleNetOAuth = "BATTLENET_OAUTH";
     public const string XOAuth = "X_OAUTH";
+    public const string EnterpriseFederationApplicationManaged = "ENTERPRISE_FEDERATION_APPLICATION_MANAGED";
+    public const string EnterpriseFederationDomainManaged = "ENTERPRISE_FEDERATION_DOMAIN_MANAGED";
 }
 
 /// <summary>
@@ -55,6 +57,11 @@ public sealed record AuthenticationRuleConstraint
 /// </summary>
 public sealed record AuthenticationRulePayload
 {
+    /// <summary>Application-managed enterprise federation connector anchor.</summary>
+    [JsonPropertyName("connectorAnchor")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ConnectorAnchor { get; init; }
+
     /// <summary>PASSKEY: opt in to discoverable-credential ("usernameless") login.</summary>
     [JsonPropertyName("allowUsernameless")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -72,10 +72,52 @@ public sealed class SpecDocument
     /// <summary>The <c>enum</c> values of a string property on a schema.</summary>
     public IReadOnlySet<string> PropertyEnum(string schemaName, string propertyName)
     {
-        var props = (Dictionary<object, object>)Schema(schemaName)["properties"];
-        var prop = (Dictionary<object, object>)props[propertyName];
-        return ((List<object>)prop["enum"]).Select(v => (string)v).ToHashSet();
+        return PropertyEnumFromSchema(Schema(schemaName), propertyName);
     }
+
+    private HashSet<string> PropertyEnumFromSchema(
+        Dictionary<object, object> schema,
+        string propertyName)
+    {
+        var values = new HashSet<string>();
+
+        if (schema.TryGetValue("$ref", out var reference))
+        {
+            values.UnionWith(PropertyEnumFromSchema(Schema(RefName((string)reference)), propertyName));
+        }
+
+        if (schema.TryGetValue("properties", out var propertiesObject))
+        {
+            var properties = (Dictionary<object, object>)propertiesObject;
+            if (properties.TryGetValue(propertyName, out var propertyObject))
+            {
+                var property = (Dictionary<object, object>)propertyObject;
+                if (property.TryGetValue("enum", out var enumObject))
+                {
+                    values.UnionWith(((List<object>)enumObject).Select(value => (string)value));
+                }
+            }
+        }
+
+        foreach (var compositionKey in new[] { "allOf", "oneOf", "anyOf" })
+        {
+            if (!schema.TryGetValue(compositionKey, out var membersObject))
+            {
+                continue;
+            }
+
+            foreach (var member in (List<object>)membersObject)
+            {
+                values.UnionWith(PropertyEnumFromSchema(
+                    (Dictionary<object, object>)member,
+                    propertyName));
+            }
+        }
+
+        return values;
+    }
+
+    private static string RefName(string reference) => reference[(reference.LastIndexOf('/') + 1)..];
 
     private static string FindSpecsDir()
     {

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -22,10 +21,8 @@ public sealed class ConnectClient
 
     private readonly HttpClient _http;
     private readonly Uri _baseUrl;
-    private readonly string _publicKeyLocale;
     private readonly ConnectClientAuth? _clientAuth;
-    private readonly ConcurrentDictionary<string, string> _publicKeyCache = new();
-    private readonly TokenVerifier _tokenVerifier;
+    private readonly Sudomimus.Session.SessionClient _sessionClient;
     private readonly Func<DateTimeOffset> _clock;
 
     /// <summary>
@@ -53,12 +50,13 @@ public sealed class ConnectClient
 
         _baseUrl = new Uri(options.BaseUrl.TrimEnd('/'));
         _http = options.HttpClient ?? s_defaultHttpClient;
-        _publicKeyLocale = options.PublicKeyFetchLocale ?? ConnectConstants.DefaultPublicKeyLocale;
         _clientAuth = options.ClientAuth;
         _clock = clock;
-        _tokenVerifier = new TokenVerifier(
-            (anchor, ct) => GetApplicationPublicKeyAsync(anchor, force: false, ct),
-            _clock);
+        _sessionClient = new Sudomimus.Session.SessionClient(new Sudomimus.Session.SessionClientOptions
+        {
+            BaseUrl = options.SessionBaseUrl,
+            HttpClient = _http,
+        });
     }
 
     /// <summary>Base URL the client targets (no trailing slash).</summary>
@@ -93,54 +91,13 @@ public sealed class ConnectClient
         return PostAsync<InfoRequest, InfoResponse>("/info", request, ct);
     }
 
-    // ───────── Public-key resolution ─────────
-
-    /// <summary>
-    /// Fetch (and cache) the application's PEM public key by calling
-    /// <c>/info</c> under the configured locale.
-    /// </summary>
-    /// <param name="applicationAnchor">Anchor of the application.</param>
-    /// <param name="force">Bypass the in-memory cache for this call.</param>
-    /// <param name="cancellationToken">Token observed for cooperative cancellation.</param>
-    public async Task<string> GetApplicationPublicKeyAsync(
-        string applicationAnchor,
-        bool force = false,
-        CancellationToken cancellationToken = default)
-    {
-        if (!force && _publicKeyCache.TryGetValue(applicationAnchor, out var cached))
-        {
-            return cached;
-        }
-
-        var info = await InfoAsync(
-            new InfoRequest { ApplicationAnchor = applicationAnchor, Locale = _publicKeyLocale },
-            cancellationToken).ConfigureAwait(false);
-
-        _publicKeyCache[applicationAnchor] = info.ApplicationPublicKey;
-        return info.ApplicationPublicKey;
-    }
-
-    /// <summary>
-    /// Drop one or all entries from the public-key cache. Pass
-    /// <c>null</c> to clear everything.
-    /// </summary>
-    public void ClearPublicKeyCache(string? applicationAnchor = null)
-    {
-        if (applicationAnchor is null)
-        {
-            _publicKeyCache.Clear();
-            return;
-        }
-        _publicKeyCache.TryRemove(applicationAnchor, out _);
-    }
-
-    // ───────── Token verification (forwarded to Sudomimus.Token) ─────────
+    // ───────── Token verification (forwarded to Sudomimus.Session) ─────────
 
     public Task<JwtToken<AccessTokenBody>> VerifyAccessTokenAsync(string jwt, CancellationToken ct = default)
-        => _tokenVerifier.VerifyAccessTokenAsync(jwt, ct);
+        => _sessionClient.VerifyAccessTokenAsync(jwt, ct);
 
     public Task<JwtToken<RefreshTokenBody>> VerifyRefreshTokenAsync(string jwt, CancellationToken ct = default)
-        => _tokenVerifier.VerifyRefreshTokenAsync(jwt, ct);
+        => _sessionClient.VerifyRefreshTokenAsync(jwt, ct);
 
     // ───────── HTTP plumbing ─────────
 

@@ -65,12 +65,22 @@ export class TokenVerifier {
             );
         }
 
+        const keyId: string | undefined = parsed.header.kid;
+
+        if (typeof keyId !== "string" || keyId.length === 0) {
+
+            throw new TokenError(
+                "MISSING_KEY_ID",
+                "Token is missing the `kid` signing-key identifier.",
+            );
+        }
+
         if (!parsed.verifyExpiration(new Date())) {
 
             throw new TokenError("EXPIRED", "Token has expired.");
         }
 
-        const publicKey: string = await this._resolver(audience);
+        const publicKey: string = await this._resolver(audience, keyId);
 
         if (!parsed.verifySignature(publicKey)) {
 

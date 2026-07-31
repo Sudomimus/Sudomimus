@@ -10,6 +10,7 @@ export type FakeResponseSpec = {
     status: number;
     body?: unknown;
     rawBody?: string;
+    headers?: Record<string, string>;
 };
 
 export const makeFetch = (specs: FakeResponseSpec[]): jest.Mock => {
@@ -36,6 +37,25 @@ export const makeFetch = (specs: FakeResponseSpec[]): jest.Mock => {
             status: next.status,
             json: async () => JSON.parse(text),
             text: async () => text,
+            headers: { get: (name: string) => next.headers?.[name] ?? null },
         } as unknown as Response;
     });
 };
+
+export const buildJwksResponse = (publicKey: string): ApplicationJwksResponse => {
+
+    const jwk = createPublicKey(publicKey).export({ format: "jwk" }) as JsonWebKey;
+    return {
+        keys: [{
+            kty: "RSA",
+            n: jwk.n!,
+            e: jwk.e!,
+            kid: KEY_ID,
+            use: "sig",
+            alg: "RS256",
+        }],
+    };
+};
+import type { ApplicationJwksResponse } from "../../src";
+import { createPublicKey, type JsonWebKey } from "node:crypto";
+import { KEY_ID } from "./jwt";

@@ -171,7 +171,9 @@ class Error1(BaseModel):
     """
     Error response body for non-polling validation and infrastructure
     failures. `/device-token` handler-level polling states use
-    `DeviceTokenError` instead.
+    `DeviceTokenError` instead. Outside `/device-token`, a missing,
+    malformed, or structurally invalid JSON request body returns
+    `InvalidBody` without parser or validation-library detail.
 
     """
 

@@ -55,8 +55,9 @@ with ConnectClient(
 Pass `client_auth` to let the SDK sign it, or provide a BYO signer.
 
 `ConnectClient` also exposes `verify_access_token` and `verify_refresh_token`,
-which resolve the application's public key through `/info` and cache it per
-client instance. If you only need JWT verification, depend on
+which delegate to the Session JWKS-backed verifier. JWKS responses are cached
+per client instance and keys are selected using the JWT `kid`. If you only
+need JWT verification, depend on
 [`sudomimus-token`](../sudomimus-token) directly.
 
 Pydantic v2 models are generated from

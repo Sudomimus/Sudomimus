@@ -21,7 +21,4 @@ public sealed record InfoResponse
     [JsonPropertyName("applicationName")]
     public required string ApplicationName { get; init; }
 
-    /// <summary>PEM-encoded application public key used to verify issued JWTs.</summary>
-    [JsonPropertyName("applicationPublicKey")]
-    public required string ApplicationPublicKey { get; init; }
 }

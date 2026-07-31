@@ -5,14 +5,16 @@
  * @description Shared fetch / response test helpers
  */
 
-import type { InfoResponse } from "../../src";
-import { APPLICATION_ANCHOR } from "./jwt";
+import type { ApplicationJwksResponse } from "@sudomimus/session";
+import { createPublicKey, type JsonWebKey } from "node:crypto";
+import { KEY_ID } from "./jwt";
 
 export type FakeResponseSpec = {
     ok: boolean;
     status: number;
     body?: unknown;
     rawBody?: string;
+    headers?: Record<string, string>;
 };
 
 export const makeFetch = (specs: FakeResponseSpec[]): jest.Mock => {
@@ -39,15 +41,22 @@ export const makeFetch = (specs: FakeResponseSpec[]): jest.Mock => {
             status: next.status,
             json: async () => JSON.parse(text),
             text: async () => text,
+            headers: { get: (name: string) => next.headers?.[name] ?? null },
         } as unknown as Response;
     });
 };
 
-export const buildInfoResponse = (publicKey: string): InfoResponse => {
+export const buildJwksResponse = (publicKey: string): ApplicationJwksResponse => {
 
+    const jwk = createPublicKey(publicKey).export({ format: "jwk" }) as JsonWebKey;
     return {
-        applicationAnchor: APPLICATION_ANCHOR,
-        applicationName: "Demo",
-        applicationPublicKey: publicKey,
+        keys: [{
+            kty: "RSA",
+            n: jwk.n!,
+            e: jwk.e!,
+            kid: KEY_ID,
+            use: "sig",
+            alg: "RS256",
+        }],
     };
 };

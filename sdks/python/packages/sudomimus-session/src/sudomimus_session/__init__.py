@@ -1,6 +1,8 @@
 """Sudomimus Session SDK."""
 
 from ._generated.models import (
+    ApplicationJsonWebKey,
+    ApplicationJwksResponse,
     ClaimRequirementStateView,
     ClaimsStateView,
     HealthResponse,
@@ -45,6 +47,8 @@ from .token_store import (
 )
 
 __all__ = [
+    "ApplicationJsonWebKey",
+    "ApplicationJwksResponse",
     "AsyncInMemoryTokenStore",
     "AsyncRotatingSessionClient",
     "AsyncSessionClient",

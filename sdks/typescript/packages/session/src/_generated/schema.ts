@@ -21,6 +21,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/applications/{applicationAnchor}/jwks.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fetch the public signing keys for one application's tokens.
+         * @description Returns the lifecycle-aware public JWK Set used to verify ordinary
+         *     application access and refresh tokens. Select the key whose `kid`
+         *     matches the JWT JOSE header. The set can contain PREPUBLISHED, ACTIVE,
+         *     and still-published RETIRING keys; it never contains private key
+         *     material or REVOKED keys.
+         */
+        get: operations["applicationJwks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/refresh": {
         parameters: {
             query?: never;
@@ -117,11 +141,20 @@ export interface paths {
         put?: never;
         /**
          * Revoke every session of an account for the calling application.
-         * @description Revokes all refresh tokens belonging to the given account that were
-         *     issued for the calling application. This is an application-authority
-         *     action, so it requires a client-auth JWT with audience
+         * @description Advances the account/application revocation authority for the account
+         *     identified by the supplied sector subject, then best-effort suspends
+         *     currently enumerated refresh-token rows. This is an
+         *     application-authority action, so it requires a client-auth JWT with audience
          *     `sudomimus-session`. Revocation is scoped to the calling application;
          *     sessions of the same account under other applications are unaffected.
+         *     A successful response acknowledges the request with `revoked: true`.
+         *     Unknown or out-of-sector subjects return the same acknowledgement with
+         *     `cleanupRowCount: 0` to avoid an existence oracle. `cleanupRowCount`
+         *     counts best-effort row suspensions, not the authoritative revocation.
+         *     Client authentication is evaluated against the raw request body before
+         *     recursive request-body schema validation. Each signed request is
+         *     at-most-once: its `jti` is consumed in a `/revoke-all`-specific replay
+         *     namespace, and a transport retry must use a freshly signed client JWT.
          */
         post: operations["revokeAll"];
         delete?: never;
@@ -134,6 +167,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ApplicationJsonWebKey: {
+            /** @enum {string} */
+            kty: "RSA";
+            /** @description Base64url-encoded RSA modulus. */
+            n: string;
+            /** @description Base64url-encoded RSA public exponent. */
+            e: string;
+            /** @description Stable signing-key identifier copied into JWT JOSE headers. */
+            kid: string;
+            /** @enum {string} */
+            use: "sig";
+            /** @enum {string} */
+            alg: "RS256";
+        };
+        ApplicationJwksResponse: {
+            keys: components["schemas"]["ApplicationJsonWebKey"][];
+        };
         HealthResponse: {
             /**
              * @description The API invocation path completed successfully.
@@ -187,8 +237,20 @@ export interface components {
             subject: string;
         };
         RevokeAllResponse: {
-            revokedCount: number;
+            /**
+             * @description Authority-safe acknowledgement of the revocation request.
+             * @enum {boolean}
+             */
+            revoked: true;
+            /** @description Number of currently enumerated refresh-token rows suspended as best-effort cleanup. */
+            cleanupRowCount: number;
         };
+        /**
+         * @description Error response body. A missing, malformed, or structurally invalid JSON
+         *     request body returns `InvalidBody` without parser or
+         *     validation-library detail. A documented status-only private failure has
+         *     an empty response body instead.
+         */
         Error: {
             reason: string;
             message?: string;
@@ -198,6 +260,8 @@ export interface components {
     parameters: never;
     requestBodies: never;
     headers: {
+        /** @description Public cache lifetime bounded by the signing-key prepublication window. */
+        PublicJwksCacheControl: string;
         /** @description Prevent storage of the credential-bearing response. */
         CredentialCacheControl: "no-store";
         /** @description Legacy cache instruction retained for credential responses. */
@@ -227,6 +291,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    applicationJwks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stable public application identifier carried by token `aud`. */
+                applicationAnchor: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public JWK Set for the application. */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["PublicJwksCacheControl"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationJwksResponse"];
+                };
+            };
+            /** @description The required application anchor path parameter is missing. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Reason `ApplicationNotFound` — the application anchor is unknown. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -301,11 +416,27 @@ export interface operations {
              *     - `AccountDeleted` — the account has been erased.
              *     - `ApplicationDisabled` — the application, parent sector, or parent organization no longer permits token issuance.
              *     - `ClaimConsentRequired` — a REQUIRED claim is no longer satisfied by a standing grant.
+             *     - `RequiredClaimDataMissing` — the REQUIRED email claim is granted,
+             *       but the account no longer owns a primary email address to issue.
              *     - `EmailDomainBlocked` — a verified adopted domain now blocks this account.
              *     - `EmailDomainRequiresSso` — a verified adopted domain now requires SSO and this session was not realized through the required connector.
              *     - `SsoAuthorityConflict` — verified adopted domains require distinct SSO connectors, so no refresh session can satisfy every domain authority until the conflict is repaired.
              */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description `AuthorizationArtifactStale` — the email-identity or exact sector
+             *     binding changed after refresh authorization was evaluated. Restart
+             *     through an initial issuance flow so current identity and claim
+             *     authority are evaluated before another refresh family is used.
+             */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -412,7 +543,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Number of sessions revoked. */
+            /** @description Revocation acknowledgement and best-effort cleanup count. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -421,7 +552,11 @@ export interface operations {
                     "application/json": components["schemas"]["RevokeAllResponse"];
                 };
             };
-            /** @description Client-auth JWT missing, malformed, expired, or invalid. */
+            /**
+             * @description Client-auth JWT missing, malformed, expired, invalid, or replayed.
+             *     A retry after an uncertain response must use a freshly signed JWT
+             *     with a new `jti`.
+             */
             401: {
                 headers: {
                     [name: string]: unknown;

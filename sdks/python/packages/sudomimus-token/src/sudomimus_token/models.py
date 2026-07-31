@@ -24,6 +24,7 @@ class JwtHeader(BaseModel):
     jti: str | None = None
     sub: str | None = None
     kty: str | None = None
+    kid: str | None = None
     ver: str | None = None
 
 

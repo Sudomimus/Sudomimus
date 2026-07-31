@@ -8,7 +8,7 @@ Mirrors [`@sudomimus/token`](../../typescript/packages/token) (TypeScript) and [
 
 ```kotlin
 dependencies {
-    implementation("com.sudomimus:sudomimus-token:0.1.0")
+    implementation("com.sudomimus:sudomimus-token:0.2.0")
 }
 ```
 
@@ -17,19 +17,20 @@ dependencies {
 ```java
 import com.sudomimus.token.*;
 
-var verifier = new TokenVerifier(applicationAnchor -> {
-    // Return the PEM-encoded RSA public key for this application.
-    return myCache.get(applicationAnchor);
+var verifier = new TokenVerifier((applicationAnchor, keyId) -> {
+    // Fetch/cache Session JWKS and return the PEM key matching keyId.
+    return myCache.get(applicationAnchor, keyId);
 });
 
 try {
     JwtToken<AccessTokenBody> token = verifier.verifyAccessToken(jwt);
     System.out.println(token.getBody().subject + " " + token.getBody().staticAvatarUrl);
 } catch (TokenException e) {
-    // e.getCode(): INVALID_JWT | WRONG_KEY_TYPE | MISSING_AUDIENCE | EXPIRED | INVALID_SIGNATURE
+    // Also includes MISSING_KEY_ID / UNKNOWN_KEY_ID for JWKS selection.
 }
 ```
 
 The verifier performs, in order: parse → `kty` matches `"Access"`/`"Refresh"`
-→ `aud` non-empty → expiration in the future → RSA-SHA256 signature against
-`resolver.resolve(aud)`. The verifier does not cache resolver results.
+→ `aud` and `kid` non-empty → expiration in the future → RSA-SHA256 signature
+against `resolver.resolve(aud, kid)`. `ApplicationJsonWebKey.toPublicKeyPem()`
+converts Session RSA JWKs for the resolver. The verifier does not cache results.

@@ -28,3 +28,9 @@ await session.LogoutAsync();
 `RevokeAllAsync` requires a client-auth JWT with audience
 `sudomimus-session`; configure `SessionClientOptions.ClientAuth` to let the SDK
 sign it.
+
+The client also exposes `ApplicationJwksAsync`,
+`ResolveApplicationPublicKeyAsync`, `VerifyAccessTokenAsync`, and
+`VerifyRefreshTokenAsync`. JWKS responses honor `Cache-Control: max-age` with
+a 5-minute fallback; an unknown `kid` triggers one forced refresh before
+`UnknownKeyId` is returned.

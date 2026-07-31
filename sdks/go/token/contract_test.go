@@ -102,17 +102,20 @@ func requiredKeys(m map[string]bool) []string {
 }
 
 func TestModelsMatchSpec(t *testing.T) {
-	doc := loadSpec(t, "connect")
 	cases := []struct {
-		schema string
-		typ    reflect.Type
+		service string
+		schema  string
+		typ     reflect.Type
 	}{
-		{"AccessTokenBody", reflect.TypeOf(AccessTokenBody{})},
-		{"RefreshTokenBody", reflect.TypeOf(RefreshTokenBody{})},
+		{"connect", "AccessTokenBody", reflect.TypeOf(AccessTokenBody{})},
+		{"connect", "RefreshTokenBody", reflect.TypeOf(RefreshTokenBody{})},
+		{"session", "ApplicationJsonWebKey", reflect.TypeOf(ApplicationJSONWebKey{})},
+		{"session", "ApplicationJwksResponse", reflect.TypeOf(ApplicationJWKS{})},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.schema, func(t *testing.T) {
+		t.Run(tc.service+"/"+tc.schema, func(t *testing.T) {
+			doc := loadSpec(t, tc.service)
 			schema, ok := doc.Components.Schemas[tc.schema]
 			if !ok {
 				t.Fatalf("spec schema %q not found", tc.schema)

@@ -1,6 +1,6 @@
 [project]
 name = "sudomimus-session"
-version = "1.0.0"
+version = "2.0.0"
 description = "Sudomimus Session SDK — refresh-token rotation, introspection, logout, and account session revocation."
 readme = "README.md"
 requires-python = ">=3.11"

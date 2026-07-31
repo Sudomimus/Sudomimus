@@ -19,6 +19,7 @@ type Header struct {
 	NotBefore int64  `json:"nbf,omitempty"`
 	JwtID     string `json:"jti,omitempty"`
 	Subject   string `json:"sub,omitempty"`
+	KeyID     string `json:"kid,omitempty"`
 	KeyType   string `json:"kty,omitempty"`
 	Version   string `json:"ver,omitempty"`
 }
@@ -59,6 +60,6 @@ type AccessToken = JWT[AccessTokenBody]
 type RefreshToken = JWT[RefreshTokenBody]
 
 // PublicKeyResolver returns a PEM-encoded RSA public key for the given
-// application anchor (the token's `aud` claim). Caching is the resolver's
-// responsibility — Verifier does not cache.
-type PublicKeyResolver func(ctx context.Context, applicationAnchor string) (string, error)
+// application anchor and key ID (the token's `aud` and `kid` claims). Caching
+// is the resolver's responsibility — Verifier does not cache.
+type PublicKeyResolver func(ctx context.Context, applicationAnchor, keyID string) (string, error)

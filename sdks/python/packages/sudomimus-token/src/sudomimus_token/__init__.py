@@ -10,6 +10,7 @@ from __future__ import annotations
 from ._codec import create_jwt, decode_base64url, encode_base64url, sign_rs256, verify_rs256
 from .errors import TokenError, TokenErrorCode
 from .id_token import IdToken, parse_id_token, verify_id_token
+from .jwks import rsa_jwk_to_pem
 from .models import (
     AccessTokenBody,
     IdTokenBody,
@@ -58,4 +59,5 @@ __all__ = [
     "sign_rs256",
     "verify_id_token",
     "verify_rs256",
+    "rsa_jwk_to_pem",
 ]

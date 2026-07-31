@@ -1,6 +1,9 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Sudomimus.Token;
 
 namespace Sudomimus.Session;
 
@@ -21,6 +24,8 @@ public sealed class SessionClient
     private readonly Uri _baseUrl;
     private readonly SessionClientAuth? _clientAuth;
     private readonly Func<DateTimeOffset> _clock;
+    private readonly ConcurrentDictionary<string, JwksCacheEntry> _jwksCache = new();
+    private readonly TokenVerifier _tokenVerifier;
 
     public SessionClient(string baseUrl = SessionConstants.ProductionBaseUrl)
         : this(new SessionClientOptions { BaseUrl = baseUrl })
@@ -44,6 +49,7 @@ public sealed class SessionClient
         _http = options.HttpClient ?? s_defaultHttpClient;
         _clientAuth = options.ClientAuth;
         _clock = clock;
+        _tokenVerifier = new TokenVerifier(ResolveApplicationPublicKeyAsync, clock);
     }
 
     /// <summary>Base URL the client targets (no trailing slash).</summary>
@@ -51,6 +57,79 @@ public sealed class SessionClient
 
     public Task<HealthResponse> HealthAsync(CancellationToken ct = default)
         => GetAsync<HealthResponse>("/health", ct);
+
+    public async Task<ApplicationJwksResponse> ApplicationJwksAsync(
+        string applicationAnchor,
+        bool force = false,
+        CancellationToken ct = default)
+    {
+        if (!force
+            && _jwksCache.TryGetValue(applicationAnchor, out var cached)
+            && cached.ExpiresAt > _clock())
+        {
+            return cached.Value;
+        }
+
+        var encodedAnchor = Uri.EscapeDataString(applicationAnchor);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            new Uri(_baseUrl, $"/applications/{encodedAnchor}/jwks.json"));
+        request.Headers.Accept.ParseAdd("application/json");
+        using var response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+        var maxAge = response.Headers.CacheControl?.MaxAge
+            ?? TimeSpan.FromSeconds(SessionConstants.DefaultJwksCacheSeconds);
+        var value = await HandleAsync<ApplicationJwksResponse>(response, ct).ConfigureAwait(false);
+        _jwksCache[applicationAnchor] = new JwksCacheEntry(_clock() + maxAge, value);
+        return value;
+    }
+
+    public void ClearJwksCache(string? applicationAnchor = null)
+    {
+        if (applicationAnchor is null)
+        {
+            _jwksCache.Clear();
+            return;
+        }
+        _jwksCache.TryRemove(applicationAnchor, out _);
+    }
+
+    public async Task<string> ResolveApplicationPublicKeyAsync(
+        string applicationAnchor,
+        string keyId,
+        CancellationToken ct = default)
+    {
+        var jwks = await ApplicationJwksAsync(applicationAnchor, false, ct).ConfigureAwait(false);
+        var key = jwks.Keys.FirstOrDefault(candidate => candidate.KeyId == keyId);
+        if (key is null)
+        {
+            jwks = await ApplicationJwksAsync(applicationAnchor, true, ct).ConfigureAwait(false);
+            key = jwks.Keys.FirstOrDefault(candidate => candidate.KeyId == keyId);
+        }
+        if (key is null)
+        {
+            throw new TokenException(
+                TokenErrorCode.UnknownKeyId,
+                $"No application signing key matches kid \"{keyId}\".");
+        }
+
+        using var rsa = RSA.Create();
+        rsa.ImportParameters(new RSAParameters
+        {
+            Modulus = DecodeBase64Url(key.Modulus),
+            Exponent = DecodeBase64Url(key.Exponent),
+        });
+        return rsa.ExportSubjectPublicKeyInfoPem();
+    }
+
+    public Task<JwtToken<AccessTokenBody>> VerifyAccessTokenAsync(
+        string jwt,
+        CancellationToken ct = default)
+        => _tokenVerifier.VerifyAccessTokenAsync(jwt, ct);
+
+    public Task<JwtToken<RefreshTokenBody>> VerifyRefreshTokenAsync(
+        string jwt,
+        CancellationToken ct = default)
+        => _tokenVerifier.VerifyRefreshTokenAsync(jwt, ct);
 
     public Task<RefreshResponse> RefreshAsync(RefreshRequest request, CancellationToken ct = default)
     {
@@ -178,4 +257,13 @@ public sealed class SessionClient
             return null;
         }
     }
+
+    private static byte[] DecodeBase64Url(string value)
+    {
+        var translated = value.Replace('-', '+').Replace('_', '/');
+        var padded = translated.PadRight(translated.Length + (4 - translated.Length % 4) % 4, '=');
+        return Convert.FromBase64String(padded);
+    }
+
+    private sealed record JwksCacheEntry(DateTimeOffset ExpiresAt, ApplicationJwksResponse Value);
 }

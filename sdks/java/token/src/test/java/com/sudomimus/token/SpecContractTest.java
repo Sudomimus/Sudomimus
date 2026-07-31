@@ -60,11 +60,21 @@ final class SpecContractTest {
 
     @Test
     void modelsMatchSpec() throws Exception {
-        JsonNode schemas = loadSchemas("connect");
-        Map<String, Class<?>> mapping =
+        assertModelsMatchSpec(
+                "connect",
                 Map.of(
                         "AccessTokenBody", AccessTokenBody.class,
-                        "RefreshTokenBody", RefreshTokenBody.class);
+                        "RefreshTokenBody", RefreshTokenBody.class));
+        assertModelsMatchSpec(
+                "session",
+                Map.of(
+                        "ApplicationJsonWebKey", ApplicationJsonWebKey.class,
+                        "ApplicationJwksResponse", ApplicationJwks.class));
+    }
+
+    private static void assertModelsMatchSpec(String service, Map<String, Class<?>> mapping)
+            throws Exception {
+        JsonNode schemas = loadSchemas(service);
 
         for (Map.Entry<String, Class<?>> entry : mapping.entrySet()) {
             assertEquals(

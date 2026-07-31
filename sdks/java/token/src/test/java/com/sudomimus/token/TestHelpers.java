@@ -72,6 +72,7 @@ final class TestHelpers {
         header.put("iat", iat);
         header.put("exp", iat + 3600);
         header.put("jti", "access-1");
+        header.put("kid", "key-1");
         header.put("kty", "Access");
         header.put("sub", "refresh-1");
 
@@ -96,6 +97,7 @@ final class TestHelpers {
         header.put("iat", iat);
         header.put("exp", iat + 30L * 24 * 3600);
         header.put("jti", "refresh-1");
+        header.put("kid", "key-1");
         header.put("kty", "Refresh");
 
         Map<String, Object> body = new LinkedHashMap<>();

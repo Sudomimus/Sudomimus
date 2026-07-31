@@ -74,6 +74,40 @@ public class SessionClientTests
     }
 
     [Fact]
+    public async Task ResolveApplicationPublicKeyAsync_UsesKidAndCachesJwks()
+    {
+        using var rsa = RSA.Create(2048);
+        var parameters = rsa.ExportParameters(false);
+        var jwks = $$"""
+        {
+            "keys": [{
+                "kty": "RSA",
+                "n": "{{EncodeBase64Url(parameters.Modulus!)}}",
+                "e": "{{EncodeBase64Url(parameters.Exponent!)}}",
+                "kid": "key-1",
+                "use": "sig",
+                "alg": "RS256"
+            }]
+        }
+        """;
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.OK, jwks);
+        var client = NewClient(handler);
+
+        var first = await client.ResolveApplicationPublicKeyAsync("anchor-1", "key-1");
+        var second = await client.ResolveApplicationPublicKeyAsync("anchor-1", "key-1");
+
+        Assert.Equal(first, second);
+        Assert.Single(handler.Requests);
+        Assert.Equal(
+            "https://session.example.com/applications/anchor-1/jwks.json",
+            handler.Requests[0].RequestUri!.ToString());
+        using var resolved = RSA.Create();
+        resolved.ImportFromPem(first);
+        Assert.Equal(parameters.Modulus, resolved.ExportParameters(false).Modulus);
+    }
+
+    [Fact]
     public async Task RevokeAllAsync_WithoutClientAuth_Throws()
     {
         var handler = new FakeHttpMessageHandler();
@@ -88,7 +122,7 @@ public class SessionClientTests
     {
         var capturedRawBody = "";
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "revokedCount": 3 }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "revoked": true, "cleanupRowCount": 3 }""");
 
         var client = new SessionClient(new SessionClientOptions
         {
@@ -110,7 +144,8 @@ public class SessionClientTests
             Subject = "subject-1",
         });
 
-        Assert.Equal(3, resp.RevokedCount);
+        Assert.True(resp.Revoked);
+        Assert.Equal(3, resp.CleanupRowCount);
         var req = Assert.Single(handler.Requests);
         Assert.Equal("external.signed.jwt", req.AuthParameter);
         Assert.Equal(req.Body, capturedRawBody);
@@ -185,4 +220,7 @@ public class SessionClientTests
         padded = padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '=');
         return Encoding.UTF8.GetString(Convert.FromBase64String(padded));
     }
+
+    private static string EncodeBase64Url(byte[] value) =>
+        Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }

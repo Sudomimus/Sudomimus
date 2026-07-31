@@ -25,6 +25,8 @@ export type InfoRequest = components["schemas"]["InfoRequest"];
 export type InfoResponse = components["schemas"]["InfoResponse"];
 
 export type AuthenticationRuleConstraint = components["schemas"]["AuthenticationRuleConstraint"];
+export type AuthenticationRuleConstraintEnterpriseFederationApplicationManaged = components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationApplicationManaged"];
+export type AuthenticationRuleConstraintEnterpriseFederationDomainManaged = components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationDomainManaged"];
 export type AuthenticationRulePasskeyUsernamelessPayload = components["schemas"]["AuthenticationRulePasskeyUsernamelessPayload"];
 export type AuthenticationRulePasskeyReasonedPayload = components["schemas"]["AuthenticationRulePasskeyReasonedPayload"];
 export type AuthenticationRuleEmailVerificationPayload = components["schemas"]["AuthenticationRuleEmailVerificationPayload"];
@@ -36,12 +38,15 @@ export type AuthenticationRuleGitHubOAuthPayload = components["schemas"]["Authen
 export type AuthenticationRuleDiscordOAuthPayload = components["schemas"]["AuthenticationRuleDiscordOAuthPayload"];
 export type AuthenticationRuleBattleNetOAuthPayload = components["schemas"]["AuthenticationRuleBattleNetOAuthPayload"];
 export type AuthenticationRuleXOAuthPayload = components["schemas"]["AuthenticationRuleXOAuthPayload"];
+export type AuthenticationRuleEnterpriseFederationApplicationManagedPayload = components["schemas"]["AuthenticationRuleEnterpriseFederationApplicationManagedPayload"];
+export type AuthenticationRuleEnterpriseFederationDomainManagedPayload = components["schemas"]["AuthenticationRuleEnterpriseFederationDomainManagedPayload"];
 
 export type RealizeRuleConstraint = components["schemas"]["RealizeRuleConstraint"];
 export type RealizeRuleEmailPayload = components["schemas"]["RealizeRuleEmailPayload"];
 export type RealizeRuleSteamIdPayload = components["schemas"]["RealizeRuleSteamIdPayload"];
 export type RealizeRuleAccountAliasPayload = components["schemas"]["RealizeRuleAccountAliasPayload"];
 export type RealizeRuleSectorSubjectPayload = components["schemas"]["RealizeRuleSectorSubjectPayload"];
+export type RealizeRuleEveryonePayload = components["schemas"]["RealizeRuleEveryonePayload"];
 
 export type ReturnMethodDeclaration = components["schemas"]["ReturnMethodDeclaration"];
 export type ReturnMethodCallback = components["schemas"]["ReturnMethodCallback"];
@@ -68,6 +73,8 @@ export const AUTHENTICATION_METHOD = {
     DISCORD_OAUTH: "DISCORD_OAUTH",
     BATTLENET_OAUTH: "BATTLENET_OAUTH",
     X_OAUTH: "X_OAUTH",
+    ENTERPRISE_FEDERATION_APPLICATION_MANAGED: "ENTERPRISE_FEDERATION_APPLICATION_MANAGED",
+    ENTERPRISE_FEDERATION_DOMAIN_MANAGED: "ENTERPRISE_FEDERATION_DOMAIN_MANAGED",
 } as const;
 export type AuthenticationMethod = AuthenticationRuleConstraint["method"];
 
@@ -76,6 +83,7 @@ export const REALIZE_CONSTRAINT_TYPE = {
     STEAM_ID: "STEAM_ID",
     ACCOUNT_ALIAS: "ACCOUNT_ALIAS",
     SECTOR_SUBJECT: "SECTOR_SUBJECT",
+    EVERYONE: "EVERYONE",
 } as const;
 export type RealizeConstraintType = RealizeRuleConstraint["constraintType"];
 
@@ -128,11 +136,7 @@ export type ConnectClientAuthConfig = ConnectClientAuthWithKey | ConnectClientAu
 
 export interface ConnectClientOptions {
     baseUrl?: string;
+    sessionBaseUrl?: string;
     fetch?: typeof globalThis.fetch;
-    publicKeyFetchLocale?: string;
     clientAuth?: ConnectClientAuthConfig;
-}
-
-export interface GetApplicationPublicKeyOptions {
-    force?: boolean;
 }

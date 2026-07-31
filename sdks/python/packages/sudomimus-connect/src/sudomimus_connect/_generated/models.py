@@ -43,6 +43,9 @@ class EstablishResponse(BaseModel):
 
 
 class StatusPollRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     exposureKey: str
     hiddenKey: str
 
@@ -68,6 +71,9 @@ class StatusPollRealizedResponse(BaseModel):
 
 
 class RedeemRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     exposureKey: str
     hiddenKey: str
     confirmationKey: str
@@ -198,6 +204,9 @@ class RefreshTokenBody(BaseModel):
 
 
 class InfoRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     applicationAnchor: str
     locale: str = Field(
         ...,
@@ -208,28 +217,75 @@ class InfoRequest(BaseModel):
 class InfoResponse(BaseModel):
     applicationAnchor: str
     applicationName: str = Field(..., description="Localized application display name.")
-    applicationPublicKey: str = Field(
-        ...,
-        description="PEM-encoded application public key used to verify issued JWTs.",
+
+
+class AuthenticationRuleConstraintCommon(BaseModel):
+    accessTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for access token lifetime. Resolved at realize time.",
+        ge=60,
+        le=604800,
+    )
+    refreshTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
+        ge=86400,
+        le=31536000,
     )
 
 
 class Method(StrEnum):
-    """
-    Which authentication method this constraint narrows to.
-    """
-
     PASSKEY_USERNAMELESS = "PASSKEY_USERNAMELESS"
+
+
+class Method1(StrEnum):
     PASSKEY_REASONED = "PASSKEY_REASONED"
+
+
+class Method2(StrEnum):
     EMAIL_VERIFICATION = "EMAIL_VERIFICATION"
+
+
+class Method3(StrEnum):
     STEAM_TICKET = "STEAM_TICKET"
+
+
+class Method4(StrEnum):
     STEAM_OPENID = "STEAM_OPENID"
+
+
+class Method5(StrEnum):
     ACCESS_KEY_DIRECT = "ACCESS_KEY_DIRECT"
+
+
+class Method6(StrEnum):
     GOOGLE_OAUTH = "GOOGLE_OAUTH"
+
+
+class Method7(StrEnum):
     GITHUB_OAUTH = "GITHUB_OAUTH"
+
+
+class Method8(StrEnum):
     DISCORD_OAUTH = "DISCORD_OAUTH"
+
+
+class Method9(StrEnum):
     BATTLENET_OAUTH = "BATTLENET_OAUTH"
+
+
+class Method10(StrEnum):
     X_OAUTH = "X_OAUTH"
+
+
+class Method11(StrEnum):
+    ENTERPRISE_FEDERATION_APPLICATION_MANAGED = (
+        "ENTERPRISE_FEDERATION_APPLICATION_MANAGED"
+    )
+
+
+class Method12(StrEnum):
+    ENTERPRISE_FEDERATION_DOMAIN_MANAGED = "ENTERPRISE_FEDERATION_DOMAIN_MANAGED"
 
 
 class AuthenticationRulePasskeyUsernamelessPayload(BaseModel):
@@ -403,15 +459,64 @@ class AuthenticationRuleXOAuthPayload(BaseModel):
     )
 
 
-class ConstraintType(StrEnum):
+class AuthenticationRuleEnterpriseFederationApplicationManagedPayload(BaseModel):
     """
-    Which realize-rule kind this constraint narrows to.
+    Application-managed enterprise federation. `connectorAnchor` names an
+    enabled FederationConnector owned by the application's organization.
+
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    connectorAnchor: str = Field(..., max_length=2048, min_length=1, pattern="\\S")
+
+
+class AuthenticationRuleEnterpriseFederationDomainManagedPayload(BaseModel):
+    """
+    Empty payload — the connector is selected from the verified adopted
+    domain's SSO_ONLY policy rather than by the application.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class RealizeRuleConstraintCommon(BaseModel):
+    accessTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for access token lifetime. Resolved at realize time.",
+        ge=60,
+        le=604800,
+    )
+    refreshTokenTtlSeconds: int | None = Field(
+        None,
+        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
+        ge=86400,
+        le=31536000,
+    )
+
+
+class ConstraintType(StrEnum):
     EMAIL = "EMAIL"
+
+
+class ConstraintType1(StrEnum):
     STEAM_ID = "STEAM_ID"
+
+
+class ConstraintType2(StrEnum):
     ACCOUNT_ALIAS = "ACCOUNT_ALIAS"
+
+
+class ConstraintType3(StrEnum):
     SECTOR_SUBJECT = "SECTOR_SUBJECT"
+
+
+class ConstraintType4(StrEnum):
+    EVERYONE = "EVERYONE"
 
 
 class AllowedEmail(RootModel[str]):
@@ -484,6 +589,18 @@ class RealizeRuleSectorSubjectPayload(BaseModel):
     )
 
 
+class RealizeRuleEveryonePayload(BaseModel):
+    """
+    Empty payload — the explicit EVERYONE constraint admits any realized
+    identity on this side of the Layer-2 AND boundary.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
 class Type(StrEnum):
     CALLBACK = "CALLBACK"
 
@@ -491,7 +608,7 @@ class Type(StrEnum):
 class Payload(BaseModel):
     callbackUrl: str = Field(
         ...,
-        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains. The scheme\nMUST be HTTPS except loopback HTTP for local development\n(`localhost`, `127.0.0.1`, `[::1]`). The server enforces the\nlength limit in UTF-8 bytes.\n",
+        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains. The scheme\nMUST be HTTPS except loopback HTTP for local development\n(`localhost`, `127.0.0.1`, `[::1]`). After realization,\nConnect appends the canonical `exposure-key` and\n`confirmation-key` query parameters. Existing query parameters\nand fragments are preserved; caller-supplied or duplicate\nvalues for the two canonical names are overwritten. The URL\nMUST be concrete and MUST NOT contain Inquiry-key templates.\nThe server enforces the length limit in UTF-8 bytes.\n",
         max_length=2048,
     )
 
@@ -530,7 +647,9 @@ class Error(BaseModel):
     Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
     for known failure modes. When the reason symbol's description begins with
     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-    signal — both `reason` and the body itself are absent in that case.
+    signal — both `reason` and the body itself are absent in that case. A
+    missing, malformed, or structurally invalid JSON request body returns
+    `InvalidBody` without parser or validation-library detail.
 
     """
 
@@ -545,51 +664,100 @@ class StatusPollResponse(
     )
 
 
-class AuthenticationRuleConstraint(BaseModel):
-    method: Method = Field(
-        ..., description="Which authentication method this constraint narrows to."
-    )
-    payload: (
-        AuthenticationRulePasskeyUsernamelessPayload
-        | AuthenticationRulePasskeyReasonedPayload
-        | AuthenticationRuleEmailVerificationPayload
-        | AuthenticationRuleSteamTicketPayload
-        | AuthenticationRuleSteamOpenIdPayload
-        | AuthenticationRuleAccessKeyDirectPayload
-        | AuthenticationRuleGoogleOAuthPayload
-        | AuthenticationRuleGitHubOAuthPayload
-        | AuthenticationRuleDiscordOAuthPayload
-        | AuthenticationRuleBattleNetOAuthPayload
-        | AuthenticationRuleXOAuthPayload
-    )
-    accessTokenTtlSeconds: int | None = Field(
-        None,
-        description="Per-constraint override for access token lifetime. Resolved at realize time.",
-    )
-    refreshTokenTtlSeconds: int | None = Field(
-        None,
-        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
-    )
+class AuthenticationRuleConstraintPasskeyUsernameless(
+    AuthenticationRuleConstraintCommon
+):
+    method: Literal["PASSKEY_USERNAMELESS"]
+    payload: AuthenticationRulePasskeyUsernamelessPayload
 
 
-class RealizeRuleConstraint(BaseModel):
-    constraintType: ConstraintType = Field(
-        ..., description="Which realize-rule kind this constraint narrows to."
-    )
-    payload: (
-        RealizeRuleEmailPayload
-        | RealizeRuleSteamIdPayload
-        | RealizeRuleAccountAliasPayload
-        | RealizeRuleSectorSubjectPayload
-    )
-    accessTokenTtlSeconds: int | None = Field(
-        None,
-        description="Per-constraint override for access token lifetime. Resolved at realize time.",
-    )
-    refreshTokenTtlSeconds: int | None = Field(
-        None,
-        description="Per-constraint override for refresh token lifetime. Resolved at realize time.",
-    )
+class AuthenticationRuleConstraintPasskeyReasoned(AuthenticationRuleConstraintCommon):
+    method: Literal["PASSKEY_REASONED"]
+    payload: AuthenticationRulePasskeyReasonedPayload
+
+
+class AuthenticationRuleConstraintEmailVerification(AuthenticationRuleConstraintCommon):
+    method: Literal["EMAIL_VERIFICATION"]
+    payload: AuthenticationRuleEmailVerificationPayload
+
+
+class AuthenticationRuleConstraintSteamTicket(AuthenticationRuleConstraintCommon):
+    method: Literal["STEAM_TICKET"]
+    payload: AuthenticationRuleSteamTicketPayload
+
+
+class AuthenticationRuleConstraintSteamOpenId(AuthenticationRuleConstraintCommon):
+    method: Literal["STEAM_OPENID"]
+    payload: AuthenticationRuleSteamOpenIdPayload
+
+
+class AuthenticationRuleConstraintAccessKeyDirect(AuthenticationRuleConstraintCommon):
+    method: Literal["ACCESS_KEY_DIRECT"]
+    payload: AuthenticationRuleAccessKeyDirectPayload
+
+
+class AuthenticationRuleConstraintGoogleOAuth(AuthenticationRuleConstraintCommon):
+    method: Literal["GOOGLE_OAUTH"]
+    payload: AuthenticationRuleGoogleOAuthPayload
+
+
+class AuthenticationRuleConstraintGitHubOAuth(AuthenticationRuleConstraintCommon):
+    method: Literal["GITHUB_OAUTH"]
+    payload: AuthenticationRuleGitHubOAuthPayload
+
+
+class AuthenticationRuleConstraintDiscordOAuth(AuthenticationRuleConstraintCommon):
+    method: Literal["DISCORD_OAUTH"]
+    payload: AuthenticationRuleDiscordOAuthPayload
+
+
+class AuthenticationRuleConstraintBattleNetOAuth(AuthenticationRuleConstraintCommon):
+    method: Literal["BATTLENET_OAUTH"]
+    payload: AuthenticationRuleBattleNetOAuthPayload
+
+
+class AuthenticationRuleConstraintXOAuth(AuthenticationRuleConstraintCommon):
+    method: Literal["X_OAUTH"]
+    payload: AuthenticationRuleXOAuthPayload
+
+
+class AuthenticationRuleConstraintEnterpriseFederationApplicationManaged(
+    AuthenticationRuleConstraintCommon
+):
+    method: Literal["ENTERPRISE_FEDERATION_APPLICATION_MANAGED"]
+    payload: AuthenticationRuleEnterpriseFederationApplicationManagedPayload
+
+
+class AuthenticationRuleConstraintEnterpriseFederationDomainManaged(
+    AuthenticationRuleConstraintCommon
+):
+    method: Literal["ENTERPRISE_FEDERATION_DOMAIN_MANAGED"]
+    payload: AuthenticationRuleEnterpriseFederationDomainManagedPayload
+
+
+class RealizeRuleConstraintEmail(RealizeRuleConstraintCommon):
+    constraintType: Literal["EMAIL"]
+    payload: RealizeRuleEmailPayload
+
+
+class RealizeRuleConstraintSteamId(RealizeRuleConstraintCommon):
+    constraintType: Literal["STEAM_ID"]
+    payload: RealizeRuleSteamIdPayload
+
+
+class RealizeRuleConstraintAccountAlias(RealizeRuleConstraintCommon):
+    constraintType: Literal["ACCOUNT_ALIAS"]
+    payload: RealizeRuleAccountAliasPayload
+
+
+class RealizeRuleConstraintSectorSubject(RealizeRuleConstraintCommon):
+    constraintType: Literal["SECTOR_SUBJECT"]
+    payload: RealizeRuleSectorSubjectPayload
+
+
+class RealizeRuleConstraintEveryone(RealizeRuleConstraintCommon):
+    constraintType: Literal["EVERYONE"]
+    payload: RealizeRuleEveryonePayload
 
 
 class ReturnMethodDeclaration(
@@ -600,7 +768,62 @@ class ReturnMethodDeclaration(
     )
 
 
+class AuthenticationRuleConstraint(
+    RootModel[
+        AuthenticationRuleConstraintPasskeyUsernameless
+        | AuthenticationRuleConstraintPasskeyReasoned
+        | AuthenticationRuleConstraintEmailVerification
+        | AuthenticationRuleConstraintSteamTicket
+        | AuthenticationRuleConstraintSteamOpenId
+        | AuthenticationRuleConstraintAccessKeyDirect
+        | AuthenticationRuleConstraintGoogleOAuth
+        | AuthenticationRuleConstraintGitHubOAuth
+        | AuthenticationRuleConstraintDiscordOAuth
+        | AuthenticationRuleConstraintBattleNetOAuth
+        | AuthenticationRuleConstraintXOAuth
+        | AuthenticationRuleConstraintEnterpriseFederationApplicationManaged
+        | AuthenticationRuleConstraintEnterpriseFederationDomainManaged
+    ]
+):
+    root: (
+        AuthenticationRuleConstraintPasskeyUsernameless
+        | AuthenticationRuleConstraintPasskeyReasoned
+        | AuthenticationRuleConstraintEmailVerification
+        | AuthenticationRuleConstraintSteamTicket
+        | AuthenticationRuleConstraintSteamOpenId
+        | AuthenticationRuleConstraintAccessKeyDirect
+        | AuthenticationRuleConstraintGoogleOAuth
+        | AuthenticationRuleConstraintGitHubOAuth
+        | AuthenticationRuleConstraintDiscordOAuth
+        | AuthenticationRuleConstraintBattleNetOAuth
+        | AuthenticationRuleConstraintXOAuth
+        | AuthenticationRuleConstraintEnterpriseFederationApplicationManaged
+        | AuthenticationRuleConstraintEnterpriseFederationDomainManaged
+    ) = Field(..., discriminator="method")
+
+
+class RealizeRuleConstraint(
+    RootModel[
+        RealizeRuleConstraintEmail
+        | RealizeRuleConstraintSteamId
+        | RealizeRuleConstraintAccountAlias
+        | RealizeRuleConstraintSectorSubject
+        | RealizeRuleConstraintEveryone
+    ]
+):
+    root: (
+        RealizeRuleConstraintEmail
+        | RealizeRuleConstraintSteamId
+        | RealizeRuleConstraintAccountAlias
+        | RealizeRuleConstraintSectorSubject
+        | RealizeRuleConstraintEveryone
+    ) = Field(..., discriminator="constraintType")
+
+
 class EstablishRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     applicationAnchor: str = Field(
         ..., description="Public anchor identifying the integrating application."
     )

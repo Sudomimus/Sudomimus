@@ -66,6 +66,7 @@ internal static class TestHelpers
             exp = iat + 3600,
             jti = "access-1",
             kty = "Access",
+            kid = "key-1",
             sub = "refresh-1",
         };
         var body = new
@@ -93,6 +94,7 @@ internal static class TestHelpers
             exp = iat + 30 * 24 * 3600,
             jti = "refresh-1",
             kty = "Refresh",
+            kid = "key-1",
         };
         var body = new
         {

@@ -3,13 +3,24 @@
 from __future__ import annotations
 
 import inspect
+import time
 from types import TracebackType
 from typing import TypeVar
+from urllib.parse import quote
 
 import httpx
 from pydantic import BaseModel
+from sudomimus_token import (
+    AccessToken,
+    AsyncTokenVerifier,
+    RefreshToken,
+    TokenError,
+    TokenErrorCode,
+    rsa_jwk_to_pem,
+)
 
 from ._generated.models import (
+    ApplicationJwksResponse,
     HealthResponse,
     IntrospectRequest,
     IntrospectResponse,
@@ -20,7 +31,7 @@ from ._generated.models import (
     RevokeAllRequest,
     RevokeAllResponse,
 )
-from .client import _JSON_HEADERS, _handle
+from .client import _JSON_HEADERS, _cache_max_age, _handle
 from .client_auth import (
     SessionClientAuth,
     SessionClientAuthWithSigner,
@@ -46,6 +57,8 @@ class AsyncSessionClient:
         self._client = http_client if http_client is not None else httpx.AsyncClient()
         self._owns_client = http_client is None
         self._client_auth = client_auth
+        self._jwks_cache: dict[str, tuple[float, ApplicationJwksResponse]] = {}
+        self._verifier = AsyncTokenVerifier(self.resolve_application_public_key)
 
     @property
     def base_url(self) -> str:
@@ -72,6 +85,50 @@ class AsyncSessionClient:
             f"{self._base_url}/health", headers={"Accept": "application/json"}
         )
         return _handle(response, HealthResponse)
+
+    async def application_jwks(
+        self, application_anchor: str, *, force: bool = False
+    ) -> ApplicationJwksResponse:
+        cached = self._jwks_cache.get(application_anchor)
+        if not force and cached is not None and cached[0] > time.monotonic():
+            return cached[1]
+
+        encoded_anchor = quote(application_anchor, safe="")
+        response = await self._client.get(
+            f"{self._base_url}/applications/{encoded_anchor}/jwks.json",
+            headers={"Accept": "application/json"},
+        )
+        jwks = _handle(response, ApplicationJwksResponse)
+        self._jwks_cache[application_anchor] = (
+            time.monotonic() + _cache_max_age(response),
+            jwks,
+        )
+        return jwks
+
+    def clear_jwks_cache(self, application_anchor: str | None = None) -> None:
+        if application_anchor is None:
+            self._jwks_cache.clear()
+        else:
+            self._jwks_cache.pop(application_anchor, None)
+
+    async def resolve_application_public_key(self, application_anchor: str, key_id: str) -> str:
+        jwks = await self.application_jwks(application_anchor)
+        key = next((candidate for candidate in jwks.keys if candidate.kid == key_id), None)
+        if key is None:
+            jwks = await self.application_jwks(application_anchor, force=True)
+            key = next((candidate for candidate in jwks.keys if candidate.kid == key_id), None)
+        if key is None:
+            raise TokenError(
+                TokenErrorCode.UNKNOWN_KEY_ID,
+                f'No application signing key matches kid "{key_id}".',
+            )
+        return rsa_jwk_to_pem(modulus=key.n, exponent=key.e)
+
+    async def verify_access_token(self, jwt: str) -> AccessToken:
+        return await self._verifier.verify_access_token(jwt)
+
+    async def verify_refresh_token(self, jwt: str) -> RefreshToken:
+        return await self._verifier.verify_refresh_token(jwt)
 
     async def refresh(self, request: RefreshRequest) -> RefreshResponse:
         return await self._post("/refresh", request, RefreshResponse)

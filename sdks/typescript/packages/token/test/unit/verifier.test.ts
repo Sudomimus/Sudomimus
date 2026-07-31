@@ -37,7 +37,7 @@ describe("TokenVerifier", () => {
         expect(result.header.kty).toBe("Refresh");
     });
 
-    it("passes the audience to the resolver", async () => {
+    it("passes the audience and kid to the resolver", async () => {
 
         const { privateKey, publicKey } = generateRsaKeyPair();
         const jwt: string = mintAccessToken(privateKey, { audience: "other-anchor" });
@@ -45,7 +45,7 @@ describe("TokenVerifier", () => {
         const verifier = new TokenVerifier({ resolver });
 
         await verifier.verifyAccessToken(jwt);
-        expect(resolver).toHaveBeenCalledWith("other-anchor");
+        expect(resolver).toHaveBeenCalledWith("other-anchor", "key-1");
     });
 
     it("throws INVALID_JWT on unparseable input", async () => {
@@ -93,6 +93,18 @@ describe("TokenVerifier", () => {
         await expect(verifier.verifyAccessToken(jwt)).rejects.toMatchObject({
             name: "TokenError",
             code: "EXPIRED",
+        });
+    });
+
+    it("throws MISSING_KEY_ID when kid is absent", async () => {
+
+        const { privateKey } = generateRsaKeyPair();
+        const jwt = mintAccessToken(privateKey, { keyId: "" });
+        const verifier = new TokenVerifier({ resolver: staticResolver("unused") });
+
+        await expect(verifier.verifyAccessToken(jwt)).rejects.toMatchObject({
+            name: "TokenError",
+            code: "MISSING_KEY_ID",
         });
     });
 

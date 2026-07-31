@@ -43,11 +43,14 @@ def _mint(
     kty: str = "Access",
     aud: str | None = ANCHOR,
     exp_offset: int = 60,
+    kid: str | None = "key-1",
     body: dict | None = None,
 ) -> str:
     header: dict = {"kty": kty, "iat": int(time.time()), "exp": int(time.time()) + exp_offset}
     if aud is not None:
         header["aud"] = aud
+    if kid is not None:
+        header["kid"] = kid
     default_body = (
         {
             "subject": "subject-1",
@@ -69,7 +72,7 @@ def test_base64url_round_trip() -> None:
 def test_verify_access_token_happy_path() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem)
-    token = TokenVerifier(lambda _: public_pem).verify_access_token(jwt)
+    token = TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(jwt)
     assert token.body.subject == "subject-1"
     assert token.body.firstName == "Ada"
     assert token.body.staticAvatarUrl == "https://cdn.sudomimus.com/avatar/subject-1.png"
@@ -82,7 +85,7 @@ def test_verify_access_token_consent_gated_claims_absent() -> None:
     # be absent; a token carrying only `subject` must still parse.
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem, body={"subject": "subject-1"})
-    token = TokenVerifier(lambda _: public_pem).verify_access_token(jwt)
+    token = TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(jwt)
     assert token.body.subject == "subject-1"
     assert token.body.firstName is None
     assert token.body.lastName is None
@@ -94,7 +97,7 @@ def test_verify_access_token_consent_gated_claims_absent() -> None:
 def test_verify_refresh_token_happy_path() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem, kty="Refresh")
-    token = TokenVerifier(lambda _: public_pem).verify_refresh_token(jwt)
+    token = TokenVerifier(lambda _aud, _kid: public_pem).verify_refresh_token(jwt)
     assert token.body.subject == "subject-1"
 
 
@@ -102,7 +105,7 @@ def test_wrong_key_type() -> None:
     private_pem, public_pem = _keypair()
     refresh_jwt = _mint(private_pem, kty="Refresh")
     with pytest.raises(TokenError) as exc:
-        TokenVerifier(lambda _: public_pem).verify_access_token(refresh_jwt)
+        TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(refresh_jwt)
     assert exc.value.code is TokenErrorCode.WRONG_KEY_TYPE
 
 
@@ -110,7 +113,7 @@ def test_missing_audience() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem, aud=None)
     with pytest.raises(TokenError) as exc:
-        TokenVerifier(lambda _: public_pem).verify_access_token(jwt)
+        TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(jwt)
     assert exc.value.code is TokenErrorCode.MISSING_AUDIENCE
 
 
@@ -118,7 +121,7 @@ def test_expired_token() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem, exp_offset=-10)
     with pytest.raises(TokenError) as exc:
-        TokenVerifier(lambda _: public_pem).verify_access_token(jwt)
+        TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(jwt)
     assert exc.value.code is TokenErrorCode.EXPIRED
 
 
@@ -127,14 +130,14 @@ def test_invalid_signature_wrong_key() -> None:
     _, other_public_pem = _keypair()
     jwt = _mint(private_pem)
     with pytest.raises(TokenError) as exc:
-        TokenVerifier(lambda _: other_public_pem).verify_access_token(jwt)
+        TokenVerifier(lambda _aud, _kid: other_public_pem).verify_access_token(jwt)
     assert exc.value.code is TokenErrorCode.INVALID_SIGNATURE
 
 
 def test_malformed_jwt() -> None:
     _, public_pem = _keypair()
     with pytest.raises(TokenError) as exc:
-        TokenVerifier(lambda _: public_pem).verify_access_token("not-a-jwt")
+        TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token("not-a-jwt")
     assert exc.value.code is TokenErrorCode.INVALID_JWT
 
 
@@ -156,7 +159,7 @@ def test_async_verifier_happy_path() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem)
 
-    async def resolver(_: str) -> str:
+    async def resolver(_aud: str, _kid: str) -> str:
         return public_pem
 
     async def run() -> str:

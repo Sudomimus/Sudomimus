@@ -15,6 +15,7 @@ import {
 import { generateKeyPairSync } from "node:crypto";
 
 export const APPLICATION_ANCHOR = "anchor-1";
+export const KEY_ID = "key-1";
 
 export const generateRsaKeyPair = (): { privateKey: string; publicKey: string } => {
 
@@ -41,7 +42,7 @@ export const mintAccessToken = (privateKey: string): string => {
         issuer: "sudomimus.com",
         audience: APPLICATION_ANCHOR,
         subject: "refresh-1",
-        header: {},
+        header: { kid: KEY_ID },
         body: {
             subject: "subject-1",
             firstName: "Ada",
@@ -65,7 +66,7 @@ export const mintRefreshToken = (privateKey: string): string => {
         keyType: "Refresh",
         issuer: "sudomimus.com",
         audience: APPLICATION_ANCHOR,
-        header: {},
+        header: { kid: KEY_ID },
         body: { subject: "subject-1" },
     });
 };

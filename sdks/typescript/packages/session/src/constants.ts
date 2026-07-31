@@ -6,6 +6,7 @@
  */
 
 export const PRODUCTION_BASE_URL = "https://session-api.sudomimus.com";
+export const DEFAULT_JWKS_CACHE_SECONDS = 300;
 
 export const CLIENT_JWT_AUDIENCE = "sudomimus-session";
 export const CLIENT_JWT_AUTH_SCHEME = "SudomimusClientJWT";

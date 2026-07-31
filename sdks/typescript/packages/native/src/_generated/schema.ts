@@ -366,7 +366,9 @@ export interface components {
          * @description Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
          *     for known failure modes. When the reason symbol's description begins with
          *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-         *     signal — both `reason` and the body itself are absent in that case.
+         *     signal — both `reason` and the body itself are absent in that case. A
+         *     missing, malformed, or structurally invalid JSON request body returns
+         *     `InvalidBody` without parser or validation-library detail.
          */
         Error: {
             /** @description Stable machine-readable reason code. */
@@ -498,6 +500,8 @@ export interface operations {
              */
             403: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -539,16 +543,15 @@ export interface operations {
                 content?: never;
             };
             /**
-             * @description Server error while resolving the credential's account. Reason
-             *     `AccessKeyCredentialAccountMissing`.
+             * @description Internal consistency failure while resolving the credential's
+             *     account. The response is status-only with an empty body; the
+             *     server-only classification is not part of the public contract.
              */
             500: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
+                content?: never;
             };
             /**
              * @description The semantic admission or credential-failure counter is
@@ -605,7 +608,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Steam rejected the ticket as invalid. */
+            /** @description Steam rejected the ticket with provider error code 101. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -651,6 +654,8 @@ export interface operations {
              */
             403: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -700,7 +705,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Steam's verification endpoint was unreachable or returned an unparseable response. */
+            /** @description Steam's verification endpoint was unreachable, returned a non-101 provider error, or returned an unparseable, malformed, or ambiguous response. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -739,6 +744,8 @@ export interface operations {
              */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {

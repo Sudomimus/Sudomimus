@@ -1,6 +1,6 @@
 [project]
 name = "sudomimus-device"
-version = "1.0.0"
+version = "1.0.1"
 description = "Sudomimus Device SDK — public-client device authorization with manual or automatic polling."
 readme = "README.md"
 requires-python = ">=3.11"

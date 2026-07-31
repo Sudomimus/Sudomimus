@@ -22,11 +22,12 @@ from sudomimus_connect import (
     ConnectClientAuthWithSigner,
     ConnectConfigError,
     EstablishRequest,
+    InfoRequest,
     RedeemRequest,
     StatusPollRequest,
     sha256_base64,
 )
-from sudomimus_token import create_jwt, decode_base64url
+from sudomimus_token import create_jwt, decode_base64url, encode_base64url
 
 Handler = Callable[[httpx.Request], httpx.Response]
 
@@ -43,6 +44,26 @@ def _keypair() -> tuple[str, str]:
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     ).decode("ascii")
     return private_pem, public_pem
+
+
+def _jwks(public_pem: str) -> dict[str, list[dict[str, str]]]:
+    key = serialization.load_pem_public_key(public_pem.encode("ascii"))
+    assert isinstance(key, rsa.RSAPublicKey)
+    numbers = key.public_numbers()
+
+    def encoded(value: int) -> str:
+        return encode_base64url(value.to_bytes((value.bit_length() + 7) // 8, "big"))
+
+    return {
+        "keys": [{
+            "kty": "RSA",
+            "n": encoded(numbers.n),
+            "e": encoded(numbers.e),
+            "kid": "key-1",
+            "use": "sig",
+            "alg": "RS256",
+        }]
+    }
 
 
 def _client(handler: Handler, **kwargs: object) -> ConnectClient:
@@ -173,35 +194,16 @@ def test_error_with_empty_body() -> None:
     assert exc.value.reason is None
 
 
-def test_get_application_public_key_caches() -> None:
-    calls = {"n": 0}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        calls["n"] += 1
-        return httpx.Response(
-            200,
-            json={
-                "applicationAnchor": "my-app",
-                "applicationName": "My App",
-                "applicationPublicKey": "PEM",
-            },
-        )
-
-    with _client(handler) as client:
-        assert client.get_application_public_key("my-app") == "PEM"
-        assert client.get_application_public_key("my-app") == "PEM"
-        assert calls["n"] == 1
-        assert client.get_application_public_key("my-app", force=True) == "PEM"
-        assert calls["n"] == 2
-        client.clear_public_key_cache("my-app")
-        client.get_application_public_key("my-app")
-        assert calls["n"] == 3
-
-
 def test_verify_access_token_end_to_end() -> None:
     private_pem, public_pem = _keypair()
     jwt = create_jwt(
-        {"kty": "Access", "aud": "my-app", "iat": int(time.time()), "exp": int(time.time()) + 60},
+        {
+            "kty": "Access",
+            "kid": "key-1",
+            "aud": "my-app",
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 60,
+        },
         {"subject": "subject-1", "firstName": "Ada"},
         private_pem,
     )
@@ -209,11 +211,8 @@ def test_verify_access_token_end_to_end() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={
-                "applicationAnchor": "my-app",
-                "applicationName": "My App",
-                "applicationPublicKey": public_pem,
-            },
+            json=_jwks(public_pem),
+            headers={"Cache-Control": "public, max-age=300"},
         )
 
     with _client(handler) as client:
@@ -236,27 +235,6 @@ def test_health() -> None:
         result = client.health()
     assert result.status == "ok"
     assert result.service == "connect"
-
-
-def test_clear_whole_public_key_cache() -> None:
-    calls = {"n": 0}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        calls["n"] += 1
-        return httpx.Response(
-            200,
-            json={
-                "applicationAnchor": "my-app",
-                "applicationName": "My App",
-                "applicationPublicKey": "PEM",
-            },
-        )
-
-    with _client(handler) as client:
-        client.get_application_public_key("my-app")
-        client.clear_public_key_cache()  # no anchor -> clears everything
-        client.get_application_public_key("my-app")
-        assert calls["n"] == 2
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")  # guard discards the un-awaited coroutine
@@ -283,7 +261,13 @@ def test_error_with_unparseable_body() -> None:
 def test_verify_refresh_token_end_to_end() -> None:
     private_pem, public_pem = _keypair()
     jwt = create_jwt(
-        {"kty": "Refresh", "aud": "my-app", "iat": int(time.time()), "exp": int(time.time()) + 60},
+        {
+            "kty": "Refresh",
+            "kid": "key-1",
+            "aud": "my-app",
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 60,
+        },
         {"subject": "subject-1"},
         private_pem,
     )
@@ -291,11 +275,7 @@ def test_verify_refresh_token_end_to_end() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={
-                "applicationAnchor": "my-app",
-                "applicationName": "My App",
-                "applicationPublicKey": public_pem,
-            },
+            json=_jwks(public_pem),
         )
 
     with _client(handler) as client:
@@ -311,7 +291,6 @@ def test_async_redeem_and_info() -> None:
                 json={
                     "applicationAnchor": "my-app",
                     "applicationName": "My App",
-                    "applicationPublicKey": "PEM",
                 },
             )
         return httpx.Response(
@@ -337,12 +316,12 @@ def test_async_redeem_and_info() -> None:
             redeemed = await client.redeem(
                 RedeemRequest(exposureKey="ek", hiddenKey="hk", confirmationKey="ck")
             )
-            key = await client.get_application_public_key("my-app")
-            return redeemed.accessToken, key
+            info = await client.info(InfoRequest(applicationAnchor="my-app", locale="en-US"))
+            return redeemed.accessToken, info.applicationName
 
-    access_token, public_key = asyncio.run(run())
+    access_token, application_name = asyncio.run(run())
     assert access_token == "a.t"
-    assert public_key == "PEM"
+    assert application_name == "My App"
 
 
 def test_async_establish_with_async_signer() -> None:
@@ -408,39 +387,6 @@ def test_async_health_status_poll() -> None:
     assert status == "PENDING"
 
 
-def test_async_public_key_cache_hit_and_clear() -> None:
-    calls = {"n": 0}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        calls["n"] += 1
-        return httpx.Response(
-            200,
-            json={
-                "applicationAnchor": "my-app",
-                "applicationName": "My App",
-                "applicationPublicKey": "PEM",
-            },
-        )
-
-    async def run() -> None:
-        async with AsyncConnectClient(
-            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
-        ) as client:
-            assert await client.get_application_public_key("my-app") == "PEM"
-            # Second call is served from cache — no extra request.
-            assert await client.get_application_public_key("my-app") == "PEM"
-            assert calls["n"] == 1
-            client.clear_public_key_cache("my-app")
-            await client.get_application_public_key("my-app")
-            assert calls["n"] == 2
-            # Clearing the whole cache forces another fetch too.
-            client.clear_public_key_cache()
-            await client.get_application_public_key("my-app")
-            assert calls["n"] == 3
-
-    asyncio.run(run())
-
-
 def test_async_requires_client_auth_for_establish() -> None:
     transport = httpx.MockTransport(lambda r: httpx.Response(200))
 
@@ -456,12 +402,12 @@ def test_async_verify_access_and_refresh_token() -> None:
     private_pem, public_pem = _keypair()
     now = int(time.time())
     access_jwt = create_jwt(
-        {"kty": "Access", "aud": "my-app", "iat": now, "exp": now + 60},
+        {"kty": "Access", "kid": "key-1", "aud": "my-app", "iat": now, "exp": now + 60},
         {"subject": "subject-1", "firstName": "Ada"},
         private_pem,
     )
     refresh_jwt = create_jwt(
-        {"kty": "Refresh", "aud": "my-app", "iat": now, "exp": now + 60},
+        {"kty": "Refresh", "kid": "key-1", "aud": "my-app", "iat": now, "exp": now + 60},
         {"subject": "subject-1"},
         private_pem,
     )
@@ -469,11 +415,8 @@ def test_async_verify_access_and_refresh_token() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={
-                "applicationAnchor": "my-app",
-                "applicationName": "My App",
-                "applicationPublicKey": public_pem,
-            },
+            json=_jwks(public_pem),
+            headers={"Cache-Control": "public, max-age=300"},
         )
 
     async def run() -> tuple[str, str]:
