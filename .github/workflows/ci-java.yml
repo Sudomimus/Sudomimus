@@ -1,0 +1,34 @@
+name: Java SDK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sdks/java/**"
+      - "specs"
+      - ".github/workflows/ci-java.yml"
+  pull_request:
+    paths:
+      - "sdks/java/**"
+      - "specs"
+      - ".github/workflows/ci-java.yml"
+
+defaults:
+  run:
+    working-directory: sdks/java
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+      - run: gradle test

@@ -1,0 +1,39 @@
+name: Go SDK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sdks/go/**"
+      - "specs"
+      - ".github/workflows/ci-go.yml"
+  pull_request:
+    paths:
+      - "sdks/go/**"
+      - "specs"
+      - ".github/workflows/ci-go.yml"
+
+defaults:
+  run:
+    working-directory: sdks/go
+
+jobs:
+  build:
+    name: Go ${{ matrix.go }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.22.x", "1.26.x"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache-dependency-path: sdks/go/go.sum
+      - name: Verify formatting
+        run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test ./...

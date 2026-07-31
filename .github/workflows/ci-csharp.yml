@@ -1,0 +1,31 @@
+name: C# SDKs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sdks/csharp/**"
+      - "specs"
+      - ".github/workflows/ci-csharp.yml"
+  pull_request:
+    paths:
+      - "sdks/csharp/**"
+      - "specs"
+      - ".github/workflows/ci-csharp.yml"
+
+defaults:
+  run:
+    working-directory: sdks/csharp
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: dotnet restore Sudomimus.slnx
+      - run: dotnet test Sudomimus.slnx --no-restore --configuration Release
