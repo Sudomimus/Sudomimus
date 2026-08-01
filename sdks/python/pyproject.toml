@@ -19,7 +19,7 @@ sudomimus-token = { workspace = true }
 
 [dependency-groups]
 dev = [
-    "datamodel-code-generator>=0.26",
+    "datamodel-code-generator>=0.64.0",
     "mypy>=1.13",
     "pytest>=8.3",
     "pytest-cov>=5.0",
