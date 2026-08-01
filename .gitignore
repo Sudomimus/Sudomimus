@@ -27,7 +27,6 @@ coverage/
 htmlcov/
 
 # IDE / editor
-.vscode/
 .idea/
 *.swp
 *.swo
