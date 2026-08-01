@@ -17,6 +17,10 @@ export type RefreshRequest = components["schemas"]["RefreshRequest"];
 export type RefreshResponse = components["schemas"]["RefreshResponse"];
 export type IntrospectRequest = components["schemas"]["IntrospectRequest"];
 export type IntrospectResponse = components["schemas"]["IntrospectResponse"];
+export type UserInfoResponse = components["schemas"]["UserInfoResponse"];
+export type UserInfoClaimStateView = components["schemas"]["UserInfoClaimStateView"];
+export type ClaimStateResponse = components["schemas"]["ClaimStateResponse"];
+export type BearerError = components["schemas"]["BearerError"];
 export type LogoutRequest = components["schemas"]["LogoutRequest"];
 export type LogoutResponse = components["schemas"]["LogoutResponse"];
 export type RevokeAllRequest = components["schemas"]["RevokeAllRequest"];
@@ -24,6 +28,7 @@ export type RevokeAllResponse = components["schemas"]["RevokeAllResponse"];
 export type ClaimsStateView = components["schemas"]["ClaimsStateView"];
 export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementStateView"];
 export type SessionErrorBody = components["schemas"]["Error"];
+export type SessionApiErrorBody = SessionErrorBody | BearerError;
 
 export const INTROSPECT_STATUS = {
     ACTIVE: "active",

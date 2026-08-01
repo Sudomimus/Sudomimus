@@ -90,6 +90,37 @@ def test_refresh_introspect_logout() -> None:
     assert logged_out.revoked is True
 
 
+def test_userinfo_and_claim_state_use_bearer_access_token() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["Authorization"] == "Bearer a1"
+        if request.url.path == "/userinfo":
+            return httpx.Response(200, json={"sub": "subject-1", "email": "ada@example.com"})
+        return httpx.Response(
+            200,
+            json={
+                "sub": "subject-1",
+                "claims": {
+                    name: {"requirement": "OFF", "state": "UNKNOWN"}
+                    for name in (
+                        "email",
+                        "given_name",
+                        "family_name",
+                        "picture",
+                        "picture_animated",
+                    )
+                },
+            },
+        )
+
+    with _client(handler) as client:
+        userinfo = client.userinfo("a1")
+        claim_state = client.claim_state("a1")
+
+    assert userinfo.sub == "subject-1"
+    assert userinfo.email == "ada@example.com"
+    assert claim_state.claims.given_name.requirement == "OFF"
+
+
 def test_revoke_all_requires_client_auth() -> None:
     with _client(lambda r: httpx.Response(200)) as client, pytest.raises(SessionConfigError):
         client.revoke_all(RevokeAllRequest(subject="subject-1"))
@@ -103,13 +134,13 @@ def test_revoke_all_signs_with_session_audience() -> None:
         captured["auth"] = request.headers["Authorization"]
         captured["raw"] = request.content.decode("utf-8")
         captured["path"] = request.url.path
-        return httpx.Response(200, json={"revoked": True, "cleanupRowCount": 2})
+        return httpx.Response(200, json={"revoked": True})
 
     auth = SessionClientAuthWithKey(application_anchor="my-app", private_key_pem=private_pem)
     with _client(handler, client_auth=auth) as client:
         result = client.revoke_all(RevokeAllRequest(subject="subject-1"))
 
-    assert result.cleanupRowCount == 2
+    assert result.revoked.value is True
     assert captured["path"] == "/revoke-all"
     scheme, _, jwt = captured["auth"].partition(" ")
     assert scheme == "SudomimusClientJWT"
@@ -122,7 +153,7 @@ def test_revoke_all_signs_with_session_audience() -> None:
 def test_revoke_all_with_byo_signer() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["Authorization"] == "SudomimusClientJWT fixed.jwt.value"
-        return httpx.Response(200, json={"revoked": True, "cleanupRowCount": 1})
+        return httpx.Response(200, json={"revoked": True})
 
     auth = SessionClientAuthWithSigner(
         application_anchor="my-app", signer=lambda _raw: "fixed.jwt.value"
@@ -130,7 +161,7 @@ def test_revoke_all_with_byo_signer() -> None:
     with _client(handler, client_auth=auth) as client:
         result = client.revoke_all(RevokeAllRequest(subject="subject-1"))
 
-    assert result.cleanupRowCount == 1
+    assert result.revoked.value is True
 
 
 def test_error_with_reason_and_empty_body() -> None:
@@ -172,11 +203,11 @@ def test_async_refresh_introspect_logout_and_revoke_all() -> None:
             return httpx.Response(200, json={"revoked": True})
         assert request.url.path == "/revoke-all"
         assert request.headers["Authorization"].startswith("SudomimusClientJWT ")
-        return httpx.Response(200, json={"revoked": True, "cleanupRowCount": 3})
+        return httpx.Response(200, json={"revoked": True})
 
     auth = SessionClientAuthWithKey(application_anchor="my-app", private_key_pem=private_pem)
 
-    async def run() -> tuple[str, str, bool, int]:
+    async def run() -> tuple[str, str, bool, bool]:
         async with AsyncSessionClient(
             http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
             client_auth=auth,
@@ -189,14 +220,14 @@ def test_async_refresh_introspect_logout_and_revoke_all() -> None:
                 refreshed.accessToken,
                 introspected.status,
                 logged_out.revoked,
-                revoked.cleanupRowCount,
+                revoked.revoked.value,
             )
 
     access_token, status, revoked, count = asyncio.run(run())
     assert access_token == "a2"
     assert status == "active"
     assert revoked is True
-    assert count == 3
+    assert count is True
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")

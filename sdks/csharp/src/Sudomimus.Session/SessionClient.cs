@@ -143,6 +143,12 @@ public sealed class SessionClient
         return PostAsync<IntrospectRequest, IntrospectResponse>("/introspect", request, ct);
     }
 
+    public Task<UserInfoResponse> UserInfoAsync(string accessToken, CancellationToken ct = default)
+        => GetWithBearerAsync<UserInfoResponse>("/userinfo", accessToken, ct);
+
+    public Task<ClaimStateResponse> ClaimStateAsync(string accessToken, CancellationToken ct = default)
+        => GetWithBearerAsync<ClaimStateResponse>("/claim-state", accessToken, ct);
+
     public Task<LogoutResponse> LogoutAsync(LogoutRequest request, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -177,6 +183,19 @@ public sealed class SessionClient
             Content = new StringContent(rawBody, Encoding.UTF8, "application/json"),
         };
         request.Headers.Accept.ParseAdd("application/json");
+        using var response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+        return await HandleAsync<TResponse>(response, ct).ConfigureAwait(false);
+    }
+
+    private async Task<TResponse> GetWithBearerAsync<TResponse>(
+        string path,
+        string accessToken,
+        CancellationToken ct)
+        where TResponse : class
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(_baseUrl, path));
+        request.Headers.Accept.ParseAdd("application/json");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         using var response = await _http.SendAsync(request, ct).ConfigureAwait(false);
         return await HandleAsync<TResponse>(response, ct).ConfigureAwait(false);
     }

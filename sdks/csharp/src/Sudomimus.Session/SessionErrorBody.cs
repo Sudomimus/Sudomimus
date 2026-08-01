@@ -14,4 +14,8 @@ public sealed record SessionErrorBody
 
     [JsonPropertyName("message")]
     public string? Message { get; init; }
+
+    /// <summary>OAuth Bearer error code returned by token-authenticated endpoints.</summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; init; }
 }

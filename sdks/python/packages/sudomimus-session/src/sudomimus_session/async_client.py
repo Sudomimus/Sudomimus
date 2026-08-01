@@ -21,6 +21,7 @@ from sudomimus_token import (
 
 from ._generated.models import (
     ApplicationJwksResponse,
+    ClaimStateResponse,
     HealthResponse,
     IntrospectRequest,
     IntrospectResponse,
@@ -30,6 +31,7 @@ from ._generated.models import (
     RefreshResponse,
     RevokeAllRequest,
     RevokeAllResponse,
+    UserInfoResponse,
 )
 from .client import _JSON_HEADERS, _cache_max_age, _handle
 from .client_auth import (
@@ -136,6 +138,12 @@ class AsyncSessionClient:
     async def introspect(self, request: IntrospectRequest) -> IntrospectResponse:
         return await self._post("/introspect", request, IntrospectResponse)
 
+    async def userinfo(self, access_token: str) -> UserInfoResponse:
+        return await self._get_with_bearer("/userinfo", access_token, UserInfoResponse)
+
+    async def claim_state(self, access_token: str) -> ClaimStateResponse:
+        return await self._get_with_bearer("/claim-state", access_token, ClaimStateResponse)
+
     async def logout(self, request: LogoutRequest) -> LogoutResponse:
         return await self._post("/logout", request, LogoutResponse)
 
@@ -153,6 +161,18 @@ class AsyncSessionClient:
         raw = request.model_dump_json(exclude_none=True)
         response = await self._client.post(
             f"{self._base_url}{path}", content=raw, headers=_JSON_HEADERS
+        )
+        return _handle(response, response_model)
+
+    async def _get_with_bearer(
+        self,
+        path: str,
+        access_token: str,
+        response_model: type[_ResponseT],
+    ) -> _ResponseT:
+        response = await self._client.get(
+            f"{self._base_url}{path}",
+            headers={"Accept": "application/json", "Authorization": f"Bearer {access_token}"},
         )
         return _handle(response, response_model)
 

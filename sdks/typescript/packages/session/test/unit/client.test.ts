@@ -16,10 +16,12 @@ import {
 } from "../../src";
 import type {
     HealthResponse,
+    ClaimStateResponse,
     IntrospectResponse,
     LogoutResponse,
     RefreshResponse,
     RevokeAllResponse,
+    UserInfoResponse,
 } from "../../src";
 import { buildJwksResponse, makeFetch } from "../helpers/fetch";
 import { APPLICATION_ANCHOR, generateRsaKeyPair, mintAccessToken } from "../helpers/jwt";
@@ -86,6 +88,43 @@ describe("SessionClient", () => {
             .toBeUndefined();
     });
 
+    it("GETs /userinfo with the access token as a Bearer credential", async () => {
+
+        const expected: UserInfoResponse = { sub: "subject-1", email: "ada@example.com" };
+        const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+        const client = new SessionClient({
+            baseUrl: "https://session.example.com",
+            fetch: fetchMock as unknown as typeof globalThis.fetch,
+        });
+
+        await expect(client.userinfo("a1")).resolves.toEqual(expected);
+        expect(fetchMock.mock.calls[0][0]).toBe("https://session.example.com/userinfo");
+        expect((fetchMock.mock.calls[0][1].headers as Record<string, string>)["Authorization"])
+            .toBe("Bearer a1");
+    });
+
+    it("GETs /claim-state with the access token as a Bearer credential", async () => {
+
+        const expected: ClaimStateResponse = {
+            sub: "subject-1",
+            claims: {
+                email: { requirement: "OFF", state: "UNKNOWN" },
+                given_name: { requirement: "OFF", state: "UNKNOWN" },
+                family_name: { requirement: "OFF", state: "UNKNOWN" },
+                picture: { requirement: "OFF", state: "UNKNOWN" },
+                picture_animated: { requirement: "OFF", state: "UNKNOWN" },
+            },
+        };
+        const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+        const client = new SessionClient({
+            baseUrl: "https://session.example.com",
+            fetch: fetchMock as unknown as typeof globalThis.fetch,
+        });
+
+        await expect(client.claimState("a1")).resolves.toEqual(expected);
+        expect(fetchMock.mock.calls[0][0]).toBe("https://session.example.com/claim-state");
+    });
+
     it("POSTs /logout", async () => {
 
         const expected: LogoutResponse = { revoked: true };
@@ -113,7 +152,7 @@ describe("SessionClient", () => {
     it("POSTs /revoke-all with a session-audience client-auth JWT", async () => {
 
         const { privateKey, publicKey } = generateRsaKeyPair();
-        const expected: RevokeAllResponse = { revoked: true, cleanupRowCount: 3 };
+        const expected: RevokeAllResponse = { revoked: true };
         const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
         const client = new SessionClient({
             baseUrl: "https://session.example.com",
@@ -170,9 +209,9 @@ describe("SessionClient", () => {
         });
 
         await expect(client.verifyAccessToken(mintAccessToken(privateKey)))
-            .resolves.toMatchObject({ body: { subject: "subject-1" } });
+            .resolves.toMatchObject({ body: { sub: "subject-1" } });
         await expect(client.verifyAccessToken(mintAccessToken(privateKey)))
-            .resolves.toMatchObject({ body: { subject: "subject-1" } });
+            .resolves.toMatchObject({ body: { sub: "subject-1" } });
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(fetchMock.mock.calls[0][0]).toBe(
             "https://session.example.com/applications/anchor-1/jwks.json",
@@ -192,7 +231,7 @@ describe("SessionClient", () => {
         });
 
         await expect(client.verifyAccessToken(mintAccessToken(privateKey)))
-            .resolves.toMatchObject({ body: { subject: "subject-1" } });
+            .resolves.toMatchObject({ body: { sub: "subject-1" } });
         expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 });

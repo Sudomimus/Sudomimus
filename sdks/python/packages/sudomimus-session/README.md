@@ -34,11 +34,14 @@ client = SessionClient(
 client.revoke_all(RevokeAllRequest(subject="sector-subject"))
 ```
 
+Resolve current identity and consent state live with
+`client.userinfo(access_token)` and `client.claim_state(access_token)`.
+
 The client can verify issued tokens using the application's Session JWKS:
 
 ```python
 verified = client.verify_access_token(access_token)
-print(verified.body.subject, verified.header.kid)
+print(verified.body.sub, verified.header.kid)
 ```
 
 JWKS responses honor `Cache-Control: max-age` (with a 5-minute fallback). An

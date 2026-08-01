@@ -42,11 +42,19 @@ const client = new SessionClient({
 await client.revokeAll({ subject: "sector-subject" });
 ```
 
+Current consent-gated identity data is resolved live instead of being copied
+into access tokens:
+
+```ts
+const user = await client.userinfo(accessToken);
+const claimState = await client.claimState(accessToken);
+```
+
 The client can also verify issued tokens through the Session JWKS endpoint:
 
 ```ts
 const verified = await client.verifyAccessToken(redeemed.accessToken);
-console.log(verified.body.subject, verified.header.kid);
+console.log(verified.body.sub, verified.header.kid);
 ```
 
 JWKS responses honor `Cache-Control: max-age` (with a 5-minute fallback). If a

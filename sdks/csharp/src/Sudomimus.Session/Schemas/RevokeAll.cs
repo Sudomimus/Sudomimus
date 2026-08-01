@@ -19,7 +19,4 @@ public sealed record RevokeAllResponse
 {
     [JsonPropertyName("revoked")]
     public required bool Revoked { get; init; }
-
-    [JsonPropertyName("cleanupRowCount")]
-    public required int CleanupRowCount { get; init; }
 }

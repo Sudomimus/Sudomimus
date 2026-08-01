@@ -1,7 +1,7 @@
 [project]
 name = "sudomimus-session"
-version = "2.0.0"
-description = "Sudomimus Session SDK — refresh-token rotation, introspection, logout, and account session revocation."
+version = "4.0.0"
+description = "Sudomimus Session SDK — user info, claim state, refresh-token rotation, introspection, logout, and session revocation."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -10,8 +10,8 @@ authors = [
 ]
 dependencies = [
     "httpx>=0.27",
-    "pydantic>=2.7",
-    "sudomimus-token",
+    "pydantic[email]>=2.7",
+    "sudomimus-token==4.0.0",
 ]
 
 [project.urls]

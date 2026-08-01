@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import http
 
-from ._generated.models import Error
+from ._generated.models import BearerError, Error1
 
 
 class SessionApiError(Exception):
     """Raised when the Session API returns a non-2xx response."""
 
-    def __init__(self, status: int, reason: str | None = None, body: Error | None = None) -> None:
+    def __init__(
+        self,
+        status: int,
+        reason: str | None = None,
+        body: Error1 | BearerError | None = None,
+    ) -> None:
         self.status = status
         self.reason = reason
         self.body = body

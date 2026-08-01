@@ -22,6 +22,7 @@ import type {
     ApplicationJsonWebKey,
     ApplicationJwksOptions,
     ApplicationJwksResponse,
+    ClaimStateResponse,
     HealthResponse,
     IntrospectRequest,
     IntrospectResponse,
@@ -33,7 +34,8 @@ import type {
     RevokeAllResponse,
     SessionClientAuthConfig,
     SessionClientOptions,
-    SessionErrorBody,
+    SessionApiErrorBody,
+    UserInfoResponse,
 } from "./declare.js";
 import { SessionApiError, SessionConfigError } from "./error.js";
 
@@ -148,6 +150,16 @@ export class SessionClient {
         return this._post<IntrospectRequest, IntrospectResponse>("/introspect", request);
     }
 
+    public async userinfo(accessToken: string): Promise<UserInfoResponse> {
+
+        return this._getWithBearer<UserInfoResponse>("/userinfo", accessToken);
+    }
+
+    public async claimState(accessToken: string): Promise<ClaimStateResponse> {
+
+        return this._getWithBearer<ClaimStateResponse>("/claim-state", accessToken);
+    }
+
     public async logout(request: LogoutRequest): Promise<LogoutResponse> {
 
         return this._post<LogoutRequest, LogoutResponse>("/logout", request);
@@ -181,6 +193,21 @@ export class SessionClient {
                 "Accept": "application/json",
             },
             body: JSON.stringify(body),
+        });
+        return this._handle<TRes>(response);
+    }
+
+    private async _getWithBearer<TRes>(
+        path: string,
+        accessToken: string,
+    ): Promise<TRes> {
+
+        const response: Response = await this._fetch(`${this._baseUrl}${path}`, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${accessToken}`,
+            },
         });
         return this._handle<TRes>(response);
     }
@@ -223,15 +250,15 @@ export class SessionClient {
             return await response.json() as TRes;
         }
 
-        const errorBody: SessionErrorBody | undefined = await this._tryReadErrorBody(response);
+        const errorBody: SessionApiErrorBody | undefined = await this._tryReadErrorBody(response);
         throw new SessionApiError(
             response.status,
-            errorBody?.reason,
+            errorBody !== undefined && "reason" in errorBody ? errorBody.reason : undefined,
             errorBody,
         );
     }
 
-    private async _tryReadErrorBody(response: Response): Promise<SessionErrorBody | undefined> {
+    private async _tryReadErrorBody(response: Response): Promise<SessionApiErrorBody | undefined> {
 
         const text: string = await response.text();
 
@@ -242,7 +269,7 @@ export class SessionClient {
 
         try {
 
-            return JSON.parse(text) as SessionErrorBody;
+            return JSON.parse(text) as SessionApiErrorBody;
         } catch {
 
             return undefined;

@@ -27,6 +27,8 @@ public sealed class ModelContractTests
         // ---- Connect: token bodies (live in Sudomimus.Token) ----
         { "connect", "AccessTokenBody", typeof(Token.AccessTokenBody) },
         { "connect", "RefreshTokenBody", typeof(Token.RefreshTokenBody) },
+        { "connect", "AccessTokenHeader", typeof(Token.JwtHeader) },
+        { "connect", "RefreshTokenHeader", typeof(Token.JwtHeader) },
 
         // ---- Connect: flat request/response DTOs ----
         { "connect", "HealthResponse", typeof(Connect.HealthResponse) },
@@ -50,6 +52,9 @@ public sealed class ModelContractTests
         { "session", "RefreshResponse", typeof(Session.RefreshResponse) },
         { "session", "IntrospectRequest", typeof(Session.IntrospectRequest) },
         { "session", "IntrospectResponse", typeof(Session.IntrospectResponse) },
+        { "session", "UserInfoResponse", typeof(Session.UserInfoResponse) },
+        { "session", "UserInfoClaimStateView", typeof(Session.UserInfoClaimStateView) },
+        { "session", "ClaimStateResponse", typeof(Session.ClaimStateResponse) },
         { "session", "LogoutRequest", typeof(Session.LogoutRequest) },
         { "session", "LogoutResponse", typeof(Session.LogoutResponse) },
         { "session", "RevokeAllRequest", typeof(Session.RevokeAllRequest) },

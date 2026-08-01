@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from enum import Enum, StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, BaseModel, ConfigDict, EmailStr, Field
 
 
 class Kty(StrEnum):
@@ -38,7 +38,7 @@ class ApplicationJwksResponse(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    keys: list[ApplicationJsonWebKey]
+    keys: list[ApplicationJsonWebKey] = Field(..., max_length=32)
 
 
 class Status(StrEnum):
@@ -93,17 +93,21 @@ class RefreshRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    refreshToken: str
+    refreshToken: str = Field(
+        ...,
+        description="Signed refresh credential carrying stable payload `sid`, exact version `jti`, and `rotationVersion`; it contains no user identifier.",
+    )
 
 
 class RefreshResponse(BaseModel):
     claims: ClaimsStateView
     accessToken: str = Field(
-        ..., description="Newly issued short-lived access token JWT."
+        ...,
+        description="Newly issued short-lived access token JWT carrying payload `sid` and pairwise `sub` with a fresh `jti`.",
     )
     refreshToken: str = Field(
         ...,
-        description="Newly issued refresh token JWT; the presented token has been consumed.",
+        description="Newly issued refresh token JWT for the same payload `sid`, with a fresh `jti` and incremented `rotationVersion`; the presented version has been consumed.",
     )
 
 
@@ -111,7 +115,61 @@ class IntrospectRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    accessToken: str
+    accessToken: str = Field(
+        ...,
+        description="Signed access credential whose payload `sid` is strongly resolved; its own `exp` is intentionally ignored by introspection.",
+    )
+
+
+class UserInfoResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    sub: str = Field(
+        ..., description="Pairwise sector subject for this application.", min_length=1
+    )
+    email: EmailStr | None = None
+    email_verified: bool | None = None
+    name: str | None = None
+    given_name: str | None = None
+    family_name: str | None = None
+    picture: AnyUrl | None = None
+    picture_animated: AnyUrl | None = Field(
+        None,
+        description="Sudomimus private claim for the sector-scoped animated avatar URL.",
+    )
+
+
+class UserInfoClaimStateView(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    email: ClaimRequirementStateView
+    given_name: ClaimRequirementStateView
+    family_name: ClaimRequirementStateView
+    picture: ClaimRequirementStateView
+    picture_animated: ClaimRequirementStateView
+
+
+class ClaimStateResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    sub: str = Field(
+        ..., description="Pairwise sector subject for this application.", min_length=1
+    )
+    claims: UserInfoClaimStateView
+
+
+class Error(StrEnum):
+    invalid_token = "invalid_token"
+
+
+class BearerError(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    error: Error
 
 
 class Status1(StrEnum):
@@ -130,7 +188,10 @@ class LogoutRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    refreshToken: str
+    refreshToken: str = Field(
+        ...,
+        description="Any genuine signed refresh-token version for the ApplicationSession to revoke.",
+    )
 
 
 class LogoutResponse(BaseModel):
@@ -156,17 +217,15 @@ class Revoked(Enum):
 
 
 class RevokeAllResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     revoked: Revoked = Field(
         ..., description="Authority-safe acknowledgement of the revocation request."
     )
-    cleanupRowCount: int = Field(
-        ...,
-        description="Number of currently enumerated refresh-token rows suspended as best-effort cleanup.",
-        ge=0,
-    )
 
 
-class Error(BaseModel):
+class Error1(BaseModel):
     """
     Error response body. A missing, malformed, or structurally invalid JSON
     request body returns `InvalidBody` without parser or

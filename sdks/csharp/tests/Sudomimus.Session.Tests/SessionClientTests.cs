@@ -61,6 +61,35 @@ public class SessionClientTests
     }
 
     [Fact]
+    public async Task UserInfoAndClaimStateAsync_UseBearerAccessToken()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.OK, """{ "sub": "subject-1", "email": "ada@example.com" }""");
+        handler.Enqueue(HttpStatusCode.OK, """
+        {
+            "sub": "subject-1",
+            "claims": {
+                "email": { "requirement": "OFF", "state": "UNKNOWN" },
+                "given_name": { "requirement": "OFF", "state": "UNKNOWN" },
+                "family_name": { "requirement": "OFF", "state": "UNKNOWN" },
+                "picture": { "requirement": "OFF", "state": "UNKNOWN" },
+                "picture_animated": { "requirement": "OFF", "state": "UNKNOWN" }
+            }
+        }
+        """);
+        var client = NewClient(handler);
+
+        var userinfo = await client.UserInfoAsync("a1");
+        var claimState = await client.ClaimStateAsync("a1");
+
+        Assert.Equal("subject-1", userinfo.Subject);
+        Assert.Equal("ada@example.com", userinfo.Email);
+        Assert.Equal(ClaimRequirement.Off, claimState.Claims.GivenName.Requirement);
+        Assert.All(handler.Requests, request => Assert.Equal("Bearer", request.AuthScheme));
+        Assert.All(handler.Requests, request => Assert.Equal("a1", request.AuthParameter));
+    }
+
+    [Fact]
     public async Task HealthAsync_ParsesResponse()
     {
         var handler = new FakeHttpMessageHandler();
@@ -122,7 +151,7 @@ public class SessionClientTests
     {
         var capturedRawBody = "";
         var handler = new FakeHttpMessageHandler();
-        handler.Enqueue(HttpStatusCode.OK, """{ "revoked": true, "cleanupRowCount": 3 }""");
+        handler.Enqueue(HttpStatusCode.OK, """{ "revoked": true }""");
 
         var client = new SessionClient(new SessionClientOptions
         {
@@ -145,7 +174,6 @@ public class SessionClientTests
         });
 
         Assert.True(resp.Revoked);
-        Assert.Equal(3, resp.CleanupRowCount);
         var req = Assert.Single(handler.Requests);
         Assert.Equal("external.signed.jwt", req.AuthParameter);
         Assert.Equal(req.Body, capturedRawBody);

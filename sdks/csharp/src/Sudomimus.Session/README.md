@@ -29,6 +29,9 @@ await session.LogoutAsync();
 `sudomimus-session`; configure `SessionClientOptions.ClientAuth` to let the SDK
 sign it.
 
+`UserInfoAsync(accessToken)` and `ClaimStateAsync(accessToken)` resolve current
+consent-gated identity and claim state with Bearer authentication.
+
 The client also exposes `ApplicationJwksAsync`,
 `ResolveApplicationPublicKeyAsync`, `VerifyAccessTokenAsync`, and
 `VerifyRefreshTokenAsync`. JWKS responses honor `Cache-Control: max-age` with

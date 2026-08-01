@@ -5,15 +5,15 @@
  * @description Session SDK errors
  */
 
-import type { SessionErrorBody } from "./declare.js";
+import type { SessionApiErrorBody } from "./declare.js";
 
 export class SessionApiError extends Error {
 
     public readonly status: number;
     public readonly reason?: string;
-    public readonly body?: SessionErrorBody;
+    public readonly body?: SessionApiErrorBody;
 
-    public constructor(status: number, reason?: string, body?: SessionErrorBody) {
+    public constructor(status: number, reason?: string, body?: SessionApiErrorBody) {
 
         super(`Sudomimus Session API error: HTTP ${status}${reason ? ` (${reason})` : ""}`);
         this.name = "SessionApiError";

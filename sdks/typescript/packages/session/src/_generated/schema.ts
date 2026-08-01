@@ -34,7 +34,7 @@ export interface paths {
          *     application access and refresh tokens. Select the key whose `kid`
          *     matches the JWT JOSE header. The set can contain PREPUBLISHED, ACTIVE,
          *     and still-published RETIRING keys; it never contains private key
-         *     material or REVOKED keys.
+         *     material or REVOKED keys. The set contains at most 32 keys.
          */
         get: operations["applicationJwks"];
         put?: never;
@@ -56,23 +56,25 @@ export interface paths {
         put?: never;
         /**
          * Rotate a refresh token and issue a new access token.
-         * @description Issues a new access token AND a new refresh token, atomically
-         *     invalidating the presented refresh token. The Session API implements
+         * @description Issues a new access token AND a new refresh token by conditionally
+         *     advancing the same ApplicationSession's signed `rotationVersion`.
+         *     The Session API implements
          *     OAuth 2.1 BCP §4.14.2 strict refresh-token rotation: every successful
          *     `/refresh` rotates the refresh token, and a later presentation of the
-         *     parent token is treated as evidence of compromise unless it is a
+         *     previous signed version is treated as evidence of compromise unless it is a
          *     near-simultaneous retry inside the rotation grace window.
          *
-         *     Inside that short grace window, if the parent was already rotated and
-         *     the winning child is still active, the retry adopts the same child and
-         *     receives HTTP 200 instead of revoking the family. Outside the grace
-         *     window, or when adoption cannot cleanly rebuild the child session, the
-         *     entire refresh-token family is revoked and the caller must restart with
+         *     Inside that short grace window, if another request already advanced
+         *     the same session by exactly one version and that winning state remains
+         *     active, the retry deterministically reissues the exact winning refresh
+         *     JWT and receives HTTP 200. Outside the grace window, for a version older
+         *     than the immediately previous version, or when exact adoption cannot be
+         *     proven, the ApplicationSession is terminally revoked and the caller must restart with
          *     its initial login flow: Connect inquiry, device authorization, native
          *     direct-issue, or another ordinary application-token issuance path.
          *
-         *     This endpoint accepts only refresh-token families whose required
-         *     issuance protocol is `APPLICATION`. OIDC refresh-token families are
+         *     This endpoint accepts only ApplicationSessions whose required issuance
+         *     protocol is `APPLICATION`. OIDC sessions are
          *     rejected before account, authority, grace-adoption, or rotation work
          *     and must use the OIDC `/token` endpoint.
          */
@@ -94,14 +96,65 @@ export interface paths {
         put?: never;
         /**
          * Check whether the session behind an access token is still valid.
-         * @description Returns the revocation status of the refresh-token session that the
-         *     supplied access token descends from. The access token is
+         * @description Strongly resolves the supplied access token's payload `sid` and returns
+         *     the current effective status of that ApplicationSession. The token's
+         *     `aud` and pairwise payload `sub` must exactly match the stored session.
+         *     The access token is
          *     self-authenticating: its signature is verified against the issuing
          *     application's public key, so no client-auth JWT is required. The access
          *     token's own expiry is not enforced here; the answer describes the
          *     underlying session.
          */
         post: operations["introspect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/userinfo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve current identity data shared with an application.
+         * @description Accepts an ordinary application access token as a Bearer credential and
+         *     returns current, consent-gated identity data for its live
+         *     ApplicationSession. This endpoint accepts only sessions whose issuance
+         *     protocol is `APPLICATION`; OIDC clients use the discovered OIDC
+         *     `userinfo_endpoint` instead. Profile data is read live and is never
+         *     copied from the access token.
+         */
+        get: operations["userinfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claim-state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve current identity-claim policy and consent state.
+         * @description Accepts an ordinary application access token as a Bearer credential and
+         *     returns the live policy requirement and standing consent state for each
+         *     shareable UserInfo claim. This endpoint accepts only sessions whose
+         *     issuance protocol is `APPLICATION`; OIDC clients use the custom
+         *     `claim_state_endpoint` from OIDC discovery instead.
+         */
+        get: operations["claimState"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -120,8 +173,10 @@ export interface paths {
         /**
          * Revoke the session behind a refresh token.
          * @description Revokes the single session identified by the supplied refresh token.
-         *     Possession of a genuine refresh token authorizes the revocation, so no
-         *     client-auth JWT is required. The operation is idempotent.
+         *     Any genuine signed version whose `sid`, `aud`, `jti`, and
+         *     `rotationVersion` bind to that session may authorize the revocation;
+         *     accepting an older genuine version here does not make it refreshable.
+         *     No client-auth JWT is required. The operation is idempotent.
          */
         post: operations["logout"];
         delete?: never;
@@ -142,15 +197,14 @@ export interface paths {
         /**
          * Revoke every session of an account for the calling application.
          * @description Advances the account/application revocation authority for the account
-         *     identified by the supplied sector subject, then best-effort suspends
-         *     currently enumerated refresh-token rows. This is an
+         *     identified by the supplied sector subject, then best-effort revokes
+         *     currently enumerated application-session rows. This is an
          *     application-authority action, so it requires a client-auth JWT with audience
          *     `sudomimus-session`. Revocation is scoped to the calling application;
          *     sessions of the same account under other applications are unaffected.
          *     A successful response acknowledges the request with `revoked: true`.
-         *     Unknown or out-of-sector subjects return the same acknowledgement with
-         *     `cleanupRowCount: 0` to avoid an existence oracle. `cleanupRowCount`
-         *     counts best-effort row suspensions, not the authoritative revocation.
+         *     Unknown or out-of-sector subjects return the same acknowledgement to
+         *     avoid an existence oracle. Cleanup results are never exposed publicly.
          *     Client authentication is evaluated against the raw request body before
          *     recursive request-body schema validation. Each signed request is
          *     at-most-once: its `jti` is consumed in a `/revoke-all`-specific replay
@@ -209,17 +263,52 @@ export interface components {
             animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
         };
         RefreshRequest: {
+            /** @description Signed refresh credential carrying stable payload `sid`, exact version `jti`, and `rotationVersion`; it contains no user identifier. */
             refreshToken: string;
         };
         RefreshResponse: {
             claims: components["schemas"]["ClaimsStateView"];
-            /** @description Newly issued short-lived access token JWT. */
+            /** @description Newly issued short-lived access token JWT carrying payload `sid` and pairwise `sub` with a fresh `jti`. */
             accessToken: string;
-            /** @description Newly issued refresh token JWT; the presented token has been consumed. */
+            /** @description Newly issued refresh token JWT for the same payload `sid`, with a fresh `jti` and incremented `rotationVersion`; the presented version has been consumed. */
             refreshToken: string;
         };
         IntrospectRequest: {
+            /** @description Signed access credential whose payload `sid` is strongly resolved; its own `exp` is intentionally ignored by introspection. */
             accessToken: string;
+        };
+        UserInfoResponse: {
+            /** @description Pairwise sector subject for this application. */
+            sub: string;
+            /** Format: email */
+            email?: string;
+            email_verified?: boolean;
+            name?: string;
+            given_name?: string;
+            family_name?: string;
+            /** Format: uri */
+            picture?: string;
+            /**
+             * Format: uri
+             * @description Sudomimus private claim for the sector-scoped animated avatar URL.
+             */
+            picture_animated?: string;
+        };
+        UserInfoClaimStateView: {
+            email: components["schemas"]["ClaimRequirementStateView"];
+            given_name: components["schemas"]["ClaimRequirementStateView"];
+            family_name: components["schemas"]["ClaimRequirementStateView"];
+            picture: components["schemas"]["ClaimRequirementStateView"];
+            picture_animated: components["schemas"]["ClaimRequirementStateView"];
+        };
+        ClaimStateResponse: {
+            /** @description Pairwise sector subject for this application. */
+            sub: string;
+            claims: components["schemas"]["UserInfoClaimStateView"];
+        };
+        BearerError: {
+            /** @enum {string} */
+            error: "invalid_token";
         };
         IntrospectResponse: {
             /** @enum {string} */
@@ -227,6 +316,7 @@ export interface components {
             recommendedRecheckSeconds: number;
         };
         LogoutRequest: {
+            /** @description Any genuine signed refresh-token version for the ApplicationSession to revoke. */
             refreshToken: string;
         };
         LogoutResponse: {
@@ -242,8 +332,6 @@ export interface components {
              * @enum {boolean}
              */
             revoked: true;
-            /** @description Number of currently enumerated refresh-token rows suspended as best-effort cleanup. */
-            cleanupRowCount: number;
         };
         /**
          * @description Error response body. A missing, malformed, or structurally invalid JSON
@@ -361,8 +449,8 @@ export interface operations {
         responses: {
             /**
              * @description New access token and rotated refresh token issued. A benign
-             *     concurrent retry may also receive 200 by adopting the live child
-             *     created by the winning refresh inside the rotation grace window.
+             *     concurrent retry may also receive 200 by adopting the exact signed
+             *     version created by the winning refresh inside the rotation grace window.
              */
             200: {
                 headers: {
@@ -388,17 +476,20 @@ export interface operations {
              *
              *     - `RefreshTokenInvalid` — the JWT is malformed, has an unsupported
              *       algorithm or issuer, lacks required claims, names an unknown
-             *       application, or no longer resolves to a stored token row.
+             *       application, or does not exactly bind to a stored ApplicationSession.
              *     - `RefreshTokenInvalidType` — the JWT is not a refresh token, or
-             *       the stored family belongs to the OIDC issuance protocol.
+             *       the stored session belongs to the OIDC issuance protocol.
              *     - `RefreshTokenInvalidSignature` — signature verification failed.
-             *     - `RefreshTokenSuspended` — the refresh-token session is suspended.
+             *     - `RefreshTokenSuspended` — the ApplicationSession is suspended.
              *     - `RefreshTokenExpired` — the token is past its `exp`.
-             *     - `RefreshTokenRevoked` — the refresh-token row was revoked.
-             *     - `RefreshTokenFamilyCompromised` — the presented token had already been rotated and grace-window adoption did not apply; the whole family has now been revoked.
+             *     - `RefreshTokenRevoked` — the ApplicationSession or one of its live
+             *       authority bindings was revoked.
+             *     - `RefreshTokenFamilyCompromised` — the signed version is stale and
+             *       exact grace-window adoption did not apply; the ApplicationSession
+             *       has now been terminally revoked.
              *
-             *     A concurrent rotation race that cannot adopt the winning child also
-             *     returns HTTP 401 and revokes the family, but intentionally carries
+             *     A concurrent rotation race that cannot adopt the winning version also
+             *     returns HTTP 401 and revokes the session, but intentionally carries
              *     an empty response body rather than exposing a public reason.
              */
             401: {
@@ -434,7 +525,7 @@ export interface operations {
              * @description `AuthorizationArtifactStale` — the email-identity or exact sector
              *     binding changed after refresh authorization was evaluated. Restart
              *     through an initial issuance flow so current identity and claim
-             *     authority are evaluated before another refresh family is used.
+             *     authority are evaluated before another ApplicationSession is used.
              */
             409: {
                 headers: {
@@ -497,6 +588,76 @@ export interface operations {
             };
         };
     };
+    userinfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current application-visible identity data. */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
+                    /** @description Prevent shared-cache reuse across Bearer credentials. */
+                    Vary?: "Authorization";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserInfoResponse"];
+                };
+            };
+            /** @description Bearer token missing, malformed, expired, inactive, or owned by another issuance protocol. */
+            401: {
+                headers: {
+                    /** @description Bearer authentication challenge. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BearerError"];
+                };
+            };
+        };
+    };
+    claimState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current application-visible claim state. */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
+                    /** @description Prevent shared-cache reuse across Bearer credentials. */
+                    Vary?: "Authorization";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimStateResponse"];
+                };
+            };
+            /** @description Bearer token missing, malformed, expired, inactive, or owned by another issuance protocol. */
+            401: {
+                headers: {
+                    /** @description Bearer authentication challenge. */
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BearerError"];
+                };
+            };
+        };
+    };
     logout: {
         parameters: {
             query?: never;
@@ -543,7 +704,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Revocation acknowledgement and best-effort cleanup count. */
+            /** @description Authority-safe revocation acknowledgement. */
             200: {
                 headers: {
                     [name: string]: unknown;

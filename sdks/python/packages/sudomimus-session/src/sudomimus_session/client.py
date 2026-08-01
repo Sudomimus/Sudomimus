@@ -21,7 +21,9 @@ from sudomimus_token import (
 
 from ._generated.models import (
     ApplicationJwksResponse,
-    Error,
+    BearerError,
+    ClaimStateResponse,
+    Error1,
     HealthResponse,
     IntrospectRequest,
     IntrospectResponse,
@@ -31,6 +33,7 @@ from ._generated.models import (
     RefreshResponse,
     RevokeAllRequest,
     RevokeAllResponse,
+    UserInfoResponse,
 )
 from .client_auth import (
     SessionClientAuth,
@@ -138,6 +141,12 @@ class SessionClient:
     def introspect(self, request: IntrospectRequest) -> IntrospectResponse:
         return self._post("/introspect", request, IntrospectResponse)
 
+    def userinfo(self, access_token: str) -> UserInfoResponse:
+        return self._get_with_bearer("/userinfo", access_token, UserInfoResponse)
+
+    def claim_state(self, access_token: str) -> ClaimStateResponse:
+        return self._get_with_bearer("/claim-state", access_token, ClaimStateResponse)
+
     def logout(self, request: LogoutRequest) -> LogoutResponse:
         return self._post("/logout", request, LogoutResponse)
 
@@ -155,6 +164,18 @@ class SessionClient:
         raw = request.model_dump_json(exclude_none=True)
         response = self._client.post(
             f"{self._base_url}{path}", content=raw, headers=_JSON_HEADERS
+        )
+        return _handle(response, response_model)
+
+    def _get_with_bearer(
+        self,
+        path: str,
+        access_token: str,
+        response_model: type[_ResponseT],
+    ) -> _ResponseT:
+        response = self._client.get(
+            f"{self._base_url}{path}",
+            headers={"Accept": "application/json", "Authorization": f"Bearer {access_token}"},
         )
         return _handle(response, response_model)
 
@@ -196,16 +217,20 @@ def _handle(response: httpx.Response, response_model: type[_ResponseT]) -> _Resp
     if response.is_success:
         return response_model.model_validate_json(response.content)
     error = _try_read_error(response)
-    raise SessionApiError(response.status_code, error.reason if error else None, error)
+    reason = error.reason if isinstance(error, Error1) else None
+    raise SessionApiError(response.status_code, reason, error)
 
 
-def _try_read_error(response: httpx.Response) -> Error | None:
+def _try_read_error(response: httpx.Response) -> Error1 | BearerError | None:
     if not response.content:
         return None
     try:
-        return Error.model_validate_json(response.content)
+        return Error1.model_validate_json(response.content)
     except ValueError:
-        return None
+        try:
+            return BearerError.model_validate_json(response.content)
+        except ValueError:
+            return None
 
 
 def _cache_max_age(response: httpx.Response) -> int:

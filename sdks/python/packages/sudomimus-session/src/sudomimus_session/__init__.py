@@ -3,8 +3,10 @@
 from ._generated.models import (
     ApplicationJsonWebKey,
     ApplicationJwksResponse,
+    BearerError,
     ClaimRequirementStateView,
     ClaimsStateView,
+    ClaimStateResponse,
     HealthResponse,
     IntrospectRequest,
     IntrospectResponse,
@@ -14,9 +16,11 @@ from ._generated.models import (
     RefreshResponse,
     RevokeAllRequest,
     RevokeAllResponse,
+    UserInfoClaimStateView,
+    UserInfoResponse,
 )
 from ._generated.models import (
-    Error as SessionError,
+    Error1 as SessionError,
 )
 from .async_client import AsyncSessionClient
 from .client import SessionClient
@@ -49,6 +53,7 @@ from .token_store import (
 __all__ = [
     "ApplicationJsonWebKey",
     "ApplicationJwksResponse",
+    "BearerError",
     "AsyncInMemoryTokenStore",
     "AsyncRotatingSessionClient",
     "AsyncSessionClient",
@@ -58,6 +63,7 @@ __all__ = [
     "CLIENT_JWT_DEFAULT_LIFETIME_SECONDS",
     "CLIENT_JWT_MAX_LIFETIME_SECONDS",
     "ClaimRequirementStateView",
+    "ClaimStateResponse",
     "ClaimsStateView",
     "ClientAuthSigner",
     "HealthResponse",
@@ -81,6 +87,8 @@ __all__ = [
     "SessionError",
     "TokenPair",
     "TokenStore",
+    "UserInfoClaimStateView",
+    "UserInfoResponse",
     "build_session_client_jwt_claims",
     "sha256_base64",
     "sign_session_client_jwt",
