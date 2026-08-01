@@ -2,7 +2,7 @@
 
 Go SDKs for the [Sudomimus](https://sudomimus.com) authentication and authorization platform.
 
-Module path: `github.com/sudomimus/sudomimus-go`
+Module path: `github.com/sudomimus/sudomimus-go/v4`
 
 > The module path is forward-compatible with publishing this SDK from its own
 > repository (`github.com/sudomimus/sudomimus-go`) — that's the standard Go
@@ -13,15 +13,15 @@ Module path: `github.com/sudomimus/sudomimus-go`
 
 | Package | Purpose | Status |
 | --- | --- | --- |
-| `github.com/sudomimus/sudomimus-go/token` | Parse and verify Sudomimus access / refresh JWTs | alpha |
-| `github.com/sudomimus/sudomimus-go/connect` | Browser inquiry establish / status / redeem / info | planned |
-| `github.com/sudomimus/sudomimus-go/session` | Refresh-token session lifecycle | planned |
-| `github.com/sudomimus/sudomimus-go/native` | Direct-issue (Steam ticket / access key) | planned |
+| `github.com/sudomimus/sudomimus-go/v4/token` | Parse and verify Sudomimus access / refresh JWTs | alpha |
+| `github.com/sudomimus/sudomimus-go/v4/connect` | Browser inquiry establish / status / redeem / info | planned |
+| `github.com/sudomimus/sudomimus-go/v4/session` | Refresh-token session lifecycle | planned |
+| `github.com/sudomimus/sudomimus-go/v4/native` | Direct-issue (Steam ticket / access key) | planned |
 
 ## Install
 
 ```bash
-go get github.com/sudomimus/sudomimus-go/token
+go get github.com/sudomimus/sudomimus-go/v4/token
 ```
 
 ## Usage
@@ -30,7 +30,7 @@ go get github.com/sudomimus/sudomimus-go/token
 import (
     "context"
 
-    "github.com/sudomimus/sudomimus-go/token"
+    "github.com/sudomimus/sudomimus-go/v4/token"
 )
 
 verifier := token.NewVerifier(func(ctx context.Context, applicationAnchor, keyID string) (string, error) {
@@ -46,11 +46,12 @@ if err != nil {
     }
     return err
 }
-fmt.Println(tok.Body.Subject, tok.Body.FirstName, tok.Body.StaticAvatarURL)
+fmt.Println(tok.Body.Subject, tok.Body.SessionID, tok.Body.Audience)
 ```
 
-The verifier performs, in order: parse → `kty` matches `"Access"`/`"Refresh"`
-→ `aud` and `kid` non-empty → expiration in the future → RSA-SHA256 signature
+The verifier performs, in order: parse → `typ` matches the Sudomimus
+access/refresh media type → payload `aud` and header `kid` are non-empty →
+expiration in the future → RSA-SHA256 signature
 against `resolver(aud, kid)`. `ApplicationJSONWebKey.PublicKeyPEM` converts
 Session RSA JWKs for the resolver. The verifier does not cache results.
 

@@ -3,54 +3,38 @@ package token
 import "context"
 
 const (
-	AccessKeyType  = "Access"
-	RefreshKeyType = "Refresh"
+	AccessTokenType  = "vnd.sudomimus.application-access+jwt"
+	RefreshTokenType = "vnd.sudomimus.application-refresh+jwt"
 )
 
-// Header holds the standard JWT envelope claims that @sudoo/jwt places in the
-// header segment. Sudomimus tokens carry these claims here, not in the body.
+// Header is the exact JOSE protected-header shape of application tokens.
 type Header struct {
-	Algorithm string `json:"alg,omitempty"`
-	Type      string `json:"typ,omitempty"`
-	Issuer    string `json:"iss,omitempty"`
-	Audience  string `json:"aud,omitempty"`
-	IssuedAt  int64  `json:"iat,omitempty"`
-	ExpiresAt int64  `json:"exp,omitempty"`
-	NotBefore int64  `json:"nbf,omitempty"`
-	JwtID     string `json:"jti,omitempty"`
-	Subject   string `json:"sub,omitempty"`
-	KeyID     string `json:"kid,omitempty"`
-	KeyType   string `json:"kty,omitempty"`
-	Version   string `json:"ver,omitempty"`
+	Algorithm string `json:"alg"`
+	KeyID     string `json:"kid"`
+	Type      string `json:"typ"`
 }
 
 // AccessTokenBody is the payload of a Sudomimus access token.
-//
-// Subject is the application-visible "sector subject" (also the OIDC sub) —
-// the value an application keys its users on. The raw internal account
-// identifier never appears in a token. It is opaque: never parse or
-// format-validate it.
-//
-// FirstName, LastName, EmailAddress, StaticAvatarURL, and AnimatedAvatarURL are
-// consent-gated (claim sharing): each is minted only when the application's
-// claim policy permits it AND the user has granted that claim, so any of them
-// may be absent. Synthetic policies may emit generated placeholders.
 type AccessTokenBody struct {
-	Subject           string `json:"subject"`
-	FirstName         string `json:"firstName,omitempty"`
-	LastName          string `json:"lastName,omitempty"`
-	EmailAddress      string `json:"emailAddress,omitempty"`
-	StaticAvatarURL   string `json:"staticAvatarUrl,omitempty"`
-	AnimatedAvatarURL string `json:"animatedAvatarUrl,omitempty"`
+	Issuer    string `json:"iss"`
+	Audience  string `json:"aud"`
+	Subject   string `json:"sub"`
+	SessionID string `json:"sid"`
+	JwtID     string `json:"jti"`
+	IssuedAt  int64  `json:"iat"`
+	ExpiresAt int64  `json:"exp"`
 }
 
-// RefreshTokenBody is the payload of a Sudomimus refresh token. It carries the
-// sector Subject (the same pairwise identifier as the access-token body)
-// because the refresh token leaves the system and must never expose the
-// internal account identifier. Informational only — /refresh resolves the
-// token by its jti.
+// RefreshTokenBody carries session binding and rotation state, with no user
+// identifier or profile data.
 type RefreshTokenBody struct {
-	Subject string `json:"subject"`
+	Issuer          string `json:"iss"`
+	Audience        string `json:"aud"`
+	SessionID       string `json:"sid"`
+	JwtID           string `json:"jti"`
+	IssuedAt        int64  `json:"iat"`
+	ExpiresAt       int64  `json:"exp"`
+	RotationVersion int64  `json:"rotationVersion"`
 }
 
 // AccessToken is a parsed Sudomimus access token.

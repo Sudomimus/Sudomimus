@@ -1,29 +1,16 @@
 package com.sudomimus.token;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Body (payload) claims carried in a Sudomimus access token. */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public final class AccessTokenBody {
 
-    /**
-     * The application-visible user identifier — the per-(account, sector)
-     * "sector subject", also the OIDC {@code sub}. The raw internal account
-     * identifier never appears in a token. Opaque: never parse it.
-     */
-    @JsonProperty("subject") public String subject;
-
-    /**
-     * Given name. Consent-gated (claim sharing): minted only when the
-     * application's claim policy permits it AND the user has granted the claim,
-     * so it may be {@code null} even when the account has a value stored. The
-     * same gating applies to {@link #lastName}, {@link #emailAddress},
-     * {@link #staticAvatarUrl}, and {@link #animatedAvatarUrl}.
-     */
-    @JsonProperty("firstName") public String firstName;
-    @JsonProperty("lastName") public String lastName;
-    @JsonProperty("emailAddress") public String emailAddress;
-    @JsonProperty("staticAvatarUrl") public String staticAvatarUrl;
-    @JsonProperty("animatedAvatarUrl") public String animatedAvatarUrl;
+    @JsonProperty("iss") public String issuer;
+    @JsonProperty("aud") public String audience;
+    /** Pairwise application-visible user key. Opaque: never parse it. */
+    @JsonProperty("sub") public String subject;
+    @JsonProperty("sid") public String sessionId;
+    @JsonProperty("jti") public String jwtId;
+    @JsonProperty("iat") public Long issuedAt;
+    @JsonProperty("exp") public Long expiresAt;
 }

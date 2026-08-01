@@ -1,66 +1,75 @@
-"""Claim models for Sudomimus access and refresh tokens.
-
-Standard envelope claims (``iss``, ``aud``, ``iat``, ``exp``, ``jti``,
-``kty``, ``sub``) live in the JWT *header*; the body carries only the
-application-specific claims. This mirrors ``@sudomimus/token`` and the C#
-``Sudomimus.Token`` package.
-"""
+"""Claim models for Sudomimus application and OIDC tokens."""
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+import re
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+_ABSOLUTE_URI = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:[^\s]*$")
+
+
+def _validate_absolute_uri(value: str) -> str:
+    if _ABSOLUTE_URI.fullmatch(value) is None:
+        raise ValueError("must be an absolute URI")
+    return value
 
 
 class JwtHeader(BaseModel):
-    """Envelope claims carried in the JWT header segment."""
+    """Loose JOSE header used only to classify a token before strict parsing."""
 
     alg: str | None = None
     typ: str | None = None
-    iss: str | None = None
-    aud: str | None = None
-    iat: int | None = None
-    exp: int | None = None
-    nbf: int | None = None
-    jti: str | None = None
-    sub: str | None = None
-    kty: str | None = None
     kid: str | None = None
-    ver: str | None = None
+
+
+class AccessTokenHeader(BaseModel):
+    """Exact JOSE protected header of an application access token."""
+
+    model_config = ConfigDict(extra="forbid")
+    alg: Literal["RS256"]
+    kid: str = Field(min_length=1)
+    typ: Literal["vnd.sudomimus.application-access+jwt"]
+
+
+class RefreshTokenHeader(BaseModel):
+    """Exact JOSE protected header of an application refresh token."""
+
+    model_config = ConfigDict(extra="forbid")
+    alg: Literal["RS256"]
+    kid: str = Field(min_length=1)
+    typ: Literal["vnd.sudomimus.application-refresh+jwt"]
 
 
 class AccessTokenBody(BaseModel):
-    """Body claims carried in a Sudomimus access token.
+    """Minimal registered claims carried by an application access token."""
 
-    ``subject`` is the application-visible **sector subject** (also the
-    OIDC ``sub``) — the value an application keys its users on. The raw
-    internal account identifier never appears in a token. Opaque: never
-    parse or format-validate it.
+    model_config = ConfigDict(extra="forbid")
+    iss: str = Field(min_length=1)
+    aud: str = Field(min_length=1)
+    sub: str = Field(min_length=1)
+    sid: str = Field(min_length=1)
+    jti: str = Field(min_length=1)
+    iat: int = Field(ge=0)
+    exp: int = Field(ge=1)
 
-    ``firstName``, ``lastName``, ``emailAddress``, ``staticAvatarUrl``, and
-    ``animatedAvatarUrl`` are
-    consent-gated (claim sharing): each is minted only when the application's
-    claim policy permits it AND the user has granted that claim, so any of
-    them may be absent. Synthetic policies may emit generated placeholders.
-    """
-
-    subject: str
-    firstName: str | None = None
-    lastName: str | None = None
-    emailAddress: str | None = None
-    staticAvatarUrl: str | None = None
-    animatedAvatarUrl: str | None = None
+    _validate_issuer = field_validator("iss")(_validate_absolute_uri)
 
 
 class RefreshTokenBody(BaseModel):
-    """Body claims carried in a Sudomimus refresh token.
+    """Session binding and rotation state carried by a refresh token."""
 
-    Carries the sector ``subject`` (the same pairwise identifier as the
-    access-token body) because the refresh token leaves the system and
-    must never expose the internal account identifier. Informational only
-    — ``/refresh`` resolves the token by its ``jti``.
-    """
+    model_config = ConfigDict(extra="forbid")
+    iss: str = Field(min_length=1)
+    aud: str = Field(min_length=1)
+    sid: str = Field(min_length=1)
+    jti: str = Field(min_length=1)
+    iat: int = Field(ge=0)
+    exp: int = Field(ge=1)
+    rotationVersion: int = Field(ge=1)
 
-    subject: str
+    _validate_issuer = field_validator("iss")(_validate_absolute_uri)
 
 
 class IdTokenHeader(BaseModel):
@@ -80,7 +89,7 @@ class IdTokenBody(BaseModel):
 
     Every claim lives in the JWT body (standard OIDC). ``sub`` is the
     per-(account, sector) sector subject — identical to the access-token
-    body ``subject``. The token is signed by the platform key.
+    body ``sub``. The token is signed by the platform key.
     """
 
     iss: str

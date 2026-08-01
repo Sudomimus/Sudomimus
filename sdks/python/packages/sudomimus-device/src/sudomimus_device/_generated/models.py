@@ -184,10 +184,10 @@ class DeviceTokenResponse(BaseModel):
     applicationAnchor: ApplicationAnchor
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). The application-visible user key is\nthe `subject` (sector subject) claim. Claim fields such as\n`emailAddress`, `firstName`, `lastName`, `staticAvatarUrl`, and\n`animatedAvatarUrl` are minted\naccording to the application's claim policy and the user's standing grant.\n",
+        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the live ApplicationSession, and\n`jti` identifies this access-token instance. It contains no profile\nclaims or raw account identifier; use Session API `/userinfo` for\ncurrent shared identity data.\n",
     )
     refreshToken: str = Field(
         ...,
-        description="Long-lived refresh token (JWT). Use Session API `/refresh` to rotate it\nand issue later access tokens.\n",
+        description="Long-lived refresh token (JWT). Payload `sid` binds the session,\n`jti` names this exact bearer version, and `rotationVersion` is a\npositive integer. It contains no user identifier. Use Session API\n`/refresh` to rotate it and issue later access tokens.\n",
     )
     claims: ClaimsStateView

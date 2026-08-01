@@ -14,8 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Mirrors enough of {@code @sudoo/jwt}'s creator to mint fixture tokens that
- * exercise the parser/verifier round-trip on the JVM.
+ * Mints compact RS256 fixtures matching the 4.0.0 token contract.
  */
 final class TestHelpers {
 
@@ -66,23 +65,17 @@ final class TestHelpers {
         long iat = Instant.now().getEpochSecond();
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("alg", "RS256");
-        header.put("typ", "JWT");
-        header.put("iss", "sudomimus.com");
-        header.put("aud", anchor);
-        header.put("iat", iat);
-        header.put("exp", iat + 3600);
-        header.put("jti", "access-1");
+        header.put("typ", TokenVerifier.ACCESS_TOKEN_TYPE);
         header.put("kid", "key-1");
-        header.put("kty", "Access");
-        header.put("sub", "refresh-1");
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("subject", "subject-1");
-        body.put("firstName", "Ada");
-        body.put("lastName", "Lovelace");
-        body.put("emailAddress", "ada@example.com");
-        body.put("staticAvatarUrl", "https://cdn.sudomimus.com/avatar/subject-1.png");
-        body.put("animatedAvatarUrl", "https://cdn.sudomimus.com/avatar/subject-1.gif");
+        body.put("iss", "https://connect-api.sudomimus.com");
+        body.put("aud", anchor);
+        body.put("sub", "subject-1");
+        body.put("sid", "session-1");
+        body.put("jti", "access-1");
+        body.put("iat", iat);
+        body.put("exp", iat + 3600);
 
         return mintToken(header, body, priv);
     }
@@ -91,17 +84,17 @@ final class TestHelpers {
         long iat = Instant.now().getEpochSecond();
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("alg", "RS256");
-        header.put("typ", "JWT");
-        header.put("iss", "sudomimus.com");
-        header.put("aud", anchor);
-        header.put("iat", iat);
-        header.put("exp", iat + 30L * 24 * 3600);
-        header.put("jti", "refresh-1");
+        header.put("typ", TokenVerifier.REFRESH_TOKEN_TYPE);
         header.put("kid", "key-1");
-        header.put("kty", "Refresh");
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("subject", "subject-1");
+        body.put("iss", "https://connect-api.sudomimus.com");
+        body.put("aud", anchor);
+        body.put("sid", "session-1");
+        body.put("jti", "refresh-1");
+        body.put("iat", iat);
+        body.put("exp", iat + 30L * 24 * 3600);
+        body.put("rotationVersion", 1);
 
         return mintToken(header, body, priv);
     }

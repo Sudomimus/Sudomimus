@@ -18,7 +18,7 @@ var verifier = new TokenVerifier(async (applicationAnchor, keyId, ct) =>
 });
 
 var token = await verifier.VerifyAccessTokenAsync(accessTokenJwt);
-Console.WriteLine($"{token.Body.Subject} ({token.Body.FirstName})");
+Console.WriteLine($"{token.Body.Subject} ({token.Body.SessionId})");
 ```
 
 `Sudomimus.Token` is independent of `Sudomimus.Native` — install whichever

@@ -160,7 +160,7 @@ class CreateErrandRequest(BaseModel):
     )
     accessToken: str = Field(
         ...,
-        description="An access token (JWT) the application already holds for the user.\nVerified server-side with its expiry enforced, then reverse-resolved\nfrom its `subject` (sector subject) claim to the account — so present\na currently-valid token, not an expired one.\n",
+        description="An access token (JWT) the application already holds for the user.\nVerified server-side with its expiry enforced, then resolved through\nits `sid` to an ACTIVE ApplicationSession with exact application and\n`sub` bindings — so present a currently valid, live-session token.\n",
     )
 
 
@@ -201,11 +201,11 @@ class DirectIssueAccessKeyResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `staticAvatarUrl` /\n`animatedAvatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the live ApplicationSession, and\n`jti` identifies this token instance. It contains no profile claims\nor raw account identifier; use Session API `/userinfo` for current\nshared identity data.\n",
     )
     refreshToken: str = Field(
         ...,
-        description="Long-lived refresh token (JWT). Use Session API `/refresh` for renewal without re-presenting the access key.",
+        description="Long-lived refresh token JWT with stable payload `sid`, version identifier `jti`, and positive `rotationVersion`. It contains no user identifier. Use Session API `/refresh` for renewal without re-presenting the access key.",
     )
 
 
@@ -214,9 +214,9 @@ class DirectIssueSteamTicketResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Body shape matches Connect's\n`AccessTokenBody`: the application-visible user key is the\n`subject` (sector subject) claim, not a raw account identifier.\nThe `firstName` / `lastName` / `emailAddress` / `staticAvatarUrl` /\n`animatedAvatarUrl` claims are\nconsent-gated and may be absent (see Connect `AccessTokenBody`).\n",
+        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the live ApplicationSession, and\n`jti` identifies this token instance. It contains no profile claims\nor raw account identifier; use Session API `/userinfo` for current\nshared identity data.\n",
     )
     refreshToken: str = Field(
         ...,
-        description="Long-lived refresh token (JWT). Use Session API `/refresh` to obtain a new access token without re-acquiring a Steam ticket.",
+        description="Long-lived refresh token JWT with stable payload `sid`, version identifier `jti`, and positive `rotationVersion`. It contains no user identifier. Use Session API `/refresh` to obtain a new access token without re-acquiring a Steam ticket.",
     )

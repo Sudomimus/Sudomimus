@@ -6,7 +6,12 @@
  */
 
 import { parseAccessToken, parseRefreshToken } from "../../src/parse";
-import { APPLICATION_ANCHOR, generateRsaKeyPair, mintAccessToken } from "../helpers/jwt";
+import {
+    APPLICATION_ANCHOR,
+    generateRsaKeyPair,
+    mintAccessToken,
+    mintRefreshToken,
+} from "../helpers/jwt";
 
 describe("parseAccessToken", () => {
 
@@ -26,34 +31,28 @@ describe("parseAccessToken", () => {
             throw new Error("expected a parsed token");
         }
 
-        expect(parsed.body.subject).toBe("subject-1");
-        expect(parsed.body.firstName).toBe("Ada");
-        expect(parsed.body.emailAddress).toBe("ada@example.com");
-        expect(parsed.body.staticAvatarUrl).toBe("https://cdn.sudomimus.com/avatar/subject-1.png");
-        expect(parsed.body.animatedAvatarUrl).toBe("https://cdn.sudomimus.com/avatar/subject-1.gif");
-        expect(parsed.header.kty).toBe("Access");
-        expect(parsed.header.aud).toBe(APPLICATION_ANCHOR);
+        expect(parsed.body.sub).toBe("subject-1");
+        expect(parsed.body.sid).toBe("session-1");
+        expect(parsed.body.aud).toBe(APPLICATION_ANCHOR);
+        expect(parsed.header.typ).toBe("vnd.sudomimus.application-access+jwt");
     });
 
-    it("parses a token whose consent-gated claims are absent", () => {
+    it("rejects an access token carrying profile claims", () => {
 
-        // firstName / lastName / emailAddress / avatar URLs are consent-gated
-        // and may be omitted; a token carrying only `subject` must still parse.
         const { privateKey } = generateRsaKeyPair();
-        const jwt: string = mintAccessToken(privateKey, { body: { subject: "subject-1" } });
-        const parsed = parseAccessToken(jwt);
+        const issuedAt = Math.floor(Date.now() / 1000);
+        const jwt: string = mintAccessToken(privateKey, { body: {
+            iss: "https://connect-api.sudomimus.com",
+            aud: APPLICATION_ANCHOR,
+            sub: "subject-1",
+            sid: "session-1",
+            jti: "access-1",
+            iat: issuedAt,
+            exp: issuedAt + 3600,
+            firstName: "Ada",
+        } as Partial<import("../../src").AccessTokenBody> });
 
-        if (parsed === null) {
-
-            throw new Error("expected a parsed token");
-        }
-
-        expect(parsed.body.subject).toBe("subject-1");
-        expect(parsed.body.firstName).toBeUndefined();
-        expect(parsed.body.lastName).toBeUndefined();
-        expect(parsed.body.emailAddress).toBeUndefined();
-        expect(parsed.body.staticAvatarUrl).toBeUndefined();
-        expect(parsed.body.animatedAvatarUrl).toBeUndefined();
+        expect(parseAccessToken(jwt)).toBeNull();
     });
 });
 
@@ -62,5 +61,14 @@ describe("parseRefreshToken", () => {
     it("returns null for garbage input", () => {
 
         expect(parseRefreshToken("not-a-jwt")).toBeNull();
+    });
+
+    it("exposes rotation state without a subject", () => {
+
+        const { privateKey } = generateRsaKeyPair();
+        const parsed = parseRefreshToken(mintRefreshToken(privateKey));
+        expect(parsed?.body.sid).toBe("session-1");
+        expect(parsed?.body.rotationVersion).toBe(1);
+        expect(parsed?.body).not.toHaveProperty("sub");
     });
 });

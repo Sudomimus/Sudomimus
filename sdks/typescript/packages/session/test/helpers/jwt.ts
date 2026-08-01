@@ -5,17 +5,23 @@
  * @description Shared JWT test helpers
  */
 
-import { JWTCreator } from "@sudoo/jwt";
-import {
-    type AccessTokenBody,
-    type AccessTokenHeader,
-    type RefreshTokenBody,
-    type RefreshTokenHeader,
-} from "@sudomimus/token";
-import { generateKeyPairSync } from "node:crypto";
+import { createSign, generateKeyPairSync } from "node:crypto";
 
 export const APPLICATION_ANCHOR = "anchor-1";
 export const KEY_ID = "key-1";
+
+const mintToken = (
+    privateKey: string,
+    header: Record<string, unknown>,
+    body: Record<string, unknown>,
+): string => {
+
+    const headerSegment = Buffer.from(JSON.stringify(header)).toString("base64url");
+    const bodySegment = Buffer.from(JSON.stringify(body)).toString("base64url");
+    const signingInput = `${headerSegment}.${bodySegment}`;
+    const signature = createSign("RSA-SHA256").update(signingInput).sign(privateKey);
+    return `${signingInput}.${signature.toString("base64url")}`;
+};
 
 export const generateRsaKeyPair = (): { privateKey: string; publicKey: string } => {
 
@@ -29,44 +35,40 @@ export const generateRsaKeyPair = (): { privateKey: string; publicKey: string } 
 
 export const mintAccessToken = (privateKey: string): string => {
 
-    const creator: JWTCreator<AccessTokenHeader, AccessTokenBody> =
-        JWTCreator.instantiate(privateKey);
     const issuedAt = new Date();
     const expirationAt = new Date(issuedAt.getTime() + 3 * 60 * 60 * 1000);
 
-    return creator.create({
-        issuedAt,
-        expirationAt,
-        identifier: "access-1",
-        keyType: "Access",
-        issuer: "sudomimus.com",
-        audience: APPLICATION_ANCHOR,
-        subject: "refresh-1",
-        header: { kid: KEY_ID },
-        body: {
-            subject: "subject-1",
-            firstName: "Ada",
-            lastName: "Lovelace",
-            emailAddress: "ada@example.com",
-        },
+    return mintToken(privateKey, {
+        alg: "RS256",
+        kid: KEY_ID,
+        typ: "vnd.sudomimus.application-access+jwt",
+    }, {
+        iss: "https://connect-api.sudomimus.com",
+        aud: APPLICATION_ANCHOR,
+        sub: "subject-1",
+        sid: "session-1",
+        jti: "access-1",
+        iat: Math.floor(issuedAt.getTime() / 1000),
+        exp: Math.floor(expirationAt.getTime() / 1000),
     });
 };
 
 export const mintRefreshToken = (privateKey: string): string => {
 
-    const creator: JWTCreator<RefreshTokenHeader, RefreshTokenBody> =
-        JWTCreator.instantiate(privateKey);
     const issuedAt = new Date();
     const expirationAt = new Date(issuedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    return creator.create({
-        issuedAt,
-        expirationAt,
-        identifier: "refresh-1",
-        keyType: "Refresh",
-        issuer: "sudomimus.com",
-        audience: APPLICATION_ANCHOR,
-        header: { kid: KEY_ID },
-        body: { subject: "subject-1" },
+    return mintToken(privateKey, {
+        alg: "RS256",
+        kid: KEY_ID,
+        typ: "vnd.sudomimus.application-refresh+jwt",
+    }, {
+        iss: "https://connect-api.sudomimus.com",
+        aud: APPLICATION_ANCHOR,
+        sid: "session-1",
+        jti: "refresh-1",
+        iat: Math.floor(issuedAt.getTime() / 1000),
+        exp: Math.floor(expirationAt.getTime() / 1000),
+        rotationVersion: 1,
     });
 };

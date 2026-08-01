@@ -13,13 +13,10 @@ public class TokenParserTests
 
         var token = TokenParser.ParseAccessToken(jwt);
 
-        Assert.Equal("Ada", token.Body.FirstName);
-        Assert.Equal("Lovelace", token.Body.LastName);
-        Assert.Equal("https://cdn.sudomimus.com/avatar/subject-1.png", token.Body.StaticAvatarUrl);
-        Assert.Equal("https://cdn.sudomimus.com/avatar/subject-1.gif", token.Body.AnimatedAvatarUrl);
         Assert.Equal("subject-1", token.Body.Subject);
-        Assert.Equal("Access", token.Header.KeyType);
-        Assert.Equal("anchor-1", token.Header.Audience);
+        Assert.Equal("session-1", token.Body.SessionId);
+        Assert.Equal("anchor-1", token.Body.Audience);
+        Assert.Equal(TokenVerifier.AccessTokenType, token.Header.Type);
         Assert.Equal("RS256", token.Header.Algorithm);
     }
 
@@ -31,8 +28,9 @@ public class TokenParserTests
 
         var token = TokenParser.ParseRefreshToken(jwt);
 
-        Assert.Equal("subject-1", token.Body.Subject);
-        Assert.Equal("Refresh", token.Header.KeyType);
+        Assert.Equal("session-1", token.Body.SessionId);
+        Assert.Equal(1, token.Body.RotationVersion);
+        Assert.Equal(TokenVerifier.RefreshTokenType, token.Header.Type);
     }
 
     [Theory]
@@ -85,18 +83,16 @@ public class TokenParserTests
     }
 
     [Fact]
-    public void PeekHeader_ReturnsEnvelopeClaims_IncludingNotBeforeAndVersion()
+    public void PeekHeader_ReturnsExactJoseHeader()
     {
         var jwt = TestHelpers.MintRaw(
-            """{"alg":"RS256","typ":"JWT","kty":"Access","aud":"anchor-1","nbf":100,"ver":"1.0"}""",
-            """{"subject":"subject-1"}""");
+            $$"""{"alg":"RS256","typ":"{{TokenVerifier.AccessTokenType}}","kid":"key-1"}""",
+            """{"sub":"subject-1"}""");
 
         var header = TokenParser.PeekHeader(jwt);
 
-        Assert.Equal("Access", header.KeyType);
-        Assert.Equal("anchor-1", header.Audience);
-        Assert.Equal(100, header.NotBefore);
-        Assert.Equal("1.0", header.Version);
+        Assert.Equal(TokenVerifier.AccessTokenType, header.Type);
+        Assert.Equal("key-1", header.KeyId);
     }
 
     [Theory]

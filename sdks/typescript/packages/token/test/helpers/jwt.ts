@@ -5,18 +5,31 @@
  * @description Shared JWT test helpers
  */
 
-import { JWTCreator } from "@sudoo/jwt";
-import { generateKeyPairSync } from "node:crypto";
+import { createSign, generateKeyPairSync } from "node:crypto";
 import type {
     AccessTokenBody,
-    AccessTokenHeader,
     PublicKeyResolver,
     RefreshTokenBody,
-    RefreshTokenHeader,
 } from "../../src";
 
 export const APPLICATION_ANCHOR = "anchor-1";
 export const KEY_ID = "key-1";
+
+const base64url = (input: Buffer | string): string => {
+
+    return Buffer.from(input).toString("base64url");
+};
+
+const mintToken = (
+    privateKey: string,
+    header: Record<string, unknown>,
+    body: Record<string, unknown>,
+): string => {
+
+    const signingInput = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(body))}`;
+    const signature = createSign("RSA-SHA256").update(signingInput).sign(privateKey);
+    return `${signingInput}.${base64url(signature)}`;
+};
 
 export const generateRsaKeyPair = (): { privateKey: string; publicKey: string } => {
 
@@ -32,59 +45,57 @@ export const mintAccessToken = (
     privateKey: string,
     overrides: {
         expirationAt?: Date;
-        keyType?: string;
+        tokenType?: string;
         audience?: string;
         keyId?: string;
-        body?: AccessTokenBody;
+        body?: Partial<AccessTokenBody>;
     } = {},
 ): string => {
 
-    const creator: JWTCreator<AccessTokenHeader, AccessTokenBody> =
-        JWTCreator.instantiate(privateKey);
     const issuedAt = new Date();
     const expirationAt = overrides.expirationAt
         ?? new Date(issuedAt.getTime() + 3 * 60 * 60 * 1000);
 
-    return creator.create({
-        issuedAt,
-        expirationAt,
-        identifier: "access-1",
-        keyType: overrides.keyType ?? "Access",
-        issuer: "sudomimus.com",
-        audience: overrides.audience ?? APPLICATION_ANCHOR,
-        subject: "refresh-1",
-        header: { kid: overrides.keyId ?? KEY_ID },
-        body: overrides.body ?? {
-            subject: "subject-1",
-            firstName: "Ada",
-            lastName: "Lovelace",
-            emailAddress: "ada@example.com",
-            staticAvatarUrl: "https://cdn.sudomimus.com/avatar/subject-1.png",
-            animatedAvatarUrl: "https://cdn.sudomimus.com/avatar/subject-1.gif",
-        },
-    });
+    const header = {
+        alg: "RS256",
+        kid: overrides.keyId ?? KEY_ID,
+        typ: overrides.tokenType ?? "vnd.sudomimus.application-access+jwt",
+    };
+    const body = overrides.body ?? {
+        iss: "https://connect-api.sudomimus.com",
+        aud: overrides.audience ?? APPLICATION_ANCHOR,
+        sub: "subject-1",
+        sid: "session-1",
+        jti: "access-1",
+        iat: Math.floor(issuedAt.getTime() / 1000),
+        exp: Math.floor(expirationAt.getTime() / 1000),
+    };
+    return mintToken(privateKey, header, body);
 };
 
 export const mintRefreshToken = (
     privateKey: string,
-    overrides: { keyType?: string; audience?: string; keyId?: string } = {},
+    overrides: { tokenType?: string; audience?: string; keyId?: string } = {},
 ): string => {
 
-    const creator: JWTCreator<RefreshTokenHeader, RefreshTokenBody> =
-        JWTCreator.instantiate(privateKey);
     const issuedAt = new Date();
     const expirationAt = new Date(issuedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    return creator.create({
-        issuedAt,
-        expirationAt,
-        identifier: "refresh-1",
-        keyType: overrides.keyType ?? "Refresh",
-        issuer: "sudomimus.com",
-        audience: overrides.audience ?? APPLICATION_ANCHOR,
-        header: { kid: overrides.keyId ?? KEY_ID },
-        body: { subject: "subject-1" },
-    });
+    const header = {
+        alg: "RS256",
+        kid: overrides.keyId ?? KEY_ID,
+        typ: overrides.tokenType ?? "vnd.sudomimus.application-refresh+jwt",
+    };
+    const body: RefreshTokenBody = {
+        iss: "https://connect-api.sudomimus.com",
+        aud: overrides.audience ?? APPLICATION_ANCHOR,
+        sid: "session-1",
+        jti: "refresh-1",
+        iat: Math.floor(issuedAt.getTime() / 1000),
+        exp: Math.floor(expirationAt.getTime() / 1000),
+        rotationVersion: 1,
+    };
+    return mintToken(privateKey, header, body);
 };
 
 export const staticResolver = (publicKey: string): PublicKeyResolver => {

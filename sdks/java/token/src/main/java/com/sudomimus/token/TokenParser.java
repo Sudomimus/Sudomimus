@@ -1,8 +1,12 @@
 package com.sudomimus.token;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.net.URI;
 import java.util.Base64;
+import java.util.function.Consumer;
 
 /**
  * Parses Sudomimus JWTs without verifying signatures. Use this when you only
@@ -10,35 +14,52 @@ import java.util.Base64;
  */
 public final class TokenParser {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     private static final Base64.Decoder B64URL = Base64.getUrlDecoder();
 
     private TokenParser() {}
 
     /** Parse a Sudomimus access token (header + {@link AccessTokenBody}). */
     public static JwtToken<AccessTokenBody> parseAccessToken(String jwt) {
-        return parse(jwt, AccessTokenBody.class);
+        return parse(jwt, AccessTokenBody.class, TokenVerifier.ACCESS_TOKEN_TYPE,
+                TokenParser::validateAccessTokenBody);
     }
 
     /** Parse a Sudomimus refresh token (header + {@link RefreshTokenBody}). */
     public static JwtToken<RefreshTokenBody> parseRefreshToken(String jwt) {
-        return parse(jwt, RefreshTokenBody.class);
+        return parse(jwt, RefreshTokenBody.class, TokenVerifier.REFRESH_TOKEN_TYPE,
+                TokenParser::validateRefreshTokenBody);
     }
 
     /**
-     * Decode only the header segment. Useful for inspecting the key type or
-     * audience before committing to a full typed parse.
+     * Decode only the header segment. Useful for inspecting the token media
+     * type before committing to a full typed parse.
      */
     public static JwtHeader peekHeader(String jwt) {
         String[] parts = splitOrThrow(jwt);
         return decodeJson(parts[0], JwtHeader.class, "header");
     }
 
-    private static <TBody> JwtToken<TBody> parse(String jwt, Class<TBody> bodyType) {
+    static String peekAudience(String jwt) {
+        String[] parts = splitOrThrow(jwt);
+        JsonNode body = decodeJson(parts[1], JsonNode.class, "body");
+        JsonNode audience = body.get("aud");
+        return audience != null && audience.isTextual() ? audience.textValue() : null;
+    }
+
+    private static <TBody> JwtToken<TBody> parse(
+            String jwt,
+            Class<TBody> bodyType,
+            String expectedTokenType,
+            Consumer<TBody> validateBody) {
         String[] parts = splitOrThrow(jwt);
 
         JwtHeader header = decodeJson(parts[0], JwtHeader.class, "header");
         TBody body = decodeJson(parts[1], bodyType, "body");
+        validateHeader(header, expectedTokenType);
+        validateBody.accept(body);
 
         byte[] signature;
         try {
@@ -89,5 +110,56 @@ public final class TokenParser {
             throw new TokenException(TokenErrorCode.INVALID_JWT,
                     "Failed to deserialize JWT " + label + ": " + e.getMessage(), e);
         }
+    }
+
+    private static void validateHeader(JwtHeader header, String expectedTokenType) {
+        if (!"RS256".equals(header.algorithm)
+                || !expectedTokenType.equals(header.type)
+                || isEmpty(header.keyId)) {
+            invalid("JWT protected header does not match the 4.0.0 contract.");
+        }
+    }
+
+    private static void validateAccessTokenBody(AccessTokenBody body) {
+        if (!isAbsoluteUri(body.issuer)
+                || isEmpty(body.audience)
+                || isEmpty(body.subject)
+                || isEmpty(body.sessionId)
+                || isEmpty(body.jwtId)
+                || body.issuedAt == null || body.issuedAt < 0
+                || body.expiresAt == null || body.expiresAt < 1) {
+            invalid("Access-token payload does not match the 4.0.0 contract.");
+        }
+    }
+
+    private static void validateRefreshTokenBody(RefreshTokenBody body) {
+        if (!isAbsoluteUri(body.issuer)
+                || isEmpty(body.audience)
+                || isEmpty(body.sessionId)
+                || isEmpty(body.jwtId)
+                || body.issuedAt == null || body.issuedAt < 0
+                || body.expiresAt == null || body.expiresAt < 1
+                || body.rotationVersion == null || body.rotationVersion < 1) {
+            invalid("Refresh-token payload does not match the 4.0.0 contract.");
+        }
+    }
+
+    private static boolean isAbsoluteUri(String value) {
+        if (isEmpty(value)) {
+            return false;
+        }
+        try {
+            return new URI(value).isAbsolute();
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isEmpty(String value) {
+        return value == null || value.isEmpty();
+    }
+
+    private static void invalid(String message) {
+        throw new TokenException(TokenErrorCode.INVALID_JWT, message);
     }
 }

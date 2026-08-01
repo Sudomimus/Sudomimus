@@ -61,11 +61,13 @@ public sealed class JwtToken<TBody>
     /// </summary>
     public bool VerifyExpiration(DateTimeOffset now)
     {
-        if (Header.ExpiresAt is null)
+        var seconds = Body switch
         {
-            return false;
-        }
-        var expiresAt = DateTimeOffset.FromUnixTimeSeconds(Header.ExpiresAt.Value);
+            AccessTokenBody access => access.ExpiresAt,
+            RefreshTokenBody refresh => refresh.ExpiresAt,
+            _ => 0,
+        };
+        var expiresAt = DateTimeOffset.FromUnixTimeSeconds(seconds);
         return now < expiresAt;
     }
 }

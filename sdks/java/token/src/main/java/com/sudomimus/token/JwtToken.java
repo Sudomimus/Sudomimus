@@ -43,10 +43,13 @@ public final class JwtToken<TBody> {
 
     /** Returns true when the token's {@code exp} claim is in the future relative to {@code now}. */
     public boolean verifyExpiration(Instant now) {
-        if (header.expiresAt == null) {
+        Long epochSeconds = body instanceof AccessTokenBody access
+                ? access.expiresAt
+                : body instanceof RefreshTokenBody refresh ? refresh.expiresAt : null;
+        if (epochSeconds == null) {
             return false;
         }
-        Instant expiresAt = Instant.ofEpochSecond(header.expiresAt);
+        Instant expiresAt = Instant.ofEpochSecond(epochSeconds);
         return now.isBefore(expiresAt);
     }
 

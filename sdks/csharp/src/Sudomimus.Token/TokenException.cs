@@ -6,7 +6,7 @@ namespace Sudomimus.Token;
 public enum TokenErrorCode
 {
     InvalidJwt,
-    WrongKeyType,
+    WrongTokenType,
     MissingAudience,
     MissingKeyId,
     UnknownKeyId,

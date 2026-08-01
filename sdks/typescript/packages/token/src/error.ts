@@ -7,7 +7,7 @@
 
 export type TokenErrorCode =
     | "INVALID_JWT"
-    | "WRONG_KEY_TYPE"
+    | "WRONG_TOKEN_TYPE"
     | "MISSING_AUDIENCE"
     | "MISSING_KEY_ID"
     | "UNKNOWN_KEY_ID"

@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"io"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -26,10 +28,17 @@ type JWT[TBody any] struct {
 // VerifyExpiration returns true when the token's exp claim is in the future
 // relative to now.
 func (t *JWT[TBody]) VerifyExpiration(now time.Time) bool {
-	if t.Header.ExpiresAt == 0 {
+	var expiresAt int64
+	switch body := any(t.Body).(type) {
+	case AccessTokenBody:
+		expiresAt = body.ExpiresAt
+	case RefreshTokenBody:
+		expiresAt = body.ExpiresAt
+	}
+	if expiresAt == 0 {
 		return false
 	}
-	return now.Before(time.Unix(t.Header.ExpiresAt, 0))
+	return now.Before(time.Unix(expiresAt, 0))
 }
 
 // VerifySignature returns true when the RSA-SHA256 signature matches the
@@ -45,16 +54,16 @@ func (t *JWT[TBody]) VerifySignature(publicKeyPEM string) bool {
 
 // ParseAccessToken parses a Sudomimus access token without verifying anything.
 func ParseAccessToken(jwt string) (*AccessToken, error) {
-	return parse[AccessTokenBody](jwt)
+	return parse(jwt, AccessTokenType, validateAccessTokenBody)
 }
 
 // ParseRefreshToken parses a Sudomimus refresh token without verifying anything.
 func ParseRefreshToken(jwt string) (*RefreshToken, error) {
-	return parse[RefreshTokenBody](jwt)
+	return parse(jwt, RefreshTokenType, validateRefreshTokenBody)
 }
 
 // PeekHeader decodes only the header segment. Useful for inspecting the key
-// type or audience before committing to a full typed parse.
+// media type before committing to a full typed parse.
 func PeekHeader(jwt string) (Header, error) {
 	if jwt == "" {
 		return Header{}, newError(ErrInvalidJWT, "token is empty")
@@ -68,13 +77,17 @@ func PeekHeader(jwt string) (Header, error) {
 		return Header{}, newError(ErrInvalidJWT, "failed to decode JWT header segment: %s", err)
 	}
 	var header Header
-	if err := json.Unmarshal(headerBytes, &header); err != nil {
+	if err := decodeExactJSON(headerBytes, &header); err != nil {
 		return Header{}, newError(ErrInvalidJWT, "failed to deserialize JWT header: %s", err)
 	}
 	return header, nil
 }
 
-func parse[TBody any](jwt string) (*JWT[TBody], error) {
+func parse[TBody any](
+	jwt string,
+	expectedTokenType string,
+	validateBody func(TBody) error,
+) (*JWT[TBody], error) {
 	if jwt == "" {
 		return nil, newError(ErrInvalidJWT, "token is empty")
 	}
@@ -97,12 +110,18 @@ func parse[TBody any](jwt string) (*JWT[TBody], error) {
 	}
 
 	var header Header
-	if err := json.Unmarshal(headerBytes, &header); err != nil {
+	if err := decodeExactJSON(headerBytes, &header); err != nil {
 		return nil, newError(ErrInvalidJWT, "failed to deserialize header: %s", err)
 	}
 	var body TBody
-	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+	if err := decodeExactJSON(bodyBytes, &body); err != nil {
 		return nil, newError(ErrInvalidJWT, "failed to deserialize body: %s", err)
+	}
+	if err := validateHeader(header, expectedTokenType); err != nil {
+		return nil, newError(ErrInvalidJWT, "protected header does not match the 4.0.0 contract: %s", err)
+	}
+	if err := validateBody(body); err != nil {
+		return nil, newError(ErrInvalidJWT, "payload does not match the 4.0.0 contract: %s", err)
 	}
 
 	signingInput := []byte(parts[0] + "." + parts[1])
@@ -113,6 +132,75 @@ func parse[TBody any](jwt string) (*JWT[TBody], error) {
 		Header:       header,
 		Body:         body,
 	}, nil
+}
+
+func decodeExactJSON(data []byte, target any) error {
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return errors.New("JSON contains more than one value")
+		}
+		return err
+	}
+	return nil
+}
+
+func peekAudience(jwt string) (string, error) {
+	parts := strings.Split(jwt, ".")
+	if len(parts) != 3 {
+		return "", newError(ErrInvalidJWT, "token must have exactly three dot-separated segments; got %d", len(parts))
+	}
+	bodyBytes, err := b64url.DecodeString(parts[1])
+	if err != nil {
+		return "", newError(ErrInvalidJWT, "failed to decode JWT body segment: %s", err)
+	}
+	var body map[string]json.RawMessage
+	if err := decodeExactJSON(bodyBytes, &body); err != nil {
+		return "", newError(ErrInvalidJWT, "failed to deserialize JWT body: %s", err)
+	}
+	var audience string
+	if raw, ok := body["aud"]; ok {
+		_ = json.Unmarshal(raw, &audience)
+	}
+	return audience, nil
+}
+
+func validateHeader(header Header, expectedTokenType string) error {
+	if header.Algorithm != "RS256" {
+		return errors.New("alg must be RS256")
+	}
+	if header.Type != expectedTokenType {
+		return errors.New("typ does not match the token kind")
+	}
+	if header.KeyID == "" {
+		return errors.New("kid must be non-empty")
+	}
+	return nil
+}
+
+func validateAccessTokenBody(body AccessTokenBody) error {
+	if !isAbsoluteURI(body.Issuer) || body.Audience == "" || body.Subject == "" ||
+		body.SessionID == "" || body.JwtID == "" || body.IssuedAt < 0 || body.ExpiresAt < 1 {
+		return errors.New("access-token claims are missing or out of range")
+	}
+	return nil
+}
+
+func validateRefreshTokenBody(body RefreshTokenBody) error {
+	if !isAbsoluteURI(body.Issuer) || body.Audience == "" || body.SessionID == "" ||
+		body.JwtID == "" || body.IssuedAt < 0 || body.ExpiresAt < 1 || body.RotationVersion < 1 {
+		return errors.New("refresh-token claims are missing or out of range")
+	}
+	return nil
+}
+
+func isAbsoluteURI(value string) bool {
+	parsed, err := url.Parse(value)
+	return err == nil && parsed.IsAbs()
 }
 
 func parseRSAPublicKey(pemStr string) (*rsa.PublicKey, error) {

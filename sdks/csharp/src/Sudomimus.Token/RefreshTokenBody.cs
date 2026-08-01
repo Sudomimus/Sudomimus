@@ -7,11 +7,24 @@ namespace Sudomimus.Token;
 /// </summary>
 public sealed record RefreshTokenBody
 {
-    /// <summary>
-    /// The application-visible sector subject (the same pairwise identifier
-    /// as the access-token body). The refresh token leaves the system, so it
-    /// must never carry the raw internal account identifier.
-    /// </summary>
-    [JsonPropertyName("subject")]
-    public required string Subject { get; init; }
+    [JsonPropertyName("iss")]
+    public required string Issuer { get; init; }
+
+    [JsonPropertyName("aud")]
+    public required string Audience { get; init; }
+
+    [JsonPropertyName("sid")]
+    public required string SessionId { get; init; }
+
+    [JsonPropertyName("jti")]
+    public required string JwtId { get; init; }
+
+    [JsonPropertyName("iat")]
+    public required long IssuedAt { get; init; }
+
+    [JsonPropertyName("exp")]
+    public required long ExpiresAt { get; init; }
+
+    [JsonPropertyName("rotationVersion")]
+    public required long RotationVersion { get; init; }
 }

@@ -198,13 +198,19 @@ def test_verify_access_token_end_to_end() -> None:
     private_pem, public_pem = _keypair()
     jwt = create_jwt(
         {
-            "kty": "Access",
+            "alg": "RS256",
+            "typ": "vnd.sudomimus.application-access+jwt",
             "kid": "key-1",
+        },
+        {
+            "iss": "https://connect-api.sudomimus.com",
             "aud": "my-app",
+            "sub": "subject-1",
+            "sid": "session-1",
+            "jti": "access-1",
             "iat": int(time.time()),
             "exp": int(time.time()) + 60,
         },
-        {"subject": "subject-1", "firstName": "Ada"},
         private_pem,
     )
 
@@ -217,7 +223,7 @@ def test_verify_access_token_end_to_end() -> None:
 
     with _client(handler) as client:
         token = client.verify_access_token(jwt)
-    assert token.body.subject == "subject-1"
+    assert token.body.sub == "subject-1"
 
 
 def test_close_closes_owned_client() -> None:
@@ -262,13 +268,19 @@ def test_verify_refresh_token_end_to_end() -> None:
     private_pem, public_pem = _keypair()
     jwt = create_jwt(
         {
-            "kty": "Refresh",
+            "alg": "RS256",
+            "typ": "vnd.sudomimus.application-refresh+jwt",
             "kid": "key-1",
+        },
+        {
+            "iss": "https://connect-api.sudomimus.com",
             "aud": "my-app",
+            "sid": "session-1",
+            "jti": "refresh-1",
             "iat": int(time.time()),
             "exp": int(time.time()) + 60,
+            "rotationVersion": 1,
         },
-        {"subject": "subject-1"},
         private_pem,
     )
 
@@ -280,7 +292,7 @@ def test_verify_refresh_token_end_to_end() -> None:
 
     with _client(handler) as client:
         token = client.verify_refresh_token(jwt)
-    assert token.body.subject == "subject-1"
+    assert token.body.sid == "session-1"
 
 
 def test_async_redeem_and_info() -> None:
@@ -402,13 +414,29 @@ def test_async_verify_access_and_refresh_token() -> None:
     private_pem, public_pem = _keypair()
     now = int(time.time())
     access_jwt = create_jwt(
-        {"kty": "Access", "kid": "key-1", "aud": "my-app", "iat": now, "exp": now + 60},
-        {"subject": "subject-1", "firstName": "Ada"},
+        {"alg": "RS256", "typ": "vnd.sudomimus.application-access+jwt", "kid": "key-1"},
+        {
+            "iss": "https://connect-api.sudomimus.com",
+            "aud": "my-app",
+            "sub": "subject-1",
+            "sid": "session-1",
+            "jti": "access-1",
+            "iat": now,
+            "exp": now + 60,
+        },
         private_pem,
     )
     refresh_jwt = create_jwt(
-        {"kty": "Refresh", "kid": "key-1", "aud": "my-app", "iat": now, "exp": now + 60},
-        {"subject": "subject-1"},
+        {"alg": "RS256", "typ": "vnd.sudomimus.application-refresh+jwt", "kid": "key-1"},
+        {
+            "iss": "https://connect-api.sudomimus.com",
+            "aud": "my-app",
+            "sid": "session-1",
+            "jti": "refresh-1",
+            "iat": now,
+            "exp": now + 60,
+            "rotationVersion": 1,
+        },
         private_pem,
     )
 
@@ -425,8 +453,8 @@ def test_async_verify_access_and_refresh_token() -> None:
         ) as client:
             access = await client.verify_access_token(access_jwt)
             refresh = await client.verify_refresh_token(refresh_jwt)
-            return access.body.subject, refresh.body.subject
+            return access.body.sub, refresh.body.sid
 
     access_subject, refresh_subject = asyncio.run(run())
     assert access_subject == "subject-1"
-    assert refresh_subject == "subject-1"
+    assert refresh_subject == "session-1"

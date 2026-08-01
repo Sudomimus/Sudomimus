@@ -369,10 +369,10 @@ describe("ConnectClient", () => {
             });
 
             const first = await client.verifyAccessToken(jwt);
-            expect(first.body.subject).toBe("subject-1");
+            expect(first.body.sub).toBe("subject-1");
 
             const second = await client.verifyAccessToken(mintAccessToken(privateKey));
-            expect(second.body.subject).toBe("subject-1");
+            expect(second.body.sub).toBe("subject-1");
 
             expect(fetchMock).toHaveBeenCalledTimes(1);
             expect(fetchMock.mock.calls[0][0]).toBe(
@@ -396,8 +396,8 @@ describe("ConnectClient", () => {
             });
 
             const result = await client.verifyRefreshToken(jwt);
-            expect(result.body.subject).toBe("subject-1");
-            expect(result.header.kty).toBe("Refresh");
+            expect(result.body.sid).toBe("session-1");
+            expect(result.header.typ).toBe("vnd.sudomimus.application-refresh+jwt");
         });
 
         it("surfaces TokenError from the underlying verifier", async () => {

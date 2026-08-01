@@ -5,7 +5,7 @@
  * @description Token verifier
  */
 
-import { ACCESS_TOKEN_KEY_TYPE, REFRESH_TOKEN_KEY_TYPE } from "./constants.js";
+import { ACCESS_TOKEN_TYPE, REFRESH_TOKEN_TYPE } from "./constants.js";
 import type {
     AccessToken,
     PublicKeyResolver,
@@ -13,7 +13,12 @@ import type {
     TokenVerifierOptions,
 } from "./declare.js";
 import { TokenError } from "./error.js";
-import { parseAccessToken, parseRefreshToken } from "./parse.js";
+import {
+    parseAccessToken,
+    parseRefreshToken,
+    peekTokenBody,
+    peekTokenHeader,
+} from "./parse.js";
 
 export class TokenVerifier {
 
@@ -26,46 +31,47 @@ export class TokenVerifier {
 
     public async verifyAccessToken(jwt: string): Promise<AccessToken> {
 
-        return this._verify(jwt, ACCESS_TOKEN_KEY_TYPE, parseAccessToken) as Promise<AccessToken>;
+        return this._verify(jwt, ACCESS_TOKEN_TYPE, parseAccessToken) as Promise<AccessToken>;
     }
 
     public async verifyRefreshToken(jwt: string): Promise<RefreshToken> {
 
-        return this._verify(jwt, REFRESH_TOKEN_KEY_TYPE, parseRefreshToken) as Promise<RefreshToken>;
+        return this._verify(jwt, REFRESH_TOKEN_TYPE, parseRefreshToken) as Promise<RefreshToken>;
     }
 
     private async _verify(
         jwt: string,
-        expectedKeyType: string,
+        expectedTokenType: string,
         parser: (jwt: string) => AccessToken | RefreshToken | null,
     ): Promise<AccessToken | RefreshToken> {
 
-        const parsed: AccessToken | RefreshToken | null = parser(jwt);
+        const header = peekTokenHeader(jwt);
+        const body = peekTokenBody(jwt);
 
-        if (parsed === null) {
+        if (header === null || body === null) {
 
             throw new TokenError("INVALID_JWT", "Token is not a parseable JWT.");
         }
 
-        if (parsed.header.kty !== expectedKeyType) {
+        if (header.typ !== expectedTokenType) {
 
             throw new TokenError(
-                "WRONG_KEY_TYPE",
-                `Expected key type "${expectedKeyType}", got "${parsed.header.kty ?? ""}".`,
+                "WRONG_TOKEN_TYPE",
+                `Expected token type "${expectedTokenType}", got "${String(header.typ ?? "")}".`,
             );
         }
 
-        const audience: string | undefined = parsed.header.aud;
+        const audience = body.aud;
 
         if (typeof audience !== "string" || audience.length === 0) {
 
             throw new TokenError(
                 "MISSING_AUDIENCE",
-                "Token is missing the `aud` (applicationAnchor) header.",
+                "Token is missing the `aud` (applicationAnchor) payload claim.",
             );
         }
 
-        const keyId: string | undefined = parsed.header.kid;
+        const keyId = header.kid;
 
         if (typeof keyId !== "string" || keyId.length === 0) {
 
@@ -73,6 +79,13 @@ export class TokenVerifier {
                 "MISSING_KEY_ID",
                 "Token is missing the `kid` signing-key identifier.",
             );
+        }
+
+        const parsed: AccessToken | RefreshToken | null = parser(jwt);
+
+        if (parsed === null) {
+
+            throw new TokenError("INVALID_JWT", "Token claims do not match the 4.0.0 contract.");
         }
 
         if (!parsed.verifyExpiration(new Date())) {

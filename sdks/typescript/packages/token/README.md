@@ -23,12 +23,12 @@ import { parseAccessToken, parseRefreshToken } from "@sudomimus/token";
 
 const token = parseAccessToken(jwt);
 if (token !== null) {
-    console.log(token.body.subject, token.body.firstName, token.body.staticAvatarUrl);
-    console.log(token.header.aud); // applicationAnchor
+    console.log(token.body.sub, token.body.sid);
+    console.log(token.body.aud); // applicationAnchor
 }
 ```
 
-`parseAccessToken` / `parseRefreshToken` decode without verifying anything. They return a `JWTToken` instance or `null` on malformed input.
+`parseAccessToken` / `parseRefreshToken` decode without verifying anything. They return an `ApplicationToken` instance or `null` on malformed input.
 
 ### Verifying
 
@@ -44,7 +44,7 @@ const verifier = new TokenVerifier({ resolver });
 
 try {
     const token = await verifier.verifyAccessToken(jwt);
-    console.log(token.body.subject);
+    console.log(token.body.sub);
 } catch (err) {
     if (err instanceof TokenError) {
         // Also includes MISSING_KEY_ID / UNKNOWN_KEY_ID for JWKS key selection.
@@ -55,8 +55,8 @@ try {
 The verifier performs, in order:
 
 1. JWT parse (`INVALID_JWT` on failure)
-2. `kty` header matches `"Access"` / `"Refresh"` (`WRONG_KEY_TYPE`)
-3. `aud` header is a non-empty string (`MISSING_AUDIENCE`)
+2. `typ` header matches the Sudomimus access/refresh media type (`WRONG_TOKEN_TYPE`)
+3. `aud` payload claim is a non-empty string (`MISSING_AUDIENCE`)
 4. `kid` identifies the signing JWK (`MISSING_KEY_ID`)
 5. Expiration is in the future (`EXPIRED`)
 6. Signature verifies against `resolver(aud, kid)` (`INVALID_SIGNATURE`)

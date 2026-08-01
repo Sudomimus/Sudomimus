@@ -5,78 +5,45 @@
  * @description Token type declarations
  */
 
-import { JWTToken } from "@sudoo/jwt";
+import type { ApplicationToken } from "./token.js";
 
 export type AccessTokenHeader = {
-    readonly kid?: string;
+    readonly alg: "RS256";
+    readonly kid: string;
+    readonly typ: "vnd.sudomimus.application-access+jwt";
 };
 
 export type AccessTokenBody = {
-
-    /**
-     * The application-visible user identifier — the per-(account, sector)
-     * "sector subject", also the OIDC `sub`. This is the value an
-     * application keys its users on; the raw internal account identifier
-     * never appears in a token. User-rotatable. Opaque: never parse or
-     * format-validate it.
-     */
-    readonly subject: string;
-
-    /**
-     * Given name. Consent-gated (claim sharing): minted only when the
-     * application's claim policy permits it AND the user has granted the
-     * claim, so it may be absent even when the account has a value stored.
-     */
-    readonly firstName?: string;
-
-    /**
-     * Family name. Same consent gating as `firstName`.
-     */
-    readonly lastName?: string;
-
-    /**
-     * Verified email associated with this login. Consent-gated like
-     * `firstName` / `lastName` / avatar URLs (minted only when policy permits
-     * AND the user granted the EMAIL claim). When included: the exact email
-     * typed for email-OTP logins, otherwise the account's primary email.
-     * Always omitted for accounts with no verified email (e.g. Steam-only or
-     * AccessKey-only), unless a synthetic email policy emits a proxy address.
-     */
-    readonly emailAddress?: string;
-
-    /**
-     * Sector-scoped static public avatar URL. Consent-gated like the other
-     * shareable claims and minted only when policy and grant allow it. Synthetic
-     * avatar policies may emit a generated sector placeholder image.
-     */
-    readonly staticAvatarUrl?: string;
-
-    /**
-     * Sector-scoped animated public avatar URL. Consent-gated separately from
-     * `staticAvatarUrl`. If the selected avatar has no animation, this is the
-     * same URL as `staticAvatarUrl`.
-     */
-    readonly animatedAvatarUrl?: string;
+    readonly iss: string;
+    readonly aud: string;
+    /** Pairwise, application-visible user key. */
+    readonly sub: string;
+    /** Stable identifier of the logical application session. */
+    readonly sid: string;
+    /** Unique identifier of this access-token instance. */
+    readonly jti: string;
+    readonly iat: number;
+    readonly exp: number;
 };
 
 export type RefreshTokenHeader = {
-    readonly kid?: string;
+    readonly alg: "RS256";
+    readonly kid: string;
+    readonly typ: "vnd.sudomimus.application-refresh+jwt";
 };
 
 export type RefreshTokenBody = {
-
-    /**
-     * The application-visible sector subject (the same pairwise identifier
-     * carried as the access-token body `subject`). The refresh token is a
-     * JWT that leaves the system, so it must never carry the raw internal
-     * account identifier. Informational only — `/refresh` resolves the
-     * token by its `jti`, never by reading this body.
-     */
-    readonly subject: string;
+    readonly iss: string;
+    readonly aud: string;
+    readonly sid: string;
+    readonly jti: string;
+    readonly iat: number;
+    readonly exp: number;
+    readonly rotationVersion: number;
 };
 
-export type AccessToken = JWTToken<AccessTokenHeader, AccessTokenBody>;
-export type RefreshToken = JWTToken<RefreshTokenHeader, RefreshTokenBody>;
+export type AccessToken = ApplicationToken<AccessTokenHeader, AccessTokenBody>;
+export type RefreshToken = ApplicationToken<RefreshTokenHeader, RefreshTokenBody>;
 
 export type PublicKeyResolver = (
     applicationAnchor: string,

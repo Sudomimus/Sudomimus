@@ -57,17 +57,12 @@ func mintToken(t *testing.T, header any, body any, priv *rsa.PrivateKey) string 
 func mintAccessToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string {
 	iat := time.Now().Unix()
 	header := map[string]any{
-		"alg": "RS256", "typ": "JWT", "iss": "sudomimus.com",
-		"aud": anchor, "iat": iat, "exp": iat + 3600,
-		"jti": "access-1", "kid": "key-1", "kty": "Access", "sub": "refresh-1",
+		"alg": "RS256", "typ": AccessTokenType, "kid": "key-1",
 	}
 	body := map[string]any{
-		"subject":           "subject-1",
-		"firstName":         "Ada",
-		"lastName":          "Lovelace",
-		"emailAddress":      "ada@example.com",
-		"staticAvatarUrl":   "https://cdn.sudomimus.com/avatar/subject-1.png",
-		"animatedAvatarUrl": "https://cdn.sudomimus.com/avatar/subject-1.gif",
+		"iss": "https://connect-api.sudomimus.com", "aud": anchor,
+		"sub": "subject-1", "sid": "session-1", "jti": "access-1",
+		"iat": iat, "exp": iat + 3600,
 	}
 	return mintToken(t, header, body, priv)
 }
@@ -75,11 +70,13 @@ func mintAccessToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string {
 func mintRefreshToken(t *testing.T, priv *rsa.PrivateKey, anchor string) string {
 	iat := time.Now().Unix()
 	header := map[string]any{
-		"alg": "RS256", "typ": "JWT", "iss": "sudomimus.com",
-		"aud": anchor, "iat": iat, "exp": iat + 30*24*3600,
-		"jti": "refresh-1", "kid": "key-1", "kty": "Refresh",
+		"alg": "RS256", "typ": RefreshTokenType, "kid": "key-1",
 	}
-	body := map[string]any{"subject": "subject-1"}
+	body := map[string]any{
+		"iss": "https://connect-api.sudomimus.com", "aud": anchor,
+		"sid": "session-1", "jti": "refresh-1", "iat": iat,
+		"exp": iat + 30*24*3600, "rotationVersion": 1,
+	}
 	return mintToken(t, header, body, priv)
 }
 
@@ -96,38 +93,27 @@ func TestVerifyAccessToken_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if tok.Body.Subject != "subject-1" ||
-		tok.Body.FirstName != "Ada" ||
-		tok.Body.StaticAvatarURL != "https://cdn.sudomimus.com/avatar/subject-1.png" ||
-		tok.Body.AnimatedAvatarURL != "https://cdn.sudomimus.com/avatar/subject-1.gif" {
+	if tok.Body.Subject != "subject-1" || tok.Body.SessionID != "session-1" {
 		t.Fatalf("unexpected body: %+v", tok.Body)
 	}
 }
 
-func TestVerifyAccessToken_ConsentGatedClaimsAbsent(t *testing.T) {
-	// firstName / lastName / emailAddress / avatar URLs are consent-gated and may
-	// be absent; a token carrying only `subject` must still verify.
+func TestVerifyAccessToken_RejectsProfileClaims(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	iat := time.Now().Unix()
 	header := map[string]any{
-		"alg": "RS256", "typ": "JWT", "iss": "sudomimus.com",
-		"aud": "anchor-1", "iat": iat, "exp": iat + 3600,
-		"jti": "access-1", "kid": "key-1", "kty": "Access", "sub": "refresh-1",
+		"alg": "RS256", "typ": AccessTokenType, "kid": "key-1",
 	}
-	jwt := mintToken(t, header, map[string]any{"subject": "subject-1"}, keys.privateKey)
+	body := map[string]any{
+		"iss": "https://connect-api.sudomimus.com", "aud": "anchor-1",
+		"sub": "subject-1", "sid": "session-1", "jti": "access-1",
+		"iat": iat, "exp": iat + 3600, "firstName": "Ada",
+	}
+	jwt := mintToken(t, header, body, keys.privateKey)
 
 	v := NewVerifier(staticResolver(keys.publicPEM))
-	tok, err := v.VerifyAccessToken(context.Background(), jwt)
-	if err != nil {
-		t.Fatalf("verify: %v", err)
-	}
-	if tok.Body.Subject != "subject-1" ||
-		tok.Body.FirstName != "" ||
-		tok.Body.EmailAddress != "" ||
-		tok.Body.StaticAvatarURL != "" ||
-		tok.Body.AnimatedAvatarURL != "" {
-		t.Fatalf("unexpected body: %+v", tok.Body)
-	}
+	_, err := v.VerifyAccessToken(context.Background(), jwt)
+	assertCode(t, err, ErrInvalidJWT)
 }
 
 func TestVerifyRefreshToken_RoundTrip(t *testing.T) {
@@ -139,18 +125,18 @@ func TestVerifyRefreshToken_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if tok.Body.Subject != "subject-1" {
+	if tok.Body.SessionID != "session-1" || tok.Body.RotationVersion != 1 {
 		t.Fatalf("unexpected body: %+v", tok.Body)
 	}
 }
 
-func TestVerifyAccessToken_WrongKeyType(t *testing.T) {
+func TestVerifyAccessToken_WrongTokenType(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	jwt := mintRefreshToken(t, keys.privateKey, "anchor-1")
 
 	v := NewVerifier(staticResolver(keys.publicPEM))
 	_, err := v.VerifyAccessToken(context.Background(), jwt)
-	assertCode(t, err, ErrWrongKeyType)
+	assertCode(t, err, ErrWrongTokenType)
 }
 
 func TestVerifyAccessToken_InvalidSignature(t *testing.T) {
@@ -176,10 +162,12 @@ func TestVerifyAccessToken_Expired(t *testing.T) {
 func TestVerifyAccessToken_MissingAudience(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	header := map[string]any{
-		"alg": "RS256", "typ": "JWT",
-		"iat": int64(0), "exp": int64(1 << 62), "kty": "Access",
+		"alg": "RS256", "typ": AccessTokenType, "kid": "key-1",
 	}
-	body := map[string]any{"subject": "subject-1", "firstName": "Ada"}
+	body := map[string]any{
+		"iss": "https://connect-api.sudomimus.com", "sub": "subject-1",
+		"sid": "session-1", "jti": "access-1", "iat": int64(0), "exp": int64(1 << 62),
+	}
 	jwt := mintToken(t, header, body, keys.privateKey)
 
 	v := NewVerifier(staticResolver(keys.publicPEM))
@@ -191,10 +179,14 @@ func TestVerifyAccessToken_MissingKeyID(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	iat := time.Now().Unix()
 	header := map[string]any{
-		"alg": "RS256", "typ": "JWT", "aud": "anchor-1",
-		"iat": iat, "exp": iat + 3600, "kty": "Access",
+		"alg": "RS256", "typ": AccessTokenType,
 	}
-	jwt := mintToken(t, header, map[string]any{"subject": "subject-1"}, keys.privateKey)
+	body := map[string]any{
+		"iss": "https://connect-api.sudomimus.com", "aud": "anchor-1",
+		"sub": "subject-1", "sid": "session-1", "jti": "access-1",
+		"iat": iat, "exp": iat + 3600,
+	}
+	jwt := mintToken(t, header, body, keys.privateKey)
 
 	v := NewVerifier(staticResolver(keys.publicPEM))
 	_, err := v.VerifyAccessToken(context.Background(), jwt)

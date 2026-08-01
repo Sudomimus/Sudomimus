@@ -23,11 +23,11 @@ public class TokenVerifierTests
         var token = await verifier.VerifyAccessTokenAsync(jwt);
 
         Assert.Equal("subject-1", token.Body.Subject);
-        Assert.Equal("Ada", token.Body.FirstName);
+        Assert.Equal("session-1", token.Body.SessionId);
     }
 
     [Fact]
-    public async Task VerifyAccessTokenAsync_ThrowsWrongKeyType_OnRefreshToken()
+    public async Task VerifyAccessTokenAsync_ThrowsWrongTokenType_OnRefreshToken()
     {
         var keys = TestHelpers.GenerateRsaKeyPair();
         var jwt = TestHelpers.MintRefreshToken(keys.PrivateKeyPem);
@@ -35,7 +35,7 @@ public class TokenVerifierTests
         var verifier = MakeVerifier(keys.PublicKeyPem);
         var ex = await Assert.ThrowsAsync<TokenException>(() => verifier.VerifyAccessTokenAsync(jwt));
 
-        Assert.Equal(TokenErrorCode.WrongKeyType, ex.Code);
+        Assert.Equal(TokenErrorCode.WrongTokenType, ex.Code);
     }
 
     [Fact]
@@ -47,7 +47,8 @@ public class TokenVerifierTests
         var verifier = MakeVerifier(keys.PublicKeyPem);
         var token = await verifier.VerifyRefreshTokenAsync(jwt);
 
-        Assert.Equal("subject-1", token.Body.Subject);
+        Assert.Equal("session-1", token.Body.SessionId);
+        Assert.Equal(1, token.Body.RotationVersion);
     }
 
     [Fact]
@@ -78,12 +79,19 @@ public class TokenVerifierTests
     }
 
     [Fact]
-    public async Task VerifyAccessTokenAsync_ThrowsMissingAudience_WhenHeaderHasNoAud()
+    public async Task VerifyAccessTokenAsync_ThrowsMissingAudience_WhenPayloadHasNoAud()
     {
         var keys = TestHelpers.GenerateRsaKeyPair();
-        // Mint a token with no aud claim.
-        var header = new { alg = "RS256", typ = "JWT", iat = 0, exp = long.MaxValue, kty = "Access" };
-        var body = new { subject = "subject-1", firstName = "Ada" };
+        var header = new { alg = "RS256", typ = TokenVerifier.AccessTokenType, kid = "key-1" };
+        var body = new
+        {
+            iss = "https://connect-api.sudomimus.com",
+            sub = "subject-1",
+            sid = "session-1",
+            jti = "access-1",
+            iat = 0,
+            exp = long.MaxValue,
+        };
         var jwt = TestHelpers.MintToken(header, body, keys.PrivateKeyPem);
 
         var verifier = MakeVerifier(keys.PublicKeyPem);

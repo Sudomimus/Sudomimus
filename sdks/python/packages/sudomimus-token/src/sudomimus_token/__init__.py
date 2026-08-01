@@ -1,7 +1,7 @@
 """Sudomimus Token SDK.
 
 Parse and verify Sudomimus access and refresh JWTs. Verification covers
-structural integrity, expected key type (``kty``), audience presence,
+structural integrity, expected media type (``typ``), audience presence,
 expiration, and the RS256 signature against a caller-supplied public key.
 """
 
@@ -13,17 +13,19 @@ from .id_token import IdToken, parse_id_token, verify_id_token
 from .jwks import rsa_jwk_to_pem
 from .models import (
     AccessTokenBody,
+    AccessTokenHeader,
     IdTokenBody,
     IdTokenHeader,
     JwtHeader,
     RefreshTokenBody,
+    RefreshTokenHeader,
     UserInfoResponse,
 )
-from .parser import parse_access_token, parse_refresh_token, peek_header
+from .parser import parse_access_token, parse_refresh_token, peek_body, peek_header
 from .token import AccessToken, JwtToken, RefreshToken
 from .verifier import (
-    ACCESS_TOKEN_KEY_TYPE,
-    REFRESH_TOKEN_KEY_TYPE,
+    ACCESS_TOKEN_TYPE,
+    REFRESH_TOKEN_TYPE,
     AsyncPublicKeyResolver,
     AsyncTokenVerifier,
     PublicKeyResolver,
@@ -31,10 +33,11 @@ from .verifier import (
 )
 
 __all__ = [
-    "ACCESS_TOKEN_KEY_TYPE",
-    "REFRESH_TOKEN_KEY_TYPE",
+    "ACCESS_TOKEN_TYPE",
+    "REFRESH_TOKEN_TYPE",
     "AccessToken",
     "AccessTokenBody",
+    "AccessTokenHeader",
     "AsyncPublicKeyResolver",
     "AsyncTokenVerifier",
     "IdToken",
@@ -45,6 +48,7 @@ __all__ = [
     "PublicKeyResolver",
     "RefreshToken",
     "RefreshTokenBody",
+    "RefreshTokenHeader",
     "TokenError",
     "TokenErrorCode",
     "TokenVerifier",
@@ -56,6 +60,7 @@ __all__ = [
     "parse_id_token",
     "parse_refresh_token",
     "peek_header",
+    "peek_body",
     "sign_rs256",
     "verify_id_token",
     "verify_rs256",

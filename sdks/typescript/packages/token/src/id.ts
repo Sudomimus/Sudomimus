@@ -19,8 +19,8 @@ export type IdTokenHeader = {
 
 /**
  * Decoded claims of a Sudomimus OIDC `id_token`. Unlike Sudomimus access /
- * refresh tokens (whose envelope claims live in the JWT header), an id_token
- * is a standard OIDC JWT: every claim below lives in the JWT *body*, and the
+ * refresh tokens, an id_token is signed by the platform rather than by the
+ * application. Every claim below lives in the JWT *body*, and the
  * token is signed by the **platform** key (resolve it from the OIDC JWKS by
  * the header `kid`), not by the application's signing key.
  */
@@ -30,7 +30,7 @@ export type IdTokenBody = {
 
     /**
      * The subject — the per-(account, sector) **sector subject**, identical
-     * to the access-token body `subject`. Opaque: never parse it.
+     * to the application access-token body `sub`. Opaque: never parse it.
      */
     readonly sub: string;
     readonly aud: string;

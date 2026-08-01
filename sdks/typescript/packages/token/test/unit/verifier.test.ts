@@ -22,8 +22,8 @@ describe("TokenVerifier", () => {
         const verifier = new TokenVerifier({ resolver: staticResolver(publicKey) });
 
         const result = await verifier.verifyAccessToken(jwt);
-        expect(result.body.subject).toBe("subject-1");
-        expect(result.header.kty).toBe("Access");
+        expect(result.body.sub).toBe("subject-1");
+        expect(result.header.typ).toBe("vnd.sudomimus.application-access+jwt");
     });
 
     it("verifies a valid refresh token", async () => {
@@ -33,8 +33,8 @@ describe("TokenVerifier", () => {
         const verifier = new TokenVerifier({ resolver: staticResolver(publicKey) });
 
         const result = await verifier.verifyRefreshToken(jwt);
-        expect(result.body.subject).toBe("subject-1");
-        expect(result.header.kty).toBe("Refresh");
+        expect(result.body.rotationVersion).toBe(1);
+        expect(result.header.typ).toBe("vnd.sudomimus.application-refresh+jwt");
     });
 
     it("passes the audience and kid to the resolver", async () => {
@@ -58,7 +58,7 @@ describe("TokenVerifier", () => {
         });
     });
 
-    it("throws WRONG_KEY_TYPE when an access token is verified as a refresh token", async () => {
+    it("throws WRONG_TOKEN_TYPE when an access token is verified as a refresh token", async () => {
 
         const { privateKey } = generateRsaKeyPair();
         const accessJwt: string = mintAccessToken(privateKey);
@@ -66,7 +66,7 @@ describe("TokenVerifier", () => {
 
         await expect(verifier.verifyRefreshToken(accessJwt)).rejects.toMatchObject({
             name: "TokenError",
-            code: "WRONG_KEY_TYPE",
+            code: "WRONG_TOKEN_TYPE",
         });
     });
 

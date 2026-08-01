@@ -109,6 +109,8 @@ func TestModelsMatchSpec(t *testing.T) {
 	}{
 		{"connect", "AccessTokenBody", reflect.TypeOf(AccessTokenBody{})},
 		{"connect", "RefreshTokenBody", reflect.TypeOf(RefreshTokenBody{})},
+		{"connect", "AccessTokenHeader", reflect.TypeOf(Header{})},
+		{"connect", "RefreshTokenHeader", reflect.TypeOf(Header{})},
 		{"session", "ApplicationJsonWebKey", reflect.TypeOf(ApplicationJSONWebKey{})},
 		{"session", "ApplicationJwksResponse", reflect.TypeOf(ApplicationJWKS{})},
 	}

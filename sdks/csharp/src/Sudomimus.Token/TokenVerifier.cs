@@ -16,13 +16,13 @@ public delegate Task<string> PublicKeyResolver(
 
 /// <summary>
 /// Verifies Sudomimus access and refresh tokens end-to-end: structural
-/// integrity, expected key type, audience presence, expiration, and RSA
+/// integrity, expected token media type, audience presence, expiration, and RSA
 /// signature against a caller-supplied public key.
 /// </summary>
 public sealed class TokenVerifier
 {
-    private const string AccessKeyType = "Access";
-    private const string RefreshKeyType = "Refresh";
+    public const string AccessTokenType = "vnd.sudomimus.application-access+jwt";
+    public const string RefreshTokenType = "vnd.sudomimus.application-refresh+jwt";
 
     private readonly PublicKeyResolver _resolver;
     private readonly Func<DateTimeOffset> _clock;
@@ -45,48 +45,52 @@ public sealed class TokenVerifier
     /// <see cref="TokenException"/> with a categorized code on any failure.
     /// </summary>
     public Task<JwtToken<AccessTokenBody>> VerifyAccessTokenAsync(string jwt, CancellationToken ct = default)
-        => VerifyAsync(jwt, AccessKeyType, TokenParser.ParseAccessToken, ct);
+        => VerifyAsync(jwt, AccessTokenType, TokenParser.ParseAccessToken, ct);
 
     /// <summary>
     /// Parse, verify, and return a Sudomimus refresh token.
     /// </summary>
     public Task<JwtToken<RefreshTokenBody>> VerifyRefreshTokenAsync(string jwt, CancellationToken ct = default)
-        => VerifyAsync(jwt, RefreshKeyType, TokenParser.ParseRefreshToken, ct);
+        => VerifyAsync(jwt, RefreshTokenType, TokenParser.ParseRefreshToken, ct);
 
     private async Task<JwtToken<TBody>> VerifyAsync<TBody>(
         string jwt,
-        string expectedKeyType,
+        string expectedTokenType,
         Func<string, JwtToken<TBody>> parser,
         CancellationToken ct)
         where TBody : class
     {
-        // Peek header first so a wrong-type token surfaces as WrongKeyType
-        // rather than InvalidJwt (which is what a body-shape mismatch would
-        // otherwise produce — e.g. a refresh body has no firstName).
+        // Peek first so a wrong-type token surfaces as WrongTokenType rather
+        // than InvalidJwt from the expected payload shape.
         var peeked = TokenParser.PeekHeader(jwt);
-        if (!string.Equals(peeked.KeyType, expectedKeyType, StringComparison.Ordinal))
+        if (!string.Equals(peeked.Type, expectedTokenType, StringComparison.Ordinal))
         {
             throw new TokenException(
-                TokenErrorCode.WrongKeyType,
-                $"Expected key type \"{expectedKeyType}\", got \"{peeked.KeyType ?? ""}\".");
+                TokenErrorCode.WrongTokenType,
+                $"Expected token type \"{expectedTokenType}\", got \"{peeked.Type}\".");
         }
 
-        var parsed = parser(jwt);
-        var audience = parsed.Header.Audience;
+        var payload = TokenParser.PeekBody(jwt);
+        var audience = payload.TryGetProperty("aud", out var audienceElement)
+            && audienceElement.ValueKind == System.Text.Json.JsonValueKind.String
+            ? audienceElement.GetString()
+            : null;
         if (string.IsNullOrEmpty(audience))
         {
             throw new TokenException(
                 TokenErrorCode.MissingAudience,
-                "Token is missing the `aud` (applicationAnchor) header.");
+                "Token is missing the `aud` (applicationAnchor) payload claim.");
         }
 
-        var keyId = parsed.Header.KeyId;
+        var keyId = peeked.KeyId;
         if (string.IsNullOrEmpty(keyId))
         {
             throw new TokenException(
                 TokenErrorCode.MissingKeyId,
                 "Token is missing the `kid` signing-key identifier.");
         }
+
+        var parsed = parser(jwt);
 
         if (!parsed.VerifyExpiration(_clock()))
         {

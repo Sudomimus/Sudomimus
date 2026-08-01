@@ -40,27 +40,29 @@ def _keypair() -> tuple[str, str]:
 def _mint(
     private_pem: str,
     *,
-    kty: str = "Access",
+    typ: str = "vnd.sudomimus.application-access+jwt",
     aud: str | None = ANCHOR,
     exp_offset: int = 60,
     kid: str | None = "key-1",
     body: dict | None = None,
 ) -> str:
-    header: dict = {"kty": kty, "iat": int(time.time()), "exp": int(time.time()) + exp_offset}
-    if aud is not None:
-        header["aud"] = aud
+    now = int(time.time())
+    header: dict = {"alg": "RS256", "typ": typ}
     if kid is not None:
         header["kid"] = kid
-    default_body = (
-        {
-            "subject": "subject-1",
-            "firstName": "Ada",
-            "staticAvatarUrl": "https://cdn.sudomimus.com/avatar/subject-1.png",
-            "animatedAvatarUrl": "https://cdn.sudomimus.com/avatar/subject-1.gif",
-        }
-        if kty == "Access"
-        else {"subject": "subject-1"}
-    )
+    default_body = {
+        "iss": "https://connect-api.sudomimus.com",
+        "sid": "session-1",
+        "jti": "access-1" if typ.endswith("access+jwt") else "refresh-1",
+        "iat": now,
+        "exp": now + exp_offset,
+    }
+    if aud is not None:
+        default_body["aud"] = aud
+    if typ.endswith("access+jwt"):
+        default_body["sub"] = "subject-1"
+    else:
+        default_body["rotationVersion"] = 1
     return create_jwt(header, body if body is not None else default_body, private_pem)
 
 
@@ -73,40 +75,46 @@ def test_verify_access_token_happy_path() -> None:
     private_pem, public_pem = _keypair()
     jwt = _mint(private_pem)
     token = TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(jwt)
-    assert token.body.subject == "subject-1"
-    assert token.body.firstName == "Ada"
-    assert token.body.staticAvatarUrl == "https://cdn.sudomimus.com/avatar/subject-1.png"
-    assert token.body.animatedAvatarUrl == "https://cdn.sudomimus.com/avatar/subject-1.gif"
-    assert token.header.aud == ANCHOR
+    assert token.body.sub == "subject-1"
+    assert token.body.sid == "session-1"
+    assert token.body.aud == ANCHOR
 
 
-def test_verify_access_token_consent_gated_claims_absent() -> None:
-    # firstName / lastName / emailAddress / avatar URLs are consent-gated and may
-    # be absent; a token carrying only `subject` must still parse.
+def test_access_token_rejects_profile_claims() -> None:
     private_pem, public_pem = _keypair()
-    jwt = _mint(private_pem, body={"subject": "subject-1"})
-    token = TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(jwt)
-    assert token.body.subject == "subject-1"
-    assert token.body.firstName is None
-    assert token.body.lastName is None
-    assert token.body.emailAddress is None
-    assert token.body.staticAvatarUrl is None
-    assert token.body.animatedAvatarUrl is None
+    now = int(time.time())
+    jwt = _mint(
+        private_pem,
+        body={
+            "iss": "https://connect-api.sudomimus.com",
+            "aud": ANCHOR,
+            "sub": "subject-1",
+            "sid": "session-1",
+            "jti": "access-1",
+            "iat": now,
+            "exp": now + 60,
+            "firstName": "Ada",
+        },
+    )
+    with pytest.raises(TokenError) as exc:
+        TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(jwt)
+    assert exc.value.code is TokenErrorCode.INVALID_JWT
 
 
 def test_verify_refresh_token_happy_path() -> None:
     private_pem, public_pem = _keypair()
-    jwt = _mint(private_pem, kty="Refresh")
+    jwt = _mint(private_pem, typ="vnd.sudomimus.application-refresh+jwt")
     token = TokenVerifier(lambda _aud, _kid: public_pem).verify_refresh_token(jwt)
-    assert token.body.subject == "subject-1"
+    assert token.body.sid == "session-1"
+    assert token.body.rotationVersion == 1
 
 
-def test_wrong_key_type() -> None:
+def test_wrong_token_type() -> None:
     private_pem, public_pem = _keypair()
-    refresh_jwt = _mint(private_pem, kty="Refresh")
+    refresh_jwt = _mint(private_pem, typ="vnd.sudomimus.application-refresh+jwt")
     with pytest.raises(TokenError) as exc:
         TokenVerifier(lambda _aud, _kid: public_pem).verify_access_token(refresh_jwt)
-    assert exc.value.code is TokenErrorCode.WRONG_KEY_TYPE
+    assert exc.value.code is TokenErrorCode.WRONG_TOKEN_TYPE
 
 
 def test_missing_audience() -> None:
@@ -141,10 +149,10 @@ def test_malformed_jwt() -> None:
     assert exc.value.code is TokenErrorCode.INVALID_JWT
 
 
-def test_peek_header_reads_key_type() -> None:
+def test_peek_header_reads_token_type() -> None:
     private_pem, _ = _keypair()
     jwt = _mint(private_pem)
-    assert peek_header(jwt).kty == "Access"
+    assert peek_header(jwt).typ == "vnd.sudomimus.application-access+jwt"
 
 
 def test_parse_does_not_verify_signature() -> None:
@@ -152,7 +160,7 @@ def test_parse_does_not_verify_signature() -> None:
     jwt = _mint(private_pem)
     # Parsing succeeds without any public key; only the verifier checks trust.
     parsed = parse_access_token(jwt)
-    assert parsed.body.firstName == "Ada"
+    assert parsed.body.sub == "subject-1"
 
 
 def test_async_verifier_happy_path() -> None:
@@ -164,6 +172,6 @@ def test_async_verifier_happy_path() -> None:
 
     async def run() -> str:
         token = await AsyncTokenVerifier(resolver).verify_access_token(jwt)
-        return token.body.subject
+        return token.body.sub
 
     assert asyncio.run(run()) == "subject-1"

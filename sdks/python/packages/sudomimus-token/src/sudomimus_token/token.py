@@ -7,13 +7,19 @@ from datetime import UTC, datetime
 from typing import Generic, TypeVar
 
 from ._codec import verify_rs256
-from .models import AccessTokenBody, JwtHeader, RefreshTokenBody
+from .models import (
+    AccessTokenBody,
+    AccessTokenHeader,
+    RefreshTokenBody,
+    RefreshTokenHeader,
+)
 
-BodyT = TypeVar("BodyT", bound="AccessTokenBody | RefreshTokenBody")
+HeaderT = TypeVar("HeaderT", AccessTokenHeader, RefreshTokenHeader)
+BodyT = TypeVar("BodyT", AccessTokenBody, RefreshTokenBody)
 
 
 @dataclass(frozen=True, slots=True)
-class JwtToken(Generic[BodyT]):
+class JwtToken(Generic[HeaderT, BodyT]):
     """A parsed Sudomimus JWT.
 
     Exposes the header (envelope claims), the typed body, and the verbatim
@@ -24,7 +30,7 @@ class JwtToken(Generic[BodyT]):
     raw: str
     signing_input: bytes
     signature: bytes
-    header: JwtHeader
+    header: HeaderT
     body: BodyT
 
     def verify_signature(self, public_key_pem: str) -> bool:
@@ -33,11 +39,9 @@ class JwtToken(Generic[BodyT]):
 
     def verify_expiration(self, now: datetime) -> bool:
         """Return ``True`` when the token's ``exp`` claim is still in the future."""
-        if self.header.exp is None:
-            return False
-        expires_at = datetime.fromtimestamp(self.header.exp, tz=UTC)
+        expires_at = datetime.fromtimestamp(self.body.exp, tz=UTC)
         return now < expires_at
 
 
-AccessToken = JwtToken[AccessTokenBody]
-RefreshToken = JwtToken[RefreshTokenBody]
+AccessToken = JwtToken[AccessTokenHeader, AccessTokenBody]
+RefreshToken = JwtToken[RefreshTokenHeader, RefreshTokenBody]

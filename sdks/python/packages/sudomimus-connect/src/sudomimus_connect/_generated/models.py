@@ -139,67 +139,123 @@ class RedeemResponse(BaseModel):
     applicationAnchor: str
     refreshToken: str = Field(
         ...,
-        description="Long-lived refresh token (JWT). Decode its body to\n`RefreshTokenBody` (see schema). The refresh token leaves the\nsystem, so its body carries the sector `subject`, never the\nunderlying account identifier.\n",
+        description="Long-lived refresh token (JWT). Decode its protected header as\n`RefreshTokenHeader` and its body as `RefreshTokenBody`. The\npayload binds the logical session as `sid`, names the rotating\nbearer instance as `jti`, and carries a positive\n`rotationVersion`. It carries no user identifier or profile data.\n",
     )
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Decode its body to\n`AccessTokenBody` (see schema) — the application-visible user\nkey is the `subject` (sector subject) claim.\n",
+        description="Short-lived access token (JWT). Decode its protected header as\n`AccessTokenHeader` and its body as `AccessTokenBody`. The\npayload carries the application-visible user key as `sub`, the\nlogical session as `sid`, and this access-token instance as `jti`.\nFetch current shared profile data from Session API `/userinfo`.\n",
     )
+
+
+class Alg(StrEnum):
+    RS256 = "RS256"
+
+
+class Typ(StrEnum):
+    vnd_sudomimus_application_access_jwt = "vnd.sudomimus.application-access+jwt"
+
+
+class AccessTokenHeader(BaseModel):
+    """
+    Exact JOSE protected header of a Sudomimus application access token.
+    Registered JWT claims live in the payload.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    alg: Alg
+    kid: str = Field(
+        ..., description="Application token-signing key identifier.", min_length=1
+    )
+    typ: Typ
 
 
 class AccessTokenBody(BaseModel):
     """
-    Decoded body (payload) of a Sudomimus access token. The standard
-    JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
-    `sub`) live in the JWT *header*; this object is the body. The
-    application keys its users on `subject`. The `firstName`,
-    `lastName`, `emailAddress`, `staticAvatarUrl`, and `animatedAvatarUrl` claims are consent-gated (claim
-    sharing): each is minted only when the application's claim policy
-    permits it AND the user has granted that claim, so any of them may
-    be absent. Synthetic modes are the exception: `SYNTHETIC_ONLY` always
-    emits a generated placeholder, and `SYNTHETIC_FALLBACK` emits real
-    data when granted or the placeholder otherwise.
+    Minimal payload of a Sudomimus access token. It contains only
+    registered JWT claims and session binding. It never contains a raw
+    account identifier or profile claims; use Session API `/userinfo` for
+    current consent-gated identity data.
 
     """
 
-    subject: str = Field(
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    iss: AnyUrl
+    aud: str = Field(..., description="Public application anchor.", min_length=1)
+    sub: str = Field(
         ...,
-        description="The application-visible user identifier — the per-(account,\nsector) **sector subject**, also the OIDC `sub`. This is the\nvalue an application keys its users on; the underlying account\nidentifier never appears in a token. User-rotatable.\nOpaque: never parse or format-validate it.\n",
+        description="Pairwise sector subject; use this opaque value as the application-visible user key.",
+        min_length=1,
     )
-    firstName: str | None = Field(
-        None,
-        description="Given name. Minted only when the application's claim policy\npermits it AND the user has granted the claim; may be absent\neven when the account has a value stored. Under a synthetic policy\nit is always present, possibly a placeholder name.\n",
+    sid: str = Field(
+        ...,
+        description="Stable identifier of the logical ApplicationSession.",
+        min_length=1,
     )
-    lastName: str | None = Field(
-        None, description="Family name. Same consent gating as `firstName`.\n"
+    jti: str = Field(
+        ...,
+        description="Unique identifier of this access-token instance; distinct from `sid`.",
+        min_length=1,
     )
-    emailAddress: str | None = Field(
-        None,
-        description="Email associated with this login. Consent-gated like\n`firstName` / `lastName` / avatar URLs (minted only when policy permits AND\nthe user granted the EMAIL claim). When a real value is included:\nthe exact email typed for email-OTP logins, otherwise the\naccount's primary email; omitted for accounts with no verified\nemail (e.g. Steam-only or AccessKey-only). Synthetic email policies\nare the exception: the field is then always present — a real\nverified email only under `SYNTHETIC_FALLBACK` when shared,\notherwise a `…@proxy.sudomimus.email` proxy address (best-effort\nforwarding, not guaranteed; not a verified mailbox).\n",
+    iat: int = Field(..., ge=0)
+    exp: int = Field(..., ge=1)
+
+
+class Typ1(StrEnum):
+    vnd_sudomimus_application_refresh_jwt = "vnd.sudomimus.application-refresh+jwt"
+
+
+class RefreshTokenHeader(BaseModel):
+    """
+    Exact JOSE protected header of a Sudomimus refresh token. Registered
+    JWT claims and rotation state live in the payload.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
     )
-    staticAvatarUrl: AnyUrl | None = Field(
-        None,
-        description="Sector-scoped static public avatar URL. Consent-gated like the other\nshareable claims and minted as `STATIC_AVATAR` when policy and grant\nallow it. The URL is pairwise to this account / sector delivery\nhandle, even when it resolves to the user's global avatar image.\nSynthetic avatar policies return a generated sector placeholder image.\n",
+    alg: Alg
+    kid: str = Field(
+        ..., description="Application token-signing key identifier.", min_length=1
     )
-    animatedAvatarUrl: AnyUrl | None = Field(
-        None,
-        description="Sector-scoped animated public avatar URL. Consent-gated separately\nfrom `staticAvatarUrl` and minted as `ANIMATED_AVATAR` when policy\nand grant allow it. If the selected avatar has no animation, this\nfield is the same URL as `staticAvatarUrl`.\n",
-    )
+    typ: Typ1
 
 
 class RefreshTokenBody(BaseModel):
     """
-    Decoded body (payload) of a Sudomimus refresh token. Carries the
-    sector `subject` (the same pairwise identifier as the access-token
-    body) because the refresh token leaves the system and must never
-    expose the underlying account identifier. Informational only —
-    `/refresh` resolves the token by its `jti`, not by reading the body.
+    Minimal payload of a Sudomimus refresh token. `sid` stays stable across
+    rotation, while every signed version has a distinct `jti` and positive
+    `rotationVersion`. The payload contains no user identifier, profile
+    claim, or raw account identifier.
 
     """
 
-    subject: str = Field(
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    iss: AnyUrl
+    aud: str = Field(..., description="Public application anchor.", min_length=1)
+    sid: str = Field(
         ...,
-        description="The application-visible **sector subject**. Opaque: never\nparse or format-validate it.\n",
+        description="Stable identifier of the logical ApplicationSession.",
+        min_length=1,
+    )
+    jti: str = Field(
+        ...,
+        description="Identifier of this exact rotating refresh-token version.",
+        min_length=1,
+    )
+    iat: int = Field(..., ge=0)
+    exp: int = Field(..., ge=1)
+    rotationVersion: int = Field(
+        ...,
+        description="Monotonic refresh version within `sid`. A successful rotation\nincrements it by one; callers must store the newly returned token.\n",
+        ge=1,
     )
 
 

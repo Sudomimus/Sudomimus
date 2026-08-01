@@ -64,7 +64,9 @@ final class SpecContractTest {
                 "connect",
                 Map.of(
                         "AccessTokenBody", AccessTokenBody.class,
-                        "RefreshTokenBody", RefreshTokenBody.class));
+                        "RefreshTokenBody", RefreshTokenBody.class,
+                        "AccessTokenHeader", JwtHeader.class,
+                        "RefreshTokenHeader", JwtHeader.class));
         assertModelsMatchSpec(
                 "session",
                 Map.of(

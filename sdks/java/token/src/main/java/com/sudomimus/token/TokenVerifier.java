@@ -7,13 +7,13 @@ import java.util.function.Function;
 
 /**
  * Verifies Sudomimus access and refresh tokens end-to-end: structural
- * integrity, expected key type, audience and key ID presence, expiration, and
+ * integrity, expected token media type, audience and key ID presence, expiration, and
  * RSA signature against a caller-supplied public key.
  */
 public final class TokenVerifier {
 
-    private static final String ACCESS_KEY_TYPE = "Access";
-    private static final String REFRESH_KEY_TYPE = "Refresh";
+    public static final String ACCESS_TOKEN_TYPE = "vnd.sudomimus.application-access+jwt";
+    public static final String REFRESH_TOKEN_TYPE = "vnd.sudomimus.application-refresh+jwt";
 
     private final PublicKeyResolver resolver;
     private final Clock clock;
@@ -32,39 +32,38 @@ public final class TokenVerifier {
     }
 
     public JwtToken<AccessTokenBody> verifyAccessToken(String jwt) {
-        return verify(jwt, ACCESS_KEY_TYPE, TokenParser::parseAccessToken);
+        return verify(jwt, ACCESS_TOKEN_TYPE, TokenParser::parseAccessToken);
     }
 
     public JwtToken<RefreshTokenBody> verifyRefreshToken(String jwt) {
-        return verify(jwt, REFRESH_KEY_TYPE, TokenParser::parseRefreshToken);
+        return verify(jwt, REFRESH_TOKEN_TYPE, TokenParser::parseRefreshToken);
     }
 
     private <TBody> JwtToken<TBody> verify(
             String jwt,
-            String expectedKeyType,
+            String expectedTokenType,
             Function<String, JwtToken<TBody>> parser) {
 
-        // Peek header first so a wrong-type token surfaces as WRONG_KEY_TYPE
-        // rather than INVALID_JWT (a refresh body has no firstName, which
-        // would otherwise fail to deserialize against AccessTokenBody).
+        // Peek header first so a wrong-type token surfaces as WRONG_TOKEN_TYPE.
         JwtHeader peeked = TokenParser.peekHeader(jwt);
-        if (!expectedKeyType.equals(peeked.keyType)) {
-            throw new TokenException(TokenErrorCode.WRONG_KEY_TYPE,
-                    "Expected key type \"" + expectedKeyType + "\", got \""
-                            + (peeked.keyType == null ? "" : peeked.keyType) + "\".");
+        if (!expectedTokenType.equals(peeked.type)) {
+            throw new TokenException(TokenErrorCode.WRONG_TOKEN_TYPE,
+                    "Expected token type \"" + expectedTokenType + "\", got \""
+                            + (peeked.type == null ? "" : peeked.type) + "\".");
         }
 
-        JwtToken<TBody> parsed = parser.apply(jwt);
-        String audience = parsed.getHeader().audience;
+        String audience = TokenParser.peekAudience(jwt);
         if (audience == null || audience.isEmpty()) {
             throw new TokenException(TokenErrorCode.MISSING_AUDIENCE,
-                    "Token is missing the `aud` (applicationAnchor) header.");
+                    "Token is missing the `aud` (applicationAnchor) payload claim.");
         }
-        String keyId = parsed.getHeader().keyId;
+        String keyId = peeked.keyId;
         if (keyId == null || keyId.isEmpty()) {
             throw new TokenException(TokenErrorCode.MISSING_KEY_ID,
                     "Token is missing the `kid` header.");
         }
+
+        JwtToken<TBody> parsed = parser.apply(jwt);
 
         if (!parsed.verifyExpiration(Instant.now(clock))) {
             throw new TokenException(TokenErrorCode.EXPIRED, "Token has expired.");

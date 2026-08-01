@@ -30,9 +30,7 @@ class TokenVerifierTest {
         JwtToken<AccessTokenBody> token = v.verifyAccessToken(jwt);
 
         assertEquals("subject-1", token.getBody().subject);
-        assertEquals("Ada", token.getBody().firstName);
-        assertEquals("https://cdn.sudomimus.com/avatar/subject-1.png", token.getBody().staticAvatarUrl);
-        assertEquals("https://cdn.sudomimus.com/avatar/subject-1.gif", token.getBody().animatedAvatarUrl);
+        assertEquals("session-1", token.getBody().sessionId);
     }
 
     @Test
@@ -43,17 +41,18 @@ class TokenVerifierTest {
         TokenVerifier v = makeVerifier(keys.publicPem, null);
         JwtToken<RefreshTokenBody> token = v.verifyRefreshToken(jwt);
 
-        assertEquals("subject-1", token.getBody().subject);
+        assertEquals("session-1", token.getBody().sessionId);
+        assertEquals(1L, token.getBody().rotationVersion);
     }
 
     @Test
-    void verifyAccessToken_wrongKeyType() throws Exception {
+    void verifyAccessToken_wrongTokenType() throws Exception {
         TestHelpers.RsaKeyPair keys = TestHelpers.generateRsaKeyPair();
         String jwt = TestHelpers.mintRefreshToken(keys.privateKey, "anchor-1");
 
         TokenVerifier v = makeVerifier(keys.publicPem, null);
         TokenException ex = assertThrows(TokenException.class, () -> v.verifyAccessToken(jwt));
-        assertEquals(TokenErrorCode.WRONG_KEY_TYPE, ex.getCode());
+        assertEquals(TokenErrorCode.WRONG_TOKEN_TYPE, ex.getCode());
     }
 
     @Test
@@ -83,13 +82,15 @@ class TokenVerifierTest {
         TestHelpers.RsaKeyPair keys = TestHelpers.generateRsaKeyPair();
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("alg", "RS256");
-        header.put("typ", "JWT");
-        header.put("iat", 0L);
-        header.put("exp", Long.MAX_VALUE / 2);
-        header.put("kty", "Access");
+        header.put("typ", TokenVerifier.ACCESS_TOKEN_TYPE);
+        header.put("kid", "key-1");
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("subject", "subject-1");
-        body.put("firstName", "Ada");
+        body.put("iss", "https://connect-api.sudomimus.com");
+        body.put("sub", "subject-1");
+        body.put("sid", "session-1");
+        body.put("jti", "access-1");
+        body.put("iat", 0L);
+        body.put("exp", Long.MAX_VALUE / 2);
         String jwt = TestHelpers.mintToken(header, body, keys.privateKey);
 
         TokenVerifier v = makeVerifier(keys.publicPem, null);
@@ -103,12 +104,15 @@ class TokenVerifierTest {
         long now = Instant.now().getEpochSecond();
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("alg", "RS256");
-        header.put("typ", "JWT");
-        header.put("aud", "anchor-1");
-        header.put("iat", now);
-        header.put("exp", now + 3600);
-        header.put("kty", "Access");
-        Map<String, Object> body = Map.of("subject", "subject-1");
+        header.put("typ", TokenVerifier.ACCESS_TOKEN_TYPE);
+        Map<String, Object> body = Map.of(
+                "iss", "https://connect-api.sudomimus.com",
+                "aud", "anchor-1",
+                "sub", "subject-1",
+                "sid", "session-1",
+                "jti", "access-1",
+                "iat", now,
+                "exp", now + 3600);
         String jwt = TestHelpers.mintToken(header, body, keys.privateKey);
 
         TokenVerifier v = makeVerifier(keys.publicPem, null);

@@ -219,93 +219,88 @@ export interface components {
             claims: components["schemas"]["ClaimsStateView"];
             applicationAnchor: string;
             /**
-             * @description Long-lived refresh token (JWT). Decode its body to
-             *     `RefreshTokenBody` (see schema). The refresh token leaves the
-             *     system, so its body carries the sector `subject`, never the
-             *     underlying account identifier.
+             * @description Long-lived refresh token (JWT). Decode its protected header as
+             *     `RefreshTokenHeader` and its body as `RefreshTokenBody`. The
+             *     payload binds the logical session as `sid`, names the rotating
+             *     bearer instance as `jti`, and carries a positive
+             *     `rotationVersion`. It carries no user identifier or profile data.
              */
             refreshToken: string;
             /**
-             * @description Short-lived access token (JWT). Decode its body to
-             *     `AccessTokenBody` (see schema) — the application-visible user
-             *     key is the `subject` (sector subject) claim.
+             * @description Short-lived access token (JWT). Decode its protected header as
+             *     `AccessTokenHeader` and its body as `AccessTokenBody`. The
+             *     payload carries the application-visible user key as `sub`, the
+             *     logical session as `sid`, and this access-token instance as `jti`.
+             *     Fetch current shared profile data from Session API `/userinfo`.
              */
             accessToken: string;
         };
         /**
-         * @description Decoded body (payload) of a Sudomimus access token. The standard
-         *     JWT envelope claims (`iss`, `aud`, `iat`, `exp`, `jti`, `kty`,
-         *     `sub`) live in the JWT *header*; this object is the body. The
-         *     application keys its users on `subject`. The `firstName`,
-         *     `lastName`, `emailAddress`, `staticAvatarUrl`, and `animatedAvatarUrl` claims are consent-gated (claim
-         *     sharing): each is minted only when the application's claim policy
-         *     permits it AND the user has granted that claim, so any of them may
-         *     be absent. Synthetic modes are the exception: `SYNTHETIC_ONLY` always
-         *     emits a generated placeholder, and `SYNTHETIC_FALLBACK` emits real
-         *     data when granted or the placeholder otherwise.
+         * @description Exact JOSE protected header of a Sudomimus application access token.
+         *     Registered JWT claims live in the payload.
          */
-        AccessTokenBody: {
-            /**
-             * @description The application-visible user identifier — the per-(account,
-             *     sector) **sector subject**, also the OIDC `sub`. This is the
-             *     value an application keys its users on; the underlying account
-             *     identifier never appears in a token. User-rotatable.
-             *     Opaque: never parse or format-validate it.
-             */
-            subject: string;
-            /**
-             * @description Given name. Minted only when the application's claim policy
-             *     permits it AND the user has granted the claim; may be absent
-             *     even when the account has a value stored. Under a synthetic policy
-             *     it is always present, possibly a placeholder name.
-             */
-            firstName?: string;
-            /** @description Family name. Same consent gating as `firstName`. */
-            lastName?: string;
-            /**
-             * @description Email associated with this login. Consent-gated like
-             *     `firstName` / `lastName` / avatar URLs (minted only when policy permits AND
-             *     the user granted the EMAIL claim). When a real value is included:
-             *     the exact email typed for email-OTP logins, otherwise the
-             *     account's primary email; omitted for accounts with no verified
-             *     email (e.g. Steam-only or AccessKey-only). Synthetic email policies
-             *     are the exception: the field is then always present — a real
-             *     verified email only under `SYNTHETIC_FALLBACK` when shared,
-             *     otherwise a `…@proxy.sudomimus.email` proxy address (best-effort
-             *     forwarding, not guaranteed; not a verified mailbox).
-             */
-            emailAddress?: string;
-            /**
-             * Format: uri
-             * @description Sector-scoped static public avatar URL. Consent-gated like the other
-             *     shareable claims and minted as `STATIC_AVATAR` when policy and grant
-             *     allow it. The URL is pairwise to this account / sector delivery
-             *     handle, even when it resolves to the user's global avatar image.
-             *     Synthetic avatar policies return a generated sector placeholder image.
-             */
-            staticAvatarUrl?: string;
-            /**
-             * Format: uri
-             * @description Sector-scoped animated public avatar URL. Consent-gated separately
-             *     from `staticAvatarUrl` and minted as `ANIMATED_AVATAR` when policy
-             *     and grant allow it. If the selected avatar has no animation, this
-             *     field is the same URL as `staticAvatarUrl`.
-             */
-            animatedAvatarUrl?: string;
+        AccessTokenHeader: {
+            /** @enum {string} */
+            alg: "RS256";
+            /** @description Application token-signing key identifier. */
+            kid: string;
+            /** @enum {string} */
+            typ: "vnd.sudomimus.application-access+jwt";
         };
         /**
-         * @description Decoded body (payload) of a Sudomimus refresh token. Carries the
-         *     sector `subject` (the same pairwise identifier as the access-token
-         *     body) because the refresh token leaves the system and must never
-         *     expose the underlying account identifier. Informational only —
-         *     `/refresh` resolves the token by its `jti`, not by reading the body.
+         * @description Minimal payload of a Sudomimus access token. It contains only
+         *     registered JWT claims and session binding. It never contains a raw
+         *     account identifier or profile claims; use Session API `/userinfo` for
+         *     current consent-gated identity data.
+         */
+        AccessTokenBody: {
+            /** Format: uri */
+            iss: string;
+            /** @description Public application anchor. */
+            aud: string;
+            /** @description Pairwise sector subject; use this opaque value as the application-visible user key. */
+            sub: string;
+            /** @description Stable identifier of the logical ApplicationSession. */
+            sid: string;
+            /** @description Unique identifier of this access-token instance; distinct from `sid`. */
+            jti: string;
+            iat: number;
+            exp: number;
+        };
+        /**
+         * @description Exact JOSE protected header of a Sudomimus refresh token. Registered
+         *     JWT claims and rotation state live in the payload.
+         */
+        RefreshTokenHeader: {
+            /** @enum {string} */
+            alg: "RS256";
+            /** @description Application token-signing key identifier. */
+            kid: string;
+            /** @enum {string} */
+            typ: "vnd.sudomimus.application-refresh+jwt";
+        };
+        /**
+         * @description Minimal payload of a Sudomimus refresh token. `sid` stays stable across
+         *     rotation, while every signed version has a distinct `jti` and positive
+         *     `rotationVersion`. The payload contains no user identifier, profile
+         *     claim, or raw account identifier.
          */
         RefreshTokenBody: {
+            /** Format: uri */
+            iss: string;
+            /** @description Public application anchor. */
+            aud: string;
+            /** @description Stable identifier of the logical ApplicationSession. */
+            sid: string;
+            /** @description Identifier of this exact rotating refresh-token version. */
+            jti: string;
+            iat: number;
+            exp: number;
             /**
-             * @description The application-visible **sector subject**. Opaque: never
-             *     parse or format-validate it.
+             * @description Monotonic refresh version within `sid`. A successful rotation
+             *     increments it by one; callers must store the newly returned token.
              */
-            subject: string;
+            rotationVersion: number;
         };
         InfoRequest: {
             applicationAnchor: string;

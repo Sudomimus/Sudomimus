@@ -6,9 +6,7 @@ using Sudomimus.Token;
 namespace Sudomimus.Token.Tests;
 
 /// <summary>
-/// Mirrors enough of <c>@sudoo/jwt</c>'s creator on the C# side to mint
-/// fixture tokens that exercise the parser/verifier round-trip. Keeps the
-/// JWT format identical to what the production token service emits.
+/// Mints compact RS256 fixtures matching the 4.0.0 token contract.
 /// </summary>
 internal static class TestHelpers
 {
@@ -59,24 +57,18 @@ internal static class TestHelpers
         var header = new
         {
             alg = "RS256",
-            typ = "JWT",
-            iss = "sudomimus.com",
-            aud = applicationAnchor,
-            iat,
-            exp = iat + 3600,
-            jti = "access-1",
-            kty = "Access",
+            typ = TokenVerifier.AccessTokenType,
             kid = "key-1",
-            sub = "refresh-1",
         };
         var body = new
         {
-            subject = "subject-1",
-            firstName = "Ada",
-            lastName = "Lovelace",
-            emailAddress = "ada@example.com",
-            staticAvatarUrl = "https://cdn.sudomimus.com/avatar/subject-1.png",
-            animatedAvatarUrl = "https://cdn.sudomimus.com/avatar/subject-1.gif",
+            iss = "https://connect-api.sudomimus.com",
+            aud = applicationAnchor,
+            sub = "subject-1",
+            sid = "session-1",
+            jti = "access-1",
+            iat,
+            exp = iat + 3600,
         };
         return MintToken(header, body, privateKeyPem);
     }
@@ -87,18 +79,18 @@ internal static class TestHelpers
         var header = new
         {
             alg = "RS256",
-            typ = "JWT",
-            iss = "sudomimus.com",
-            aud = applicationAnchor,
-            iat,
-            exp = iat + 30 * 24 * 3600,
-            jti = "refresh-1",
-            kty = "Refresh",
+            typ = TokenVerifier.RefreshTokenType,
             kid = "key-1",
         };
         var body = new
         {
-            subject = "subject-1",
+            iss = "https://connect-api.sudomimus.com",
+            aud = applicationAnchor,
+            sid = "session-1",
+            jti = "refresh-1",
+            iat,
+            exp = iat + 30 * 24 * 3600,
+            rotationVersion = 1,
         };
         return MintToken(header, body, privateKeyPem);
     }
