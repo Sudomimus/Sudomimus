@@ -1,4 +1,4 @@
-module github.com/sudomimus/sudomimus-go
+module github.com/sudomimus/sudomimus-go/v4
 
 go 1.22
 
