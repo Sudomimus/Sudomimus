@@ -32,23 +32,14 @@ export interface paths {
         put?: never;
         /**
          * Establish a new authentication inquiry for an application.
-         * @description Creates a new authentication inquiry under the calling application.
+         * @description Creates an authentication inquiry for the calling application. The
+         *     client-auth JWT binds the exact request bytes and is single-use; see
+         *     `SudomimusClientJWT` for its claim contract.
          *
-         *     The request MUST carry a client-auth JWT in the `Authorization` header
-         *     using the `SudomimusClientJWT` scheme. The JWT binds the request body
-         *     bytes via a `body_sha256` claim and carries a single-use `jti` to
-         *     prevent replay. See the `SudomimusClientJWT` security scheme below
-         *     for the full claim contract.
-         *
-         *     All three narrowing fields (`authenticationConstraints`,
-         *     `realizeConstraints`, `returnMethods`) are optional. When absent the
-         *     inquiry imposes no per-inquiry narrowing on that layer. When present
-         *     the array MUST be non-empty — an empty array is explicitly rejected
-         *     with HTTP 400. Authentication and realize arrays are limited to 16
-         *     constraints each, return methods to 3 entries, nested allowlists to
-         *     128 entries, and the combined stored Inquiry configuration to 65,536
-         *     serialized UTF-8 bytes. Individual configuration strings are limited
-         *     to 2,048 UTF-8 bytes.
+         *     Constraint and return-method arrays are optional. When supplied, they
+         *     narrow the application's configured rules and MUST be non-empty. The
+         *     schemas define per-field limits; the three arrays together are limited
+         *     to 65,536 serialized UTF-8 bytes.
          */
         post: operations["establish"];
         delete?: never;
@@ -139,14 +130,10 @@ export interface components {
              */
             realizeConstraints?: components["schemas"]["RealizeRuleConstraint"][];
             /**
-             * @description Optional per-inquiry return-method declaration. Connect accepts
-             *     CALLBACK, STATUS_POLL, and REVEAL here; DIRECT_ISSUE, OIDC, and
-             *     DEVICE_CODE are opened by their dedicated APIs after application-
-             *     level ReturnRules are configured. CALLBACK doubles as the concrete
-             *     delivery info (carries the callback URL). Absent means no per-
-             *     inquiry narrowing (CALLBACK is unreachable for this inquiry
-             *     because no URL is anchored). If present, the array MUST be non-
-             *     empty; empty arrays are rejected with 400.
+             * @description Optional return methods for this inquiry. Connect accepts CALLBACK,
+             *     STATUS_POLL, and REVEAL. CALLBACK includes its concrete delivery
+             *     URL. Absence means no per-inquiry narrowing, but CALLBACK is not
+             *     available without a URL. If supplied, the array MUST be non-empty.
              */
             returnMethods?: components["schemas"]["ReturnMethodDeclaration"][];
         };
@@ -464,14 +451,14 @@ export interface components {
         };
         /**
          * @description Empty payload — narrows to usernameless (discoverable-credential)
-         *     passkey login, the "Sign in with a passkey" entry shown before any
-         *     email is entered. Realize authorization is still decided by Layer 2.
+         *     passkey login shown before an email is entered. Other configured
+         *     authorization rules still apply.
          */
         AuthenticationRulePasskeyUsernamelessPayload: Record<string, never>;
         /**
          * @description Empty payload — narrows to email-first ("reasoned") passkey login,
-         *     the passkey option offered after the user enters their email.
-         *     Realize authorization is still decided by Layer 2.
+         *     the passkey option offered after the user enters an email. Other
+         *     configured authorization rules still apply.
          */
         AuthenticationRulePasskeyReasonedPayload: Record<string, never>;
         /** @description Empty payload — email-verification constraints carry no further parameters. */
@@ -490,17 +477,12 @@ export interface components {
          *     as the application's rule set allows STEAM_OPENID at all.
          */
         AuthenticationRuleSteamOpenIdPayload: Record<string, never>;
-        /**
-         * @description Gates native-api's `/direct-issue/access-key` flow. Credentials
-         *     live in the dedicated `AccessKeyCredential` table; no row of
-         *     this method ever appears in the `Authentication` table.
-         */
+        /** @description Enables Native API `/direct-issue/access-key` authentication. */
         AuthenticationRuleAccessKeyDirectPayload: Record<string, never>;
         /**
          * @description Empty `allowedHostedDomains` means no hosted-domain gating. A
          *     non-empty list requires an exact, case-insensitive match against the
-         *     Google Workspace `hd` claim. The server lowercases and deduplicates
-         *     entries before persistence.
+         *     Google Workspace `hd` claim. Matching is case-insensitive.
          */
         AuthenticationRuleGoogleOAuthPayload: {
             allowedHostedDomains?: string[];
@@ -520,8 +502,7 @@ export interface components {
         /**
          * @description Empty `allowedDiscordGuilds` means no guild gating. A non-empty list
          *     requires membership in at least one listed Discord guild and causes
-         *     the authentication flow to request the `guilds` scope. Entries are
-         *     trimmed and deduplicated before persistence.
+         *     the authentication flow to request the `guilds` scope.
          */
         AuthenticationRuleDiscordOAuthPayload: {
             allowedDiscordGuilds?: string[];
@@ -618,8 +599,7 @@ export interface components {
         RealizeRuleEmailPayload: {
             /**
              * @description List of email addresses or glob patterns the realized identity
-             *     must match. Glob patterns are bounded by server-side limits to
-             *     prevent regex backtracking attacks.
+             *     must match.
              */
             allowedEmails: string[];
         };
@@ -632,25 +612,17 @@ export interface components {
             allowedSteamIds: string[];
         };
         /**
-         * @description Exact match on the realizing account's **account alias** — the
-         *     user-visible, application-invisible, rotatable handle the user
-         *     reads in the With portal and shares out-of-band with whoever
-         *     configures the rule. No wildcard — because the account does not
-         *     yet exist during fresh registration, this constraint matches
-         *     nothing for new sign-ups. The alias is opaque: it is compared by
-         *     exact-string equality and never parsed or format-validated.
+         * @description Exact match on the account alias shared by the user. Wildcards are not
+         *     supported, and a new account cannot match a pre-existing alias list.
+         *     Values are opaque and compared exactly.
          */
         RealizeRuleAccountAliasPayload: {
             allowedAccountAliases: string[];
         };
         /**
-         * @description Exact match on the realizing account's **sector subject** for the
-         *     realizing application's sector — the application-visible token
-         *     `sub` the owner already sees in their own logs. No wildcard.
-         *     Rotating the subject locks the user out (it becomes a brand-new,
-         *     not-yet-allow-listed identity) rather than letting them bypass the
-         *     rule. The subject is opaque: compared by exact-string equality and
-         *     never parsed or format-validated.
+         * @description Exact match on the application-visible token `sub`. Wildcards are not
+         *     supported. A rotated subject must be allow-listed separately. Values
+         *     are opaque and compared exactly.
          */
         RealizeRuleSectorSubjectPayload: {
             allowedSectorSubjects: string[];
@@ -678,7 +650,7 @@ export interface components {
                  *     and fragments are preserved; caller-supplied or duplicate
                  *     values for the two canonical names are overwritten. The URL
                  *     MUST be concrete and MUST NOT contain Inquiry-key templates.
-                 *     The server enforces the length limit in UTF-8 bytes.
+                 *     Length is measured in UTF-8 bytes.
                  */
                 callbackUrl: string;
             };
@@ -707,12 +679,9 @@ export interface components {
             payload: Record<string, never>;
         };
         /**
-         * @description Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
-         *     for known failure modes. When the reason symbol's description begins with
-         *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-         *     signal — both `reason` and the body itself are absent in that case. A
-         *     missing, malformed, or structurally invalid JSON request body returns
-         *     `InvalidBody` without parser or validation-library detail.
+         * @description Error response body. Known failures may include a stable `reason`.
+         *     Some failures are status-only and have an empty body. A missing,
+         *     malformed, or structurally invalid JSON body returns `InvalidBody`.
          */
         Error: {
             /** @description Stable machine-readable reason code. */
@@ -772,6 +741,8 @@ export interface operations {
             /** @description Inquiry established. */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -788,8 +759,9 @@ export interface operations {
                 };
             };
             /**
-             * @description Application is disabled.
-             *     Reason `ApplicationDisabled`.
+             * @description Application is not ACTIVE, or its parent Sector or Organization is
+             *     unavailable.
+             *     Reason `ApplicationNotActive`.
              */
             403: {
                 headers: {
@@ -826,6 +798,8 @@ export interface operations {
             /** @description Current status of the inquiry. */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -870,25 +844,12 @@ export interface operations {
             /**
              * @description The inquiry could not be redeemed. The `reason` distinguishes:
              *
-             *     - `InquiryNotFound` — the `(exposureKey, hiddenKey,
-             *       confirmationKey)` triple does not resolve to a realized
-             *       inquiry.
-             *     - `InquiryExpired` — the inquiry resolved but its lifetime has
-             *       elapsed (expired by TTL or out of polling attempts).
-             *     - `InquiryNotRealized` — the inquiry exists but has not been
-             *       realized yet.
-             *     - `InquiryAlreadyRedeemed` — the inquiry has already been
-             *       consumed (single-use guard via conditional write; also
-             *       fires after a REVEAL realize that surfaces the tokens
-             *       in-line and immediately marks the inquiry redeemed).
-             *     - `ApplicationNotFound` — the application bound to the Inquiry no
-             *       longer exists.
-             *     - `AuthenticationNotFound` — the realized Authentication record is
-             *       missing or the Inquiry lacks a valid realized authentication
-             *       binding.
-             *     - `AccountNotFound` — the realized Account no longer exists,
-             *       including when it disappears at the issuance transaction
-             *       boundary.
+             *     - `InquiryNotFound` — the supplied key triple is not valid.
+             *     - `InquiryExpired` — the inquiry has expired.
+             *     - `InquiryNotRealized` — authentication is not complete.
+             *     - `InquiryAlreadyRedeemed` — the single-use inquiry was consumed.
+             *     - `ApplicationNotFound`, `AuthenticationNotFound`, or
+             *       `AccountNotFound` — required issuance authority is unavailable.
              */
             400: {
                 headers: {
@@ -901,22 +862,17 @@ export interface operations {
             /**
              * @description The attempt was refused. The `reason` distinguishes:
              *
-             *     - `ApplicationDisabled` — the application is disabled.
+             *     - `ApplicationNotActive` — the application is unavailable.
              *     - `AccountDisabled` — the realizing account is disabled.
              *     - `AccountDeleted` — the realizing account has been erased.
-             *     - `ClaimConsentRequired` — the application requires a claim
-             *       (email / first name / last name / static avatar / animated avatar) the user has not granted;
-             *       the standing grant must be (re)established through an
-             *       interactive browser login before tokens can be issued.
-             *     - `EmailDomainBlocked` — one of the account's verified email
-             *       domains is governed by a `BLOCK_ALL` login policy.
-             *     - `EmailDomainRequiresSso` — one of the account's verified email
-             *       domains requires SSO and the inquiry was not realized through
-             *       the currently required connector.
-             *     - `SsoAuthorityConflict` — verified email domains on the account
-             *       require distinct SSO connectors. No one connector can satisfy
-             *       every domain authority, so issuance remains blocked until the
-             *       domain policies or account email ownership are repaired.
+             *     - `ClaimConsentRequired` — interactive login is required to
+             *       establish the current claim grant.
+             *     - `RequiredClaimDataMissing` — a REQUIRED claim cannot currently
+             *       be disclosed. An approved account without a surname is not
+             *       missing data and discloses an empty surname.
+             *     - `EmailDomainBlocked`, `EmailDomainRequiresSso`, or
+             *       `SsoAuthorityConflict` — current email-domain policy prevents
+             *       issuance.
              */
             403: {
                 headers: {
@@ -927,12 +883,8 @@ export interface operations {
                 };
             };
             /**
-             * @description The realized authorization is stale.
-             *
-             *     - `AuthorizationArtifactStale` — the exact sector binding stopped
-             *       being authoritative after Layer 2 authorized the Inquiry because
-             *       the assignment changed or the subject rotated. Start a new
-             *       Inquiry so the current identity is evaluated before issuance.
+             * @description Reason `AuthorizationArtifactStale`: identity authority changed
+             *     after authentication. Start a new inquiry before retrying.
              */
             409: {
                 headers: {

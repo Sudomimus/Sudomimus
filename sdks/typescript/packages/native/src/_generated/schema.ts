@@ -32,32 +32,11 @@ export interface paths {
         put?: never;
         /**
          * Exchange an access-key credential for application tokens.
-         * @description Trade a long-lived access-key credential (identifier + secret) for
-         *     application access and refresh tokens. Access keys are
-         *     application-scoped credentials bound to a specific account; the
-         *     credential carries optional TTL bounds and an opt-in expiry
-         *     timestamp.
-         *
-         *     The server:
-         *
-         *       1. Applies global and per-application semantic admission budgets.
-         *       2. Validates the application's authentication-rule layer admits
-         *          `ACCESS_KEY_DIRECT`.
-         *       3. Looks up the credential by `accessKeyIdentifier`.
-         *       4. Cross-checks that the credential belongs to the application
-         *          named in `applicationAnchor`, is not revoked, and has not
-         *          expired.
-         *       5. Timing-safe-verifies `accessKeySecret`.
-         *       6. Validates the realize-rule layer (`EMAIL` / `STEAM_ID` /
-         *          `ACCOUNT_ALIAS` / `SECTOR_SUBJECT`) and ensures a
-         *          `DIRECT_ISSUE` return rule exists.
-         *       7. Issues access + refresh JWTs and best-effort touches the
-         *          credential's `lastUsedAt` timestamp.
-         *
-         *     All credential-level failures (unknown identifier, app mismatch,
-         *     revoked, expired, wrong secret) collapse into a single opaque
-         *     `AccessKeyDirectDenied` 401 reason to avoid leaking identifier
-         *     existence.
+         * @description Exchanges an application-scoped access-key identifier and secret for
+         *     access and refresh tokens. The key must belong to the named
+         *     application, remain active, and satisfy its configured authorization
+         *     rules. Credential rejection uses the single opaque reason
+         *     `AccessKeyDirectDenied`.
          */
         post: operations["directIssueAccessKey"];
         delete?: never;
@@ -79,41 +58,11 @@ export interface paths {
          * Exchange a Steam Web API auth ticket for application tokens.
          * @description The client SDK calls `ISteamUser::GetAuthTicketForWebApi("sudomimus")`
          *     (the identity string MUST be exactly `"sudomimus"`), waits for the
-         *     `GetTicketForWebApiResponse_t` callback, hex-encodes the ticket
-         *     bytes, and POSTs them here together with the application anchor and
-         *     the Steam App ID. The server:
-         *
-         *       1. Validates the application's authentication-rule layer admits
-         *          `STEAM_TICKET` for this `steamAppId`.
-         *       2. Applies fixed-window semantic budgets after local validation:
-         *          150 eligible attempts per application and 200 globally per 10
-         *          seconds. It also opens a 60-second failure circuit at 20
-         *          Steam/upstream failures per application or 60 globally. A
-         *          blocked request returns `429` before replay storage, per-request
-         *          auditing, or Steam verification. Per-IP limiting remains an
-         *          independent edge responsibility.
-         *       3. Atomically creates a 60-second processing reservation for
-         *          `sha256(steamTicketHex.toLowerCase())`; a concurrent duplicate
-         *          is rejected with `409`.
-         *       4. Verifies the ticket with Steam's
-         *          `ISteamUserAuth/AuthenticateUserTicket` endpoint, identity
-         *          `"sudomimus"`, then promotes that exact live reservation to a
-         *          24-hour replay window. Invalid and upstream-failed attempts keep
-         *          only the short reservation.
-         *       5. Validates the application's realize-rule layer (`EMAIL` /
-         *          `STEAM_ID` / `ACCOUNT_ALIAS` / `SECTOR_SUBJECT`) and ensures a
-         *          `DIRECT_ISSUE` return rule exists.
-         *       6. Issues access + refresh JWTs signed with the application's
-         *          private key.
-         *
-         *     Tokens follow the same shape as those issued through other ordinary
-         *     application-token issuance paths. Verification is the responsibility
-         *     of the relying party (see the `Sudomimus.Token` SDK).
-         *
-         *     The Layer-1 method name on the wire is `STEAM_TICKET`, but the
-         *     resolved identity is stored as a `STEAM_ID64` Authentication row
-         *     — `STEAM_TICKET` and `STEAM_OPENID` share a single identity row
-         *     per SteamID64, differing only in how the SteamID64 was proven.
+         *     `GetTicketForWebApiResponse_t` callback, hex-encodes the returned bytes,
+         *     and submits them with the application anchor and Steam App ID. The
+         *     ticket must satisfy the application's configured rules and is
+         *     single-use for this exchange. Verify the returned tokens through the
+         *     application's Session JWKS.
          */
         post: operations["directIssueSteamTicket"];
         delete?: never;
@@ -133,27 +82,11 @@ export interface paths {
         put?: never;
         /**
          * Proactively mint an errand for a user you already authenticated.
-         * @description Ask, on the application's own behalf, for an errand side-trip so the
-         *     user can manage what they share — the on-demand counterpart to the
-         *     claim-gate 403. Use it when direct-issue would succeed but you want to
-         *     invite the user to grant OPTIONAL claims that native issuance can never
-         *     prompt for, or to let a Steam-only user add an email they choose to
-         *     share.
-         *
-         *     Authenticated by an access token you already hold for the user (from an
-         *     earlier direct-issue or Connect redeem). It is verified and its expiry is
-         *     enforced, then its `sid` is strongly resolved to an ACTIVE
-         *     ApplicationSession whose application and `sub` bindings must exactly
-         *     match the token. The account comes from that session, so present a fresh,
-         *     still-live session credential. The access token only identifies the
-         *     user; it never authorizes the sharing. Every minted ticket therefore
-         *     forces an in-browser re-authentication before any task runs, so a leaked
-         *     token cannot alter a user's grants.
-         *
-         *     When the account already satisfies the application's claim policy the
-         *     response carries `errand: null` — nothing to do, just direct-issue.
-         *     Otherwise open `errand.url` and poll `/errand/{errandKey}/status`
-         *     exactly as for the 403 handoff.
+         * @description Creates a browser handoff that lets an already authenticated user
+         *     complete profile data or manage optional claim sharing. Supply a
+         *     current application access token. The browser flow re-authenticates the
+         *     user before making changes. If nothing is required, `errand` is `null`;
+         *     otherwise open `errand.url` and optionally poll its status.
          */
         post: operations["createErrand"];
         delete?: never;
@@ -171,22 +104,11 @@ export interface paths {
         };
         /**
          * Poll the status of an errand handoff.
-         * @description Lightweight polling endpoint for the errand handoff returned by a
-         *     claim-gate 403: bearer-by-key, no other authentication, a pure
-         *     single-row read with no side effects — unlike retrying direct-issue,
-         *     which is the full credential round-trip. Poll every ~2 seconds while
-         *     the user completes the browser side-trip, or skip polling and let
-         *     the user signal completion in your own UI.
-         *
-         *     An accidental direct-issue retry will not split your polling state:
-         *     while the current ticket has at least 15 minutes left and the task
-         *     scope is unchanged, the retry returns the SAME `errandKey`; a fresh
-         *     ticket is minted only near expiry or after a scope change.
-         *
-         *     Unknown, malformed, and expired keys are deliberately
-         *     indistinguishable: all report `EXPIRED`, so the endpoint cannot be
-         *     used to probe key validity. `COMPLETED` means every task finished —
-         *     retry the direct-issue request once to obtain tokens.
+         * @description Poll about every two seconds while the user completes the browser
+         *     handoff, or wait for confirmation in your own UI. No additional
+         *     authentication is required beyond `errandKey`. Unknown, malformed, and
+         *     expired keys all report `EXPIRED`. After `COMPLETED`, retry the original
+         *     direct-issue request once.
          */
         get: operations["errandStatus"];
         put?: never;
@@ -223,9 +145,7 @@ export interface components {
             /**
              * @description Canonical access-key secret, including the mandatory `acs_t_`
              *     prefix followed by 64 lowercase hexadecimal characters (32
-             *     random bytes). Returned exactly once when the access key was
-             *     issued. Never logged or persisted in plaintext server-side after
-             *     creation.
+             *     random bytes). Returned only when the access key is issued.
              */
             accessKeySecret: string;
         };
@@ -234,7 +154,7 @@ export interface components {
             applicationAnchor: string;
             /**
              * @description Short-lived access token (JWT). Payload `sub` is the pairwise
-             *     sector subject, `sid` identifies the live ApplicationSession, and
+             *     sector subject, `sid` identifies the session, and
              *     `jti` identifies this token instance. It contains no profile claims
              *     or raw account identifier; use Session API `/userinfo` for current
              *     shared identity data.
@@ -248,17 +168,16 @@ export interface components {
             applicationAnchor: string;
             /**
              * @description Hex-encoded Steam Web API auth ticket bytes returned from
-             *     `ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case
-             *     insensitive — the server lowercases before hashing for replay
-             *     protection, but forwards the original bytes to Steam.
+             *     `ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Hexadecimal
+             *     characters are case-insensitive.
              */
             steamTicketHex: string;
             /**
              * Format: int64
              * @description Steam App ID under which the ticket was generated. Must be
              *     allow-listed by the application's `STEAM_TICKET` authentication
-             *     rule. Tickets are bound to their issuing App ID server-side;
-             *     passing a different value will fail Steam verification.
+             *     rule. Steam binds tickets to their issuing App ID; passing a
+             *     different value fails verification.
              */
             steamAppId: number;
         };
@@ -267,7 +186,7 @@ export interface components {
             applicationAnchor: string;
             /**
              * @description Short-lived access token (JWT). Payload `sub` is the pairwise
-             *     sector subject, `sid` identifies the live ApplicationSession, and
+             *     sector subject, `sid` identifies the session, and
              *     `jti` identifies this token instance. It contains no profile claims
              *     or raw account identifier; use Session API `/userinfo` for current
              *     shared identity data.
@@ -310,13 +229,9 @@ export interface components {
         };
         /**
          * @description The browser side-trip that unblocks a claim-gated direct-issue:
-         *     a short-lived (30 minutes), single-use bearer URL where the user
-         *     authenticates (when account data is being written), completes any
-         *     missing data, and grants consent. The stored task list is server-
-         *     side only — open the URL and let the page drive. Repeated blocked
-         *     calls re-hand the same live handoff (same `errandKey`, original
-         *     `expiresAt`) while it has at least 15 minutes left and the owed
-         *     task scope is unchanged.
+         *     a short-lived, single-use bearer URL where the user authenticates when
+         *     required, completes missing data, and manages consent. Open the URL and
+         *     let the browser page guide the user.
          */
         ErrandHandoff: {
             /** @description Bearer key (`ernd_…`); also the status-poll path key. */
@@ -342,10 +257,8 @@ export interface components {
         };
         CreateErrandRequest: {
             /**
-             * @description An access token (JWT) the application already holds for the user.
-             *     Verified server-side with its expiry enforced, then resolved through
-             *     its `sid` to an ACTIVE ApplicationSession with exact application and
-             *     `sub` bindings — so present a currently valid, live-session token.
+             * @description A current application access token (JWT) for the user. The token
+             *     must be unexpired and its session must remain active.
              */
             accessToken: string;
         };
@@ -363,12 +276,9 @@ export interface components {
             status: "PENDING" | "COMPLETED" | "EXPIRED";
         };
         /**
-         * @description Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
-         *     for known failure modes. When the reason symbol's description begins with
-         *     `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-         *     signal — both `reason` and the body itself are absent in that case. A
-         *     missing, malformed, or structurally invalid JSON request body returns
-         *     `InvalidBody` without parser or validation-library detail.
+         * @description Error response body. Known failures may include a stable `reason`.
+         *     Some failures are status-only and have an empty body. A missing,
+         *     malformed, or structurally invalid JSON body returns `InvalidBody`.
          */
         Error: {
             /** @description Stable machine-readable reason code. */
@@ -451,9 +361,8 @@ export interface operations {
                 };
             };
             /**
-             * @description The access-key credential was rejected. The `reason` is
-             *     uniformly `AccessKeyDirectDenied` regardless of root cause
-             *     (not found, app mismatch, revoked, expired, wrong secret).
+             * @description Reason `AccessKeyDirectDenied`: the access-key credential was
+             *     rejected. Obtain a current credential before retrying.
              */
             401: {
                 headers: {
@@ -466,37 +375,19 @@ export interface operations {
             /**
              * @description The attempt was refused. The response `reason` distinguishes:
              *
-             *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — the
-             *       application's three-layer rules rejected this attempt
-             *       (which layer is indicated by the reason code).
-             *     - `ApplicationDisabled` — the application is disabled.
-             *     - `AccountDisabled` — the resolved account is disabled.
-             *     - `AccountDeleted` — the resolved account has been erased.
-             *     - `EmailDomainBlocked` — a verified adopted domain blocks the
-             *       account platform-wide.
-             *     - `EmailDomainRequiresSso` — a verified adopted domain requires a
-             *       different SSO connector than this non-interactive proof used.
-             *     - `SsoAuthorityConflict` — verified adopted domains require
-             *       distinct SSO connectors. Direct issue remains blocked until the
-             *       domain policies or account email ownership are repaired.
-             *     - `ClaimConsentRequired` — the application requires a claim the
-             *       user has not yet granted; direct-issue cannot prompt.
-             *     - `RequiredClaimDataMissing` — every required claim is granted,
-             *       but the account lacks the underlying data (e.g. no email on a
-             *       Steam-created account).
+             *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — application
+             *       policy rejected the attempt.
+             *     - `ApplicationNotActive` — the application is unavailable.
+             *     - `AccountDisabled` or `AccountDeleted` — the account is
+             *       unavailable for issuance.
+             *     - `EmailDomainBlocked`, `EmailDomainRequiresSso`, or
+             *       `SsoAuthorityConflict` — email-domain policy prevents issuance.
+             *     - `ClaimConsentRequired` or `RequiredClaimDataMissing` — browser
+             *       interaction is required before direct issuance can continue.
              *
-             *     For the two claim-gate reasons the body additionally carries a
-             *     per-claim `claims` view (UNKNOWN distinguishes "never asked"
-             *     from DENIED "declined") and an `errand` handoff — a short-lived
-             *     browser URL where the user can authenticate, complete the
-             *     missing data, and grant consent. Open `errand.url` in the
-             *     system browser, poll `GET /errand/{errandKey}/status` (or wait
-             *     for the user), then retry this request once.
-             *
-             *     Repeated blocked calls reuse the live ticket: while it has at
-             *     least 15 minutes left and the owed task scope is unchanged, the
-             *     same `errandKey` (with its original `expiresAt`) is returned
-             *     again, so retries cannot split the handoff state.
+             *     Claim-gate responses also include `claims` and an `errand` browser
+             *     handoff. Open `errand.url`, wait or poll its status, then retry this
+             *     request once after completion.
              */
             403: {
                 headers: {
@@ -518,9 +409,8 @@ export interface operations {
                 };
             };
             /**
-             * @description `AuthorizationArtifactStale` — the exact sector binding changed
-             *     after Layer 2 evaluated the direct-issue attempt. Retry the entire
-             *     request so the current identity is evaluated before issuance.
+             * @description Reason `AuthorizationArtifactStale`: identity authority changed
+             *     during the attempt. Retry the complete credential exchange.
              */
             409: {
                 headers: {
@@ -530,34 +420,21 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /**
-             * @description The AccessKey route's per-application/global attempt budget or
-             *     credential-failure circuit is exhausted. The response
-             *     intentionally has no stable reason body. No rule, credential, or
-             *     per-attempt audit work is performed for this rejection.
-             */
+            /** @description Too many access-key attempts. Back off before retrying. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /**
-             * @description Internal consistency failure while resolving the credential's
-             *     account. The response is status-only with an empty body; the
-             *     server-only classification is not part of the public contract.
-             */
+            /** @description Access-key issuance failed with an empty response body. */
             500: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /**
-             * @description The semantic admission or credential-failure counter is
-             *     unavailable. The request fails closed and intentionally has no
-             *     stable reason body.
-             */
+            /** @description Access-key issuance is temporarily unavailable. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -608,7 +485,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Steam rejected the ticket with provider error code 101. */
+            /** @description Steam rejected the ticket. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -620,37 +497,19 @@ export interface operations {
             /**
              * @description The attempt was refused. The response `reason` distinguishes:
              *
-             *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — the
-             *       application's three-layer rules rejected this attempt
-             *       (which layer is indicated by the reason code).
-             *     - `ApplicationDisabled` — the application is disabled.
-             *     - `AccountDisabled` — the resolved account is disabled.
-             *     - `AccountDeleted` — the resolved account has been erased.
-             *     - `EmailDomainBlocked` — a verified adopted domain blocks the
-             *       account platform-wide.
-             *     - `EmailDomainRequiresSso` — a verified adopted domain requires a
-             *       different SSO connector than this non-interactive proof used.
-             *     - `SsoAuthorityConflict` — verified adopted domains require
-             *       distinct SSO connectors. Direct issue remains blocked until the
-             *       domain policies or account email ownership are repaired.
-             *     - `ClaimConsentRequired` — the application requires a claim the
-             *       user has not yet granted; direct-issue cannot prompt.
-             *     - `RequiredClaimDataMissing` — every required claim is granted,
-             *       but the account lacks the underlying data (e.g. no email on a
-             *       Steam-created account).
+             *     - `Layer1Denied`, `Layer2Denied`, `Layer3Denied` — application
+             *       policy rejected the attempt.
+             *     - `ApplicationNotActive` — the application is unavailable.
+             *     - `AccountDisabled` or `AccountDeleted` — the account is
+             *       unavailable for issuance.
+             *     - `EmailDomainBlocked`, `EmailDomainRequiresSso`, or
+             *       `SsoAuthorityConflict` — email-domain policy prevents issuance.
+             *     - `ClaimConsentRequired` or `RequiredClaimDataMissing` — browser
+             *       interaction is required before direct issuance can continue.
              *
-             *     For the two claim-gate reasons the body additionally carries a
-             *     per-claim `claims` view (UNKNOWN distinguishes "never asked"
-             *     from DENIED "declined") and an `errand` handoff — a short-lived
-             *     browser URL where the user can authenticate, complete the
-             *     missing data, and grant consent. Open `errand.url` in the
-             *     system browser, poll `GET /errand/{errandKey}/status` (or wait
-             *     for the user), then retry this request once.
-             *
-             *     Repeated blocked calls reuse the live ticket: while it has at
-             *     least 15 minutes left and the owed task scope is unchanged, the
-             *     same `errandKey` (with its original `expiresAt`) is returned
-             *     again, so retries cannot split the handoff state.
+             *     Claim-gate responses also include `claims` and an `errand` browser
+             *     handoff. Open `errand.url`, wait or poll its status, then acquire a
+             *     fresh Steam ticket and retry once after completion.
              */
             403: {
                 headers: {
@@ -674,15 +533,12 @@ export interface operations {
             /**
              * @description Conflict. The response `reason` distinguishes:
              *
-             *     - `ReplayProtectionAlreadySeen` — this Steam ticket is currently
-             *       being verified, was already Steam-verified within the 24-hour
-             *       replay window, or its processing reservation could not be
-             *       promoted safely. Acquire a fresh ticket via
-             *       `GetAuthTicketForWebApi` and retry.
-             *     - `AuthorizationArtifactStale` — the exact sector binding changed
-             *       after Layer 2 evaluated the direct-issue attempt. Acquire a fresh
-             *       ticket and retry the entire request so the current identity is
-             *       evaluated before issuance.
+             *     - `ReplayProtectionAlreadySeen` — the ticket was already submitted
+             *       or is being processed.
+             *     - `AuthorizationArtifactStale` — identity authority changed during
+             *       the attempt.
+             *
+             *     Acquire a fresh ticket before retrying either condition.
              */
             409: {
                 headers: {
@@ -693,11 +549,8 @@ export interface operations {
                 };
             };
             /**
-             * @description The Steam route's per-application/global attempt budget or failure
-             *     circuit is exhausted. The response intentionally has no stable
-             *     reason body; back off before acquiring and submitting another
-             *     Steam ticket. No replay/audit row or Steam Partner API request is
-             *     made for this rejection.
+             * @description Too many Steam-ticket attempts. Back off before acquiring and
+             *     submitting another ticket.
              */
             429: {
                 headers: {
@@ -705,7 +558,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Steam's verification endpoint was unreachable, returned a non-101 provider error, or returned an unparseable, malformed, or ambiguous response. */
+            /** @description Steam ticket verification is temporarily unavailable. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -752,7 +605,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreateErrandResponse"];
                 };
             };
-            /** @description The access token is missing, malformed, expired, or its ApplicationSession is no longer active. */
+            /** @description The access token is missing, malformed, expired, or no longer active. */
             401: {
                 headers: {
                     [name: string]: unknown;

@@ -32,18 +32,10 @@ export interface paths {
         put?: never;
         /**
          * Start a device authorization session.
-         * @description Creates a short-lived device authorization session for the application
-         *     identified by `applicationAnchor`.
-         *
-         *     No client-auth JWT is required or accepted here. The application must
-         *     already have an enabled Layer 3 `DEVICE_CODE` ReturnRule. The caller
-         *     keeps `deviceCode` private and polls `/device-token`; the user sees
-         *     `userCode` and approves the request at `verificationUri` or
-         *     `verificationUriComplete`.
-         *
-         *     The client should wait at least `interval` seconds between
-         *     `/device-token` polls. Polling faster can return `slow_down` with a
-         *     larger interval.
+         * @description Creates a short-lived device authorization for `applicationAnchor`.
+         *     No client-auth JWT is required. Keep `deviceCode` private, show
+         *     `userCode` to the user, and direct them to either verification URI.
+         *     Poll `/device-token` no faster than the returned `interval`.
          */
         post: operations["deviceAuthorize"];
         delete?: never;
@@ -63,13 +55,10 @@ export interface paths {
         put?: never;
         /**
          * Poll and consume a device authorization session.
-         * @description Polls the session identified by `deviceCode`. Pending and terminal
-         *     refusal states are serialized as OAuth-style device-flow errors, not
-         *     Sudomimus `{ "reason": "..." }` wire reasons.
-         *
-         *     A successful response consumes the device authorization session and
-         *     returns a normal Sudomimus application access/refresh token pair.
-         *     Repeating the same request after success cannot mint another pair.
+         * @description Polls the authorization identified by `deviceCode`. Polling states use
+         *     OAuth-style device-flow errors. Success consumes the authorization and
+         *     returns an access/refresh token pair; the code cannot issue tokens
+         *     again.
          */
         post: operations["deviceToken"];
         delete?: never;
@@ -138,7 +127,7 @@ export interface components {
             applicationAnchor: components["schemas"]["ApplicationAnchor"];
             /**
              * @description Short-lived access token (JWT). Payload `sub` is the pairwise
-             *     sector subject, `sid` identifies the live ApplicationSession, and
+             *     sector subject, `sid` identifies the session, and
              *     `jti` identifies this access-token instance. It contains no profile
              *     claims or raw account identifier; use Session API `/userinfo` for
              *     current shared identity data.
@@ -193,11 +182,9 @@ export interface components {
             animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
         };
         /**
-         * @description Error response body for non-polling validation and infrastructure
-         *     failures. `/device-token` handler-level polling states use
-         *     `DeviceTokenError` instead. Outside `/device-token`, a missing,
-         *     malformed, or structurally invalid JSON request body returns
-         *     `InvalidBody` without parser or validation-library detail.
+         * @description Error response body for failures outside the device polling state
+         *     machine. `/device-token` polling states use `DeviceTokenError`.
+         *     Invalid JSON request bodies return `InvalidBody`.
          */
         Error: {
             /** @description Stable machine-readable reason code. */
@@ -257,6 +244,8 @@ export interface operations {
             /** @description Device authorization session created. */
             200: {
                 headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -276,7 +265,7 @@ export interface operations {
              * @description The application cannot start device authorization. The `reason`
              *     distinguishes:
              *
-             *     - `ApplicationDisabled` - the application has been disabled.
+             *     - `ApplicationNotActive` - the application is unavailable.
              *     - `Layer3Denied` - the application does not currently have an
              *       enabled `DEVICE_CODE` ReturnRule.
              */
@@ -297,22 +286,14 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /**
-             * @description The global or per-application Device creation budget is exhausted.
-             *     The response intentionally has no stable reason body. No
-             *     authorization session, code reservation, or audit row is created.
-             */
+            /** @description Too many authorization requests. Retry later. */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /**
-             * @description The semantic admission counter is unavailable. The request fails
-             *     closed before application, rule, session, reservation, or audit
-             *     work and intentionally has no stable reason body.
-             */
+            /** @description Device authorization is temporarily unavailable. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -361,12 +342,7 @@ export interface operations {
              *       request yet. Continue polling after the current interval.
              *     - `slow_down` - the client is polling too quickly. Use the returned
              *       `interval` value for subsequent polls.
-             *     - `access_denied` - the user denied the request, approval failed,
-             *       policy no longer allows token issuance, or the exact sector
-             *       binding changed after Layer 2 approved the session. Policy
-             *       denial includes an account whose verified domains require
-             *       distinct SSO connectors; the OAuth device response intentionally
-             *       does not expose a Sudomimus wire reason.
+             *     - `access_denied` - the user or current policy denied issuance.
              *     - `expired_token` - the device authorization session expired.
              *     - `invalid_request` - the request body is missing, malformed, or
              *       structurally invalid; or the `deviceCode` is unknown or has
@@ -383,8 +359,8 @@ export interface operations {
                 };
             };
             /**
-             * @description Token issuance failed after approval. The device authorization
-             *     session is failed server-side and the client should stop polling.
+             * @description Token issuance failed. Stop polling and start a new device
+             *     authorization if the user wants to retry.
              */
             500: {
                 headers: {

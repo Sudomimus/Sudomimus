@@ -30,11 +30,10 @@ export interface paths {
         };
         /**
          * Fetch the public signing keys for one application's tokens.
-         * @description Returns the lifecycle-aware public JWK Set used to verify ordinary
-         *     application access and refresh tokens. Select the key whose `kid`
-         *     matches the JWT JOSE header. The set can contain PREPUBLISHED, ACTIVE,
-         *     and still-published RETIRING keys; it never contains private key
-         *     material or REVOKED keys. The set contains at most 32 keys.
+         * @description Returns the public JWK Set for application access and refresh tokens.
+         *     Select the key whose `kid` matches the JWT JOSE header. Unknown `kid`
+         *     values should trigger one immediate refresh before rejection. The set
+         *     contains no private key material and at most 32 keys.
          */
         get: operations["applicationJwks"];
         put?: never;
@@ -56,27 +55,12 @@ export interface paths {
         put?: never;
         /**
          * Rotate a refresh token and issue a new access token.
-         * @description Issues a new access token AND a new refresh token by conditionally
-         *     advancing the same ApplicationSession's signed `rotationVersion`.
-         *     The Session API implements
-         *     OAuth 2.1 BCP §4.14.2 strict refresh-token rotation: every successful
-         *     `/refresh` rotates the refresh token, and a later presentation of the
-         *     previous signed version is treated as evidence of compromise unless it is a
-         *     near-simultaneous retry inside the rotation grace window.
-         *
-         *     Inside that short grace window, if another request already advanced
-         *     the same session by exactly one version and that winning state remains
-         *     active, the retry deterministically reissues the exact winning refresh
-         *     JWT and receives HTTP 200. Outside the grace window, for a version older
-         *     than the immediately previous version, or when exact adoption cannot be
-         *     proven, the ApplicationSession is terminally revoked and the caller must restart with
-         *     its initial login flow: Connect inquiry, device authorization, native
-         *     direct-issue, or another ordinary application-token issuance path.
-         *
-         *     This endpoint accepts only ApplicationSessions whose required issuance
-         *     protocol is `APPLICATION`. OIDC sessions are
-         *     rejected before account, authority, grace-adoption, or rotation work
-         *     and must use the OIDC `/token` endpoint.
+         * @description Rotates an ordinary application refresh token and returns a new access
+         *     token and refresh token. Replace the stored refresh token after every
+         *     success. A near-simultaneous retry may receive the already-issued
+         *     winning token pair. Reuse outside that allowance revokes the session;
+         *     restart through an initial issuance flow. OIDC sessions must use the
+         *     OIDC `/token` endpoint instead.
          */
         post: operations["refresh"];
         delete?: never;
@@ -96,14 +80,10 @@ export interface paths {
         put?: never;
         /**
          * Check whether the session behind an access token is still valid.
-         * @description Strongly resolves the supplied access token's payload `sid` and returns
-         *     the current effective status of that ApplicationSession. The token's
-         *     `aud` and pairwise payload `sub` must exactly match the stored session.
-         *     The access token is
-         *     self-authenticating: its signature is verified against the issuing
-         *     application's public key, so no client-auth JWT is required. The access
-         *     token's own expiry is not enforced here; the answer describes the
-         *     underlying session.
+         * @description Returns the current effective status of the session identified by a
+         *     signed access token. No client-auth JWT is required. The access token's
+         *     own expiry is intentionally ignored because the response describes the
+         *     underlying session rather than token validity.
          */
         post: operations["introspect"];
         delete?: never;
@@ -122,8 +102,8 @@ export interface paths {
         /**
          * Resolve current identity data shared with an application.
          * @description Accepts an ordinary application access token as a Bearer credential and
-         *     returns current, consent-gated identity data for its live
-         *     ApplicationSession. This endpoint accepts only sessions whose issuance
+         *     returns current, consent-gated identity data for its live session. This
+         *     endpoint accepts only sessions whose issuance
          *     protocol is `APPLICATION`; OIDC clients use the discovered OIDC
          *     `userinfo_endpoint` instead. Profile data is read live and is never
          *     copied from the access token.
@@ -196,19 +176,12 @@ export interface paths {
         put?: never;
         /**
          * Revoke every session of an account for the calling application.
-         * @description Advances the account/application revocation authority for the account
-         *     identified by the supplied sector subject, then best-effort revokes
-         *     currently enumerated application-session rows. This is an
-         *     application-authority action, so it requires a client-auth JWT with audience
-         *     `sudomimus-session`. Revocation is scoped to the calling application;
-         *     sessions of the same account under other applications are unaffected.
-         *     A successful response acknowledges the request with `revoked: true`.
-         *     Unknown or out-of-sector subjects return the same acknowledgement to
-         *     avoid an existence oracle. Cleanup results are never exposed publicly.
-         *     Client authentication is evaluated against the raw request body before
-         *     recursive request-body schema validation. Each signed request is
-         *     at-most-once: its `jti` is consumed in a `/revoke-all`-specific replay
-         *     namespace, and a transport retry must use a freshly signed client JWT.
+         * @description Revokes all sessions for the supplied application-visible subject under
+         *     the calling application. Sessions under other applications are not
+         *     affected. The request requires a client-auth JWT with audience
+         *     `sudomimus-session`. Unknown and out-of-scope subjects return the same
+         *     `revoked: true` acknowledgement. Each signed request is single-use; a
+         *     transport retry requires a freshly signed JWT with a new `jti`.
          */
         post: operations["revokeAll"];
         delete?: never;
@@ -274,7 +247,7 @@ export interface components {
             refreshToken: string;
         };
         IntrospectRequest: {
-            /** @description Signed access credential whose payload `sid` is strongly resolved; its own `exp` is intentionally ignored by introspection. */
+            /** @description Signed access credential identifying the session to inspect; its own `exp` is intentionally ignored. */
             accessToken: string;
         };
         UserInfoResponse: {
@@ -285,6 +258,7 @@ export interface components {
             email_verified?: boolean;
             name?: string;
             given_name?: string;
+            /** @description The approved surname. Empty when the account legitimately has no surname. */
             family_name?: string;
             /** Format: uri */
             picture?: string;
@@ -316,7 +290,7 @@ export interface components {
             recommendedRecheckSeconds: number;
         };
         LogoutRequest: {
-            /** @description Any genuine signed refresh-token version for the ApplicationSession to revoke. */
+            /** @description Any genuine signed refresh-token version for the session to revoke. */
             refreshToken: string;
         };
         LogoutResponse: {
@@ -335,9 +309,8 @@ export interface components {
         };
         /**
          * @description Error response body. A missing, malformed, or structurally invalid JSON
-         *     request body returns `InvalidBody` without parser or
-         *     validation-library detail. A documented status-only private failure has
-         *     an empty response body instead.
+         *     request body returns `InvalidBody`. Documented status-only failures have
+         *     an empty response body.
          */
         Error: {
             reason: string;
@@ -448,9 +421,8 @@ export interface operations {
         };
         responses: {
             /**
-             * @description New access token and rotated refresh token issued. A benign
-             *     concurrent retry may also receive 200 by adopting the exact signed
-             *     version created by the winning refresh inside the rotation grace window.
+             * @description New access and refresh tokens issued. A near-simultaneous retry may
+             *     receive the token pair already issued for the same rotation.
              */
             200: {
                 headers: {
@@ -474,23 +446,18 @@ export interface operations {
             /**
              * @description Refresh token rejected. The `reason` distinguishes:
              *
-             *     - `RefreshTokenInvalid` — the JWT is malformed, has an unsupported
-             *       algorithm or issuer, lacks required claims, names an unknown
-             *       application, or does not exactly bind to a stored ApplicationSession.
-             *     - `RefreshTokenInvalidType` — the JWT is not a refresh token, or
-             *       the stored session belongs to the OIDC issuance protocol.
+             *     - `RefreshTokenInvalid` — the token is malformed or does not match
+             *       a valid application session.
+             *     - `RefreshTokenInvalidType` — the token type or issuance protocol
+             *       is not accepted here.
              *     - `RefreshTokenInvalidSignature` — signature verification failed.
-             *     - `RefreshTokenSuspended` — the ApplicationSession is suspended.
+             *     - `RefreshTokenSuspended` — the session is suspended.
              *     - `RefreshTokenExpired` — the token is past its `exp`.
-             *     - `RefreshTokenRevoked` — the ApplicationSession or one of its live
-             *       authority bindings was revoked.
-             *     - `RefreshTokenFamilyCompromised` — the signed version is stale and
-             *       exact grace-window adoption did not apply; the ApplicationSession
-             *       has now been terminally revoked.
+             *     - `RefreshTokenRevoked` — the session is revoked.
+             *     - `RefreshTokenFamilyCompromised` — a stale token version was used;
+             *       the session is now revoked.
              *
-             *     A concurrent rotation race that cannot adopt the winning version also
-             *     returns HTTP 401 and revokes the session, but intentionally carries
-             *     an empty response body rather than exposing a public reason.
+             *     Some unrecoverable rotation conflicts return an empty 401 body.
              */
             401: {
                 headers: {
@@ -503,15 +470,13 @@ export interface operations {
             /**
              * @description The attempt was refused. The `reason` distinguishes:
              *
-             *     - `AccountDisabled` — the account behind the refresh token is disabled.
-             *     - `AccountDeleted` — the account has been erased.
-             *     - `ApplicationDisabled` — the application, parent sector, or parent organization no longer permits token issuance.
-             *     - `ClaimConsentRequired` — a REQUIRED claim is no longer satisfied by a standing grant.
-             *     - `RequiredClaimDataMissing` — the REQUIRED email claim is granted,
-             *       but the account no longer owns a primary email address to issue.
-             *     - `EmailDomainBlocked` — a verified adopted domain now blocks this account.
-             *     - `EmailDomainRequiresSso` — a verified adopted domain now requires SSO and this session was not realized through the required connector.
-             *     - `SsoAuthorityConflict` — verified adopted domains require distinct SSO connectors, so no refresh session can satisfy every domain authority until the conflict is repaired.
+             *     - `AccountDisabled` or `AccountDeleted` — the account is
+             *       unavailable for issuance.
+             *     - `ApplicationNotActive` — the application is unavailable.
+             *     - `ClaimConsentRequired` or `RequiredClaimDataMissing` — current
+             *       claim requirements are not satisfied.
+             *     - `EmailDomainBlocked`, `EmailDomainRequiresSso`, or
+             *       `SsoAuthorityConflict` — email-domain policy prevents issuance.
              */
             403: {
                 headers: {
@@ -522,10 +487,8 @@ export interface operations {
                 };
             };
             /**
-             * @description `AuthorizationArtifactStale` — the email-identity or exact sector
-             *     binding changed after refresh authorization was evaluated. Restart
-             *     through an initial issuance flow so current identity and claim
-             *     authority are evaluated before another ApplicationSession is used.
+             * @description Reason `AuthorizationArtifactStale`: identity authority changed
+             *     during refresh. Restart through an initial issuance flow.
              */
             409: {
                 headers: {
