@@ -27,7 +27,7 @@ public static class NativeReason
 
     // -- Application / account state --
 
-    public const string ApplicationDisabled = "ApplicationDisabled";
+    public const string ApplicationNotActive = "ApplicationNotActive";
     public const string ApplicationNotFound = "ApplicationNotFound";
     public const string AccountDisabled = "AccountDisabled";
     public const string AccountDeleted = "AccountDeleted";
