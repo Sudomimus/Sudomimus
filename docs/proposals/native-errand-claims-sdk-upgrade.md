@@ -249,7 +249,7 @@ public readonly record struct NativeReason(string? Value)
     public static readonly NativeReason Layer1Denied            = new("Layer1Denied");
     public static readonly NativeReason Layer2Denied            = new("Layer2Denied");
     public static readonly NativeReason Layer3Denied            = new("Layer3Denied");
-    public static readonly NativeReason ApplicationDisabled     = new("ApplicationDisabled");
+    public static readonly NativeReason ApplicationNotActive    = new("ApplicationNotActive");
     public static readonly NativeReason AccountDisabled         = new("AccountDisabled");
     public static readonly NativeReason AccountDeleted          = new("AccountDeleted");
     public static readonly NativeReason SteamTicketInvalid      = new("SteamTicketInvalid");
