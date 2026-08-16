@@ -43,7 +43,7 @@ class DirectIssueAccessKeyRequest(BaseModel):
     )
     accessKeySecret: str = Field(
         ...,
-        description="Canonical access-key secret, including the mandatory `acs_t_`\nprefix followed by 64 lowercase hexadecimal characters (32\nrandom bytes). Returned exactly once when the access key was\nissued. Never logged or persisted in plaintext server-side after\ncreation.\n",
+        description="Canonical access-key secret, including the mandatory `acs_t_`\nprefix followed by 64 lowercase hexadecimal characters (32\nrandom bytes). Returned only when the access key is issued.\n",
         pattern="^acs_t_[0-9a-f]{64}$",
     )
 
@@ -57,11 +57,11 @@ class DirectIssueSteamTicketRequest(BaseModel):
     )
     steamTicketHex: str = Field(
         ...,
-        description='Hex-encoded Steam Web API auth ticket bytes returned from\n`ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Case\ninsensitive — the server lowercases before hashing for replay\nprotection, but forwards the original bytes to Steam.\n',
+        description='Hex-encoded Steam Web API auth ticket bytes returned from\n`ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Hexadecimal\ncharacters are case-insensitive.\n',
     )
     steamAppId: int = Field(
         ...,
-        description="Steam App ID under which the ticket was generated. Must be\nallow-listed by the application's `STEAM_TICKET` authentication\nrule. Tickets are bound to their issuing App ID server-side;\npassing a different value will fail Steam verification.\n",
+        description="Steam App ID under which the ticket was generated. Must be\nallow-listed by the application's `STEAM_TICKET` authentication\nrule. Steam binds tickets to their issuing App ID; passing a\ndifferent value fails verification.\n",
         ge=1,
     )
 
@@ -124,13 +124,9 @@ class ClaimsStateView(BaseModel):
 class ErrandHandoff(BaseModel):
     """
     The browser side-trip that unblocks a claim-gated direct-issue:
-    a short-lived (30 minutes), single-use bearer URL where the user
-    authenticates (when account data is being written), completes any
-    missing data, and grants consent. The stored task list is server-
-    side only — open the URL and let the page drive. Repeated blocked
-    calls re-hand the same live handoff (same `errandKey`, original
-    `expiresAt`) while it has at least 15 minutes left and the owed
-    task scope is unchanged.
+    a short-lived, single-use bearer URL where the user authenticates when
+    required, completes missing data, and manages consent. Open the URL and
+    let the browser page guide the user.
 
     """
 
@@ -160,7 +156,7 @@ class CreateErrandRequest(BaseModel):
     )
     accessToken: str = Field(
         ...,
-        description="An access token (JWT) the application already holds for the user.\nVerified server-side with its expiry enforced, then resolved through\nits `sid` to an ACTIVE ApplicationSession with exact application and\n`sub` bindings — so present a currently valid, live-session token.\n",
+        description="A current application access token (JWT) for the user. The token\nmust be unexpired and its session must remain active.\n",
     )
 
 
@@ -184,12 +180,9 @@ class ErrandStatusResponse(BaseModel):
 
 class Error(BaseModel):
     """
-    Error response body. The Native service emits `{ "reason": "<SymbolDescription>" }`
-    for known failure modes. When the reason symbol's description begins with
-    `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-    signal — both `reason` and the body itself are absent in that case. A
-    missing, malformed, or structurally invalid JSON request body returns
-    `InvalidBody` without parser or validation-library detail.
+    Error response body. Known failures may include a stable `reason`.
+    Some failures are status-only and have an empty body. A missing,
+    malformed, or structurally invalid JSON body returns `InvalidBody`.
 
     """
 
@@ -201,7 +194,7 @@ class DirectIssueAccessKeyResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the live ApplicationSession, and\n`jti` identifies this token instance. It contains no profile claims\nor raw account identifier; use Session API `/userinfo` for current\nshared identity data.\n",
+        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the session, and\n`jti` identifies this token instance. It contains no profile claims\nor raw account identifier; use Session API `/userinfo` for current\nshared identity data.\n",
     )
     refreshToken: str = Field(
         ...,
@@ -214,7 +207,7 @@ class DirectIssueSteamTicketResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the live ApplicationSession, and\n`jti` identifies this token instance. It contains no profile claims\nor raw account identifier; use Session API `/userinfo` for current\nshared identity data.\n",
+        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the session, and\n`jti` identifies this token instance. It contains no profile claims\nor raw account identifier; use Session API `/userinfo` for current\nshared identity data.\n",
     )
     refreshToken: str = Field(
         ...,

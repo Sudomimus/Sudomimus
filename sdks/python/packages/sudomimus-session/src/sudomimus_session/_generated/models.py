@@ -117,7 +117,7 @@ class IntrospectRequest(BaseModel):
     )
     accessToken: str = Field(
         ...,
-        description="Signed access credential whose payload `sid` is strongly resolved; its own `exp` is intentionally ignored by introspection.",
+        description="Signed access credential identifying the session to inspect; its own `exp` is intentionally ignored.",
     )
 
 
@@ -132,7 +132,10 @@ class UserInfoResponse(BaseModel):
     email_verified: bool | None = None
     name: str | None = None
     given_name: str | None = None
-    family_name: str | None = None
+    family_name: str | None = Field(
+        None,
+        description="The approved surname. Empty when the account legitimately has no surname.",
+    )
     picture: AnyUrl | None = None
     picture_animated: AnyUrl | None = Field(
         None,
@@ -190,7 +193,7 @@ class LogoutRequest(BaseModel):
     )
     refreshToken: str = Field(
         ...,
-        description="Any genuine signed refresh-token version for the ApplicationSession to revoke.",
+        description="Any genuine signed refresh-token version for the session to revoke.",
     )
 
 
@@ -228,9 +231,8 @@ class RevokeAllResponse(BaseModel):
 class Error1(BaseModel):
     """
     Error response body. A missing, malformed, or structurally invalid JSON
-    request body returns `InvalidBody` without parser or
-    validation-library detail. A documented status-only private failure has
-    an empty response body instead.
+    request body returns `InvalidBody`. Documented status-only failures have
+    an empty response body.
 
     """
 

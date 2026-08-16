@@ -169,11 +169,9 @@ class ClaimsStateView(BaseModel):
 
 class Error1(BaseModel):
     """
-    Error response body for non-polling validation and infrastructure
-    failures. `/device-token` handler-level polling states use
-    `DeviceTokenError` instead. Outside `/device-token`, a missing,
-    malformed, or structurally invalid JSON request body returns
-    `InvalidBody` without parser or validation-library detail.
+    Error response body for failures outside the device polling state
+    machine. `/device-token` polling states use `DeviceTokenError`.
+    Invalid JSON request bodies return `InvalidBody`.
 
     """
 
@@ -184,7 +182,7 @@ class DeviceTokenResponse(BaseModel):
     applicationAnchor: ApplicationAnchor
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the live ApplicationSession, and\n`jti` identifies this access-token instance. It contains no profile\nclaims or raw account identifier; use Session API `/userinfo` for\ncurrent shared identity data.\n",
+        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the session, and\n`jti` identifies this access-token instance. It contains no profile\nclaims or raw account identifier; use Session API `/userinfo` for\ncurrent shared identity data.\n",
     )
     refreshToken: str = Field(
         ...,

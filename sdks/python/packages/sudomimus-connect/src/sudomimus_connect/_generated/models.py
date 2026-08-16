@@ -347,8 +347,8 @@ class Method12(StrEnum):
 class AuthenticationRulePasskeyUsernamelessPayload(BaseModel):
     """
     Empty payload — narrows to usernameless (discoverable-credential)
-    passkey login, the "Sign in with a passkey" entry shown before any
-    email is entered. Realize authorization is still decided by Layer 2.
+    passkey login shown before an email is entered. Other configured
+    authorization rules still apply.
 
     """
 
@@ -360,8 +360,8 @@ class AuthenticationRulePasskeyUsernamelessPayload(BaseModel):
 class AuthenticationRulePasskeyReasonedPayload(BaseModel):
     """
     Empty payload — narrows to email-first ("reasoned") passkey login,
-    the passkey option offered after the user enters their email.
-    Realize authorization is still decided by Layer 2.
+    the passkey option offered after the user enters an email. Other
+    configured authorization rules still apply.
 
     """
 
@@ -415,9 +415,7 @@ class AuthenticationRuleSteamOpenIdPayload(BaseModel):
 
 class AuthenticationRuleAccessKeyDirectPayload(BaseModel):
     """
-    Gates native-api's `/direct-issue/access-key` flow. Credentials
-    live in the dedicated `AccessKeyCredential` table; no row of
-    this method ever appears in the `Authentication` table.
+    Enables Native API `/direct-issue/access-key` authentication.
 
     """
 
@@ -434,8 +432,7 @@ class AuthenticationRuleGoogleOAuthPayload(BaseModel):
     """
     Empty `allowedHostedDomains` means no hosted-domain gating. A
     non-empty list requires an exact, case-insensitive match against the
-    Google Workspace `hd` claim. The server lowercases and deduplicates
-    entries before persistence.
+    Google Workspace `hd` claim. Matching is case-insensitive.
 
     """
 
@@ -475,8 +472,7 @@ class AuthenticationRuleDiscordOAuthPayload(BaseModel):
     """
     Empty `allowedDiscordGuilds` means no guild gating. A non-empty list
     requires membership in at least one listed Discord guild and causes
-    the authentication flow to request the `guilds` scope. Entries are
-    trimmed and deduplicated before persistence.
+    the authentication flow to request the `guilds` scope.
 
     """
 
@@ -582,7 +578,7 @@ class AllowedEmail(RootModel[str]):
 class RealizeRuleEmailPayload(BaseModel):
     allowedEmails: list[AllowedEmail] = Field(
         ...,
-        description="List of email addresses or glob patterns the realized identity\nmust match. Glob patterns are bounded by server-side limits to\nprevent regex backtracking attacks.\n",
+        description="List of email addresses or glob patterns the realized identity\nmust match.\n",
         max_length=128,
         min_length=1,
     )
@@ -609,13 +605,9 @@ class AllowedAccountAliase(RootModel[str]):
 
 class RealizeRuleAccountAliasPayload(BaseModel):
     """
-    Exact match on the realizing account's **account alias** — the
-    user-visible, application-invisible, rotatable handle the user
-    reads in the With portal and shares out-of-band with whoever
-    configures the rule. No wildcard — because the account does not
-    yet exist during fresh registration, this constraint matches
-    nothing for new sign-ups. The alias is opaque: it is compared by
-    exact-string equality and never parsed or format-validated.
+    Exact match on the account alias shared by the user. Wildcards are not
+    supported, and a new account cannot match a pre-existing alias list.
+    Values are opaque and compared exactly.
 
     """
 
@@ -630,13 +622,9 @@ class AllowedSectorSubject(RootModel[str]):
 
 class RealizeRuleSectorSubjectPayload(BaseModel):
     """
-    Exact match on the realizing account's **sector subject** for the
-    realizing application's sector — the application-visible token
-    `sub` the owner already sees in their own logs. No wildcard.
-    Rotating the subject locks the user out (it becomes a brand-new,
-    not-yet-allow-listed identity) rather than letting them bypass the
-    rule. The subject is opaque: compared by exact-string equality and
-    never parsed or format-validated.
+    Exact match on the application-visible token `sub`. Wildcards are not
+    supported. A rotated subject must be allow-listed separately. Values
+    are opaque and compared exactly.
 
     """
 
@@ -664,7 +652,7 @@ class Type(StrEnum):
 class Payload(BaseModel):
     callbackUrl: str = Field(
         ...,
-        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains. The scheme\nMUST be HTTPS except loopback HTTP for local development\n(`localhost`, `127.0.0.1`, `[::1]`). After realization,\nConnect appends the canonical `exposure-key` and\n`confirmation-key` query parameters. Existing query parameters\nand fragments are preserved; caller-supplied or duplicate\nvalues for the two canonical names are overwritten. The URL\nMUST be concrete and MUST NOT contain Inquiry-key templates.\nThe server enforces the length limit in UTF-8 bytes.\n",
+        description="Concrete callback URL for this inquiry. The host MUST match\none of the application's allowed callback domains. The scheme\nMUST be HTTPS except loopback HTTP for local development\n(`localhost`, `127.0.0.1`, `[::1]`). After realization,\nConnect appends the canonical `exposure-key` and\n`confirmation-key` query parameters. Existing query parameters\nand fragments are preserved; caller-supplied or duplicate\nvalues for the two canonical names are overwritten. The URL\nMUST be concrete and MUST NOT contain Inquiry-key templates.\nLength is measured in UTF-8 bytes.\n",
         max_length=2048,
     )
 
@@ -700,12 +688,9 @@ class ReturnMethodReveal(BaseModel):
 
 class Error(BaseModel):
     """
-    Error response body. The Connect service emits `{ "reason": "<SymbolDescription>" }`
-    for known failure modes. When the reason symbol's description begins with
-    `PRIVATE`, the body is empty (zero bytes) and only the HTTP status carries
-    signal — both `reason` and the body itself are absent in that case. A
-    missing, malformed, or structurally invalid JSON request body returns
-    `InvalidBody` without parser or validation-library detail.
+    Error response body. Known failures may include a stable `reason`.
+    Some failures are status-only and have an empty body. A missing,
+    malformed, or structurally invalid JSON body returns `InvalidBody`.
 
     """
 
@@ -897,7 +882,7 @@ class EstablishRequest(BaseModel):
     )
     returnMethods: list[ReturnMethodDeclaration] | None = Field(
         None,
-        description="Optional per-inquiry return-method declaration. Connect accepts\nCALLBACK, STATUS_POLL, and REVEAL here; DIRECT_ISSUE, OIDC, and\nDEVICE_CODE are opened by their dedicated APIs after application-\nlevel ReturnRules are configured. CALLBACK doubles as the concrete\ndelivery info (carries the callback URL). Absent means no per-\ninquiry narrowing (CALLBACK is unreachable for this inquiry\nbecause no URL is anchored). If present, the array MUST be non-\nempty; empty arrays are rejected with 400.\n",
+        description="Optional return methods for this inquiry. Connect accepts CALLBACK,\nSTATUS_POLL, and REVEAL. CALLBACK includes its concrete delivery\nURL. Absence means no per-inquiry narrowing, but CALLBACK is not\navailable without a URL. If supplied, the array MUST be non-empty.\n",
         max_length=3,
         min_length=1,
     )
