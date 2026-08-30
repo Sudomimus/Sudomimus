@@ -10,8 +10,8 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 | --- | --- | --- | --- |
 | TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
 | TypeScript | [`@sudomimus/device`](sdks/typescript/packages/device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | alpha |
-| TypeScript | [`@sudomimus/token`](sdks/typescript/packages/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
-| TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Direct-issue (Steam ticket / access key) | alpha |
+| TypeScript | [`@sudomimus/token`](sdks/typescript/packages/token) | Parse and verify Account / Workload access and refresh JWTs | alpha |
+| TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Direct-issue (Steam / access key / public key) | alpha |
 | TypeScript | [`@sudomimus/session`](sdks/typescript/packages/session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
 | Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
 | Python | [`sudomimus-device`](sdks/python/packages/sudomimus-device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | alpha |
