@@ -57,6 +57,9 @@ const verified = await client.verifyAccessToken(redeemed.accessToken);
 console.log(verified.body.sub, verified.header.kid);
 ```
 
+For Agent/Automation tokens use `verifyWorkloadAccessToken`; the pairwise
+actor is `verified.body.act.sub`.
+
 JWKS responses honor `Cache-Control: max-age` (with a 5-minute fallback). If a
 token references an unknown `kid`, the client refreshes JWKS once before
 returning `UNKNOWN_KEY_ID`.

@@ -45,7 +45,9 @@ public final class JwtToken<TBody> {
     public boolean verifyExpiration(Instant now) {
         Long epochSeconds = body instanceof AccessTokenBody access
                 ? access.expiresAt
-                : body instanceof RefreshTokenBody refresh ? refresh.expiresAt : null;
+                : body instanceof RefreshTokenBody refresh
+                        ? refresh.expiresAt
+                        : body instanceof WorkloadAccessTokenBody workload ? workload.expiresAt : null;
         if (epochSeconds == null) {
             return false;
         }

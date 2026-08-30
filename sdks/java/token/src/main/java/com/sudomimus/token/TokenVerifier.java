@@ -14,6 +14,7 @@ public final class TokenVerifier {
 
     public static final String ACCESS_TOKEN_TYPE = "vnd.sudomimus.application-access+jwt";
     public static final String REFRESH_TOKEN_TYPE = "vnd.sudomimus.application-refresh+jwt";
+    public static final String WORKLOAD_ACCESS_TOKEN_TYPE = "vnd.sudomimus.workload-access+jwt";
 
     private final PublicKeyResolver resolver;
     private final Clock clock;
@@ -37,6 +38,10 @@ public final class TokenVerifier {
 
     public JwtToken<RefreshTokenBody> verifyRefreshToken(String jwt) {
         return verify(jwt, REFRESH_TOKEN_TYPE, TokenParser::parseRefreshToken);
+    }
+
+    public JwtToken<WorkloadAccessTokenBody> verifyWorkloadAccessToken(String jwt) {
+        return verify(jwt, WORKLOAD_ACCESS_TOKEN_TYPE, TokenParser::parseWorkloadAccessToken);
     }
 
     private <TBody> JwtToken<TBody> verify(

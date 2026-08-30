@@ -64,6 +64,7 @@ public sealed class JwtToken<TBody>
         var seconds = Body switch
         {
             AccessTokenBody access => access.ExpiresAt,
+            WorkloadAccessTokenBody workload => workload.ExpiresAt,
             RefreshTokenBody refresh => refresh.ExpiresAt,
             _ => 0,
         };

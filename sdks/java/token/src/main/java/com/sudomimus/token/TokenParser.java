@@ -33,6 +33,12 @@ public final class TokenParser {
                 TokenParser::validateRefreshTokenBody);
     }
 
+    /** Parse a Workload access token carrying pairwise {@code act.sub}. */
+    public static JwtToken<WorkloadAccessTokenBody> parseWorkloadAccessToken(String jwt) {
+        return parse(jwt, WorkloadAccessTokenBody.class, TokenVerifier.WORKLOAD_ACCESS_TOKEN_TYPE,
+                TokenParser::validateWorkloadAccessTokenBody);
+    }
+
     /**
      * Decode only the header segment. Useful for inspecting the token media
      * type before committing to a full typed parse.
@@ -116,7 +122,7 @@ public final class TokenParser {
         if (!"RS256".equals(header.algorithm)
                 || !expectedTokenType.equals(header.type)
                 || isEmpty(header.keyId)) {
-            invalid("JWT protected header does not match the 4.0.0 contract.");
+            invalid("JWT protected header does not match the 4.1.0 contract.");
         }
     }
 
@@ -128,7 +134,7 @@ public final class TokenParser {
                 || isEmpty(body.jwtId)
                 || body.issuedAt == null || body.issuedAt < 0
                 || body.expiresAt == null || body.expiresAt < 1) {
-            invalid("Access-token payload does not match the 4.0.0 contract.");
+            invalid("Access-token payload does not match the 4.1.0 contract.");
         }
     }
 
@@ -140,7 +146,20 @@ public final class TokenParser {
                 || body.issuedAt == null || body.issuedAt < 0
                 || body.expiresAt == null || body.expiresAt < 1
                 || body.rotationVersion == null || body.rotationVersion < 1) {
-            invalid("Refresh-token payload does not match the 4.0.0 contract.");
+            invalid("Refresh-token payload does not match the 4.1.0 contract.");
+        }
+    }
+
+    private static void validateWorkloadAccessTokenBody(WorkloadAccessTokenBody body) {
+        if (!isAbsoluteUri(body.issuer)
+                || isEmpty(body.audience)
+                || isEmpty(body.subject)
+                || isEmpty(body.sessionId)
+                || isEmpty(body.jwtId)
+                || body.issuedAt == null || body.issuedAt < 0
+                || body.expiresAt == null || body.expiresAt < 1
+                || body.actor == null || isEmpty(body.actor.subject)) {
+            invalid("Workload access-token payload does not match the 4.1.0 contract.");
         }
     }
 

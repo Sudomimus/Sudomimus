@@ -12,7 +12,7 @@ namespace Sudomimus.Native;
 ///   browser and hands the errand back; the caller decides when to retry (e.g.
 ///   an "I'm done" button). No polling.</item>
 /// </list>
-/// The attempt is a delegate so the same loop serves both direct-issue flows,
+/// The attempt is a delegate so the same loop serves every direct-issue flow,
 /// and so the Steam flow can re-acquire a fresh ticket on every retry. Tokens
 /// are returned as raw strings on <see cref="DirectIssueResult"/>; seed your
 /// <c>RotatingSessionClient</c> from them.
@@ -95,6 +95,20 @@ public sealed class NativeAuthenticator
     }
 
     /// <summary>
+    /// Automatic mode for the public-key flow. Every retry signs a fresh
+    /// assertion and therefore receives a new replay-protection <c>jti</c>.
+    /// </summary>
+    public Task<DirectIssueResult> AuthenticatePublicKeyAsync(
+        DirectIssuePublicKeyRequest request,
+        PublicKeyCredential credential,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(credential);
+        return AuthenticateAsync(PublicKeyAttempt(request, credential), cancellationToken);
+    }
+
+    /// <summary>
     /// Automatic mode for the Steam flow. <paramref name="requestFactory"/> is
     /// invoked before every attempt so each retry carries a freshly acquired,
     /// single-use Steam ticket.
@@ -146,6 +160,17 @@ public sealed class NativeAuthenticator
         return TryAuthenticateAsync(AccessKeyAttempt(request), cancellationToken);
     }
 
+    /// <summary>Manual mode for the signed public-key flow.</summary>
+    public Task<DirectIssueOutcome> TryAuthenticatePublicKeyAsync(
+        DirectIssuePublicKeyRequest request,
+        PublicKeyCredential credential,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(credential);
+        return TryAuthenticateAsync(PublicKeyAttempt(request, credential), cancellationToken);
+    }
+
     /// <summary>
     /// Manual mode for the Steam flow. <paramref name="requestFactory"/> is
     /// invoked for the attempt so the retry carries a freshly acquired ticket.
@@ -177,6 +202,17 @@ public sealed class NativeAuthenticator
                 await requestFactory(cancellationToken).ConfigureAwait(false);
             DirectIssueSteamTicketResponse response =
                 await _client.DirectIssueSteamTicketAsync(request, cancellationToken).ConfigureAwait(false);
+            return ToResult(response.ApplicationAnchor, response.AccessToken, response.RefreshToken, response.Claims);
+        };
+
+    private Func<CancellationToken, Task<DirectIssueResult>> PublicKeyAttempt(
+        DirectIssuePublicKeyRequest request,
+        PublicKeyCredential credential)
+        => async cancellationToken =>
+        {
+            DirectIssueAccessKeyResponse response = await _client
+                .DirectIssuePublicKeyAsync(request, credential, cancellationToken)
+                .ConfigureAwait(false);
             return ToResult(response.ApplicationAnchor, response.AccessToken, response.RefreshToken, response.Claims);
         };
 

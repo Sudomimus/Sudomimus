@@ -10,14 +10,18 @@ import type {
     CreateErrandResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
+    DirectIssuePublicKeyRequest,
+    DirectIssuePublicKeyResponse,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
     ErrandStatusResponse,
     NativeClientOptions,
     NativeErrorBody,
+    PublicKeyCredential,
 } from "./declare.js";
 import { PRODUCTION_BASE_URL } from "./constants.js";
 import { NativeApiError } from "./error.js";
+import { signPublicKeyRequest } from "./public-key-assertion.js";
 
 export class NativeClient {
 
@@ -72,6 +76,32 @@ export class NativeClient {
             "/direct-issue/access-key",
             request,
         );
+    }
+
+    /**
+     * Exchange a signed registered Ed25519 public-key assertion for Account
+     * or Workload application tokens. A fresh assertion is created for every
+     * call, so retries automatically receive a new `jti`.
+     */
+    public async directIssuePublicKey(
+        request: DirectIssuePublicKeyRequest,
+        credential: PublicKeyCredential,
+    ): Promise<DirectIssuePublicKeyResponse> {
+
+        const signed = await signPublicKeyRequest(request, credential);
+        const response: Response = await this._fetch(
+            `${this._baseUrl}/direct-issue/public-key`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": signed.authorization,
+                },
+                body: signed.body,
+            },
+        );
+        return this._handle<DirectIssuePublicKeyResponse>(response);
     }
 
     /**

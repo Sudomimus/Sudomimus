@@ -1,8 +1,9 @@
 # sudomimus-token
 
-Python SDK for parsing and verifying Sudomimus access and refresh JWTs.
+Python SDK for parsing and verifying Sudomimus Account access, Workload access,
+and refresh JWTs.
 
-Sudomimus 4.0 application tokens use an exact JOSE header (`alg`, `kid`,
+Sudomimus 4.1 application tokens use an exact JOSE header (`alg`, `kid`,
 `typ`); registered claims live in the payload. Access payloads carry `sub`,
 `sid`, and `jti`; refresh payloads carry `sid`, `jti`, and `rotationVersion`
 without a user identifier. The verifier checks structure, token media type,
@@ -28,6 +29,9 @@ verifier = TokenVerifier(resolve_public_key)
 access = verifier.verify_access_token(jwt)
 print(access.body.sub, access.body.sid, access.body.aud)
 ```
+
+Use `verify_workload_access_token` for Agent/Automation tokens; `body.sub` is
+the owner Account subject and `body.act.sub` is the pairwise Workload actor.
 
 Async callers use `AsyncTokenVerifier` with an awaitable resolver:
 

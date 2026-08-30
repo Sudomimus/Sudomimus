@@ -1,8 +1,8 @@
 # Sudomimus.Native
 
 C# SDK for the [Sudomimus](https://sudomimus.com) Native API. Exchanges a
-Steam Web API auth ticket for application access and refresh tokens in a
-single round trip.
+Steam ticket, access key, or signed Ed25519 public-key assertion for application
+access and refresh tokens in a single round trip.
 
 Mirrors the [`@sudomimus/native`](https://www.npmjs.com/package/@sudomimus/native)
 TypeScript SDK. Generic .NET 8 package — no Steam SDK, no Godot dependency.
@@ -22,6 +22,19 @@ var response = await client.DirectIssueSteamTicketAsync(new DirectIssueSteamTick
 });
 
 // response.AccessToken / response.RefreshToken — parse with Sudomimus.Token.
+```
+
+For a registered public key, supply a signer that returns the raw 64-byte
+Ed25519 signature. The SDK signs a fresh assertion over the exact request body:
+
+```csharp
+var response = await client.DirectIssuePublicKeyAsync(
+    new DirectIssuePublicKeyRequest { ApplicationAnchor = "anchor-xxx" },
+    new PublicKeyCredential
+    {
+        KeyId = "pky_...",
+        SignAsync = (input, ct) => SignWithEd25519Async(input, ct),
+    });
 ```
 
 For tickets to verify, the calling Steam client SDK **must** pass identity

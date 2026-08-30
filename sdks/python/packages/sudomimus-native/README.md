@@ -2,7 +2,7 @@
 
 Python SDK for the Sudomimus Native API — the direct-issue gateway for
 native callers (desktop applications, games, headless processes). Exchange a
-Steam Web API auth ticket or an access-key credential for application access
+Steam Web API auth ticket, access-key credential, or signed Ed25519 key for application access
 and refresh tokens in a single round trip.
 
 ## Install
@@ -41,6 +41,18 @@ tokens = client.direct_issue_access_key(
 )
 ```
 
+Registered public-key credentials accept a raw Ed25519 signing callback; the
+SDK creates the short-lived assertion and binds it to the exact request bytes:
+
+```python
+from sudomimus_native import DirectIssuePublicKeyRequest, PublicKeyCredential
+
+tokens = client.direct_issue_public_key(
+    DirectIssuePublicKeyRequest(applicationAnchor="my-app"),
+    PublicKeyCredential("pky_...", private_key.sign),
+)
+```
+
 An `AsyncNativeClient` with the same methods is available for `asyncio`
 callers. Non-2xx responses raise `NativeApiError` (inspect `.status` and
 `.reason`). Steam and access-key admission failures return `429`, or `503`
@@ -57,6 +69,8 @@ and re-exported from the package root:
 from sudomimus_native import (
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
+    DirectIssuePublicKeyRequest,
+    PublicKeyCredential,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
     NativeError,

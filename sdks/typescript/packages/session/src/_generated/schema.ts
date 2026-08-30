@@ -60,7 +60,9 @@ export interface paths {
          *     success. A near-simultaneous retry may receive the already-issued
          *     winning token pair. Reuse outside that allowance revokes the session;
          *     restart through an initial issuance flow. OIDC sessions must use the
-         *     OIDC `/token` endpoint instead.
+         *     OIDC `/token` endpoint instead. Workload refresh tokens have the same
+         *     actor-free wire shape; the authoritative session restores the Workload
+         *     actor and emits a dedicated Workload access token on every rotation.
          */
         post: operations["refresh"];
         delete?: never;
@@ -83,7 +85,9 @@ export interface paths {
          * @description Returns the current effective status of the session identified by a
          *     signed access token. No client-auth JWT is required. The access token's
          *     own expiry is intentionally ignored because the response describes the
-         *     underlying session rather than token validity.
+         *     underlying session rather than token validity. Workload tokens are
+         *     accepted only when the session's Workload principal, generation,
+         *     pairwise actor subject, and source credential remain authoritative.
          */
         post: operations["introspect"];
         delete?: never;
@@ -241,13 +245,20 @@ export interface components {
         };
         RefreshResponse: {
             claims: components["schemas"]["ClaimsStateView"];
-            /** @description Newly issued short-lived access token JWT carrying payload `sid` and pairwise `sub` with a fresh `jti`. */
+            /**
+             * @description Newly issued short-lived access token JWT carrying payload `sid`
+             *     and owner Account pairwise `sub` with a fresh `jti`. A
+             *     Workload-descended session uses media type
+             *     `vnd.sudomimus.workload-access+jwt` and adds exact pairwise
+             *     `act: {sub}`; an Account session uses
+             *     `vnd.sudomimus.application-access+jwt` and has no `act`.
+             */
             accessToken: string;
             /** @description Newly issued refresh token JWT for the same payload `sid`, with a fresh `jti` and incremented `rotationVersion`; the presented version has been consumed. */
             refreshToken: string;
         };
         IntrospectRequest: {
-            /** @description Signed access credential identifying the session to inspect; its own `exp` is intentionally ignored. */
+            /** @description Signed Account or Workload access credential identifying the session to inspect; its own `exp` is intentionally ignored. */
             accessToken: string;
         };
         UserInfoResponse: {
@@ -297,7 +308,7 @@ export interface components {
             revoked: boolean;
         };
         RevokeAllRequest: {
-            /** @description Application-visible sector subject (`sub`) for the account to revoke. */
+            /** @description Application-visible owner Account sector subject (`sub`). Revocation advances the shared Account/Application authority and ends both human and Workload-descended sessions for that subject. */
             subject: string;
         };
         RevokeAllResponse: {

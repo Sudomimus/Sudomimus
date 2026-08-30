@@ -12,6 +12,9 @@ import type {
     RefreshToken,
     RefreshTokenBody,
     RefreshTokenHeader,
+    WorkloadAccessToken,
+    WorkloadAccessTokenBody,
+    WorkloadAccessTokenHeader,
 } from "./declare.js";
 import { ApplicationToken } from "./token.js";
 
@@ -63,6 +66,15 @@ const isRefreshHeader = (value: unknown): value is RefreshTokenHeader => {
         && value.typ === "vnd.sudomimus.application-refresh+jwt";
 };
 
+const isWorkloadAccessHeader = (value: unknown): value is WorkloadAccessTokenHeader => {
+
+    return isRecord(value)
+        && hasExactKeys(value, ["alg", "kid", "typ"])
+        && value.alg === "RS256"
+        && isNonEmptyString(value.kid)
+        && value.typ === "vnd.sudomimus.workload-access+jwt";
+};
+
 const isAccessBody = (value: unknown): value is AccessTokenBody => {
 
     return isRecord(value)
@@ -89,6 +101,20 @@ const isRefreshBody = (value: unknown): value is RefreshTokenBody => {
         && isIntegerAtLeast(value.rotationVersion, 1);
 };
 
+const isWorkloadAccessBody = (value: unknown): value is WorkloadAccessTokenBody => {
+
+    if (!isRecord(value) || !hasExactKeys(value, ["iss", "aud", "sub", "sid", "jti", "iat", "exp", "act"])) {
+
+        return false;
+    }
+
+    const { act, ...accountClaims } = value;
+    return isAccessBody(accountClaims)
+        && isRecord(act)
+        && hasExactKeys(act, ["sub"])
+        && isNonEmptyString(act.sub);
+};
+
 export const peekTokenHeader = (jwt: string): Record<string, unknown> | null => {
 
     const parsed = ApplicationToken.parse(jwt);
@@ -113,6 +139,16 @@ export const parseRefreshToken = (jwt: string): RefreshToken | null => {
 
     const parsed = ApplicationToken.parse(jwt);
     return parsed !== null && isRefreshHeader(parsed.header) && isRefreshBody(parsed.body)
+        ? new ApplicationToken(jwt, parsed.signingInput, parsed.signature, parsed.header, parsed.body)
+        : null;
+};
+
+export const parseWorkloadAccessToken = (jwt: string): WorkloadAccessToken | null => {
+
+    const parsed = ApplicationToken.parse(jwt);
+    return parsed !== null
+        && isWorkloadAccessHeader(parsed.header)
+        && isWorkloadAccessBody(parsed.body)
         ? new ApplicationToken(jwt, parsed.signingInput, parsed.signature, parsed.header, parsed.body)
         : null;
 };

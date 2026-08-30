@@ -5,17 +5,19 @@
  * @description Token verifier
  */
 
-import { ACCESS_TOKEN_TYPE, REFRESH_TOKEN_TYPE } from "./constants.js";
+import { ACCESS_TOKEN_TYPE, REFRESH_TOKEN_TYPE, WORKLOAD_ACCESS_TOKEN_TYPE } from "./constants.js";
 import type {
     AccessToken,
     PublicKeyResolver,
     RefreshToken,
     TokenVerifierOptions,
+    WorkloadAccessToken,
 } from "./declare.js";
 import { TokenError } from "./error.js";
 import {
     parseAccessToken,
     parseRefreshToken,
+    parseWorkloadAccessToken,
     peekTokenBody,
     peekTokenHeader,
 } from "./parse.js";
@@ -39,11 +41,20 @@ export class TokenVerifier {
         return this._verify(jwt, REFRESH_TOKEN_TYPE, parseRefreshToken) as Promise<RefreshToken>;
     }
 
+    public async verifyWorkloadAccessToken(jwt: string): Promise<WorkloadAccessToken> {
+
+        return this._verify(
+            jwt,
+            WORKLOAD_ACCESS_TOKEN_TYPE,
+            parseWorkloadAccessToken,
+        ) as Promise<WorkloadAccessToken>;
+    }
+
     private async _verify(
         jwt: string,
         expectedTokenType: string,
-        parser: (jwt: string) => AccessToken | RefreshToken | null,
-    ): Promise<AccessToken | RefreshToken> {
+        parser: (jwt: string) => AccessToken | RefreshToken | WorkloadAccessToken | null,
+    ): Promise<AccessToken | RefreshToken | WorkloadAccessToken> {
 
         const header = peekTokenHeader(jwt);
         const body = peekTokenBody(jwt);
@@ -81,11 +92,11 @@ export class TokenVerifier {
             );
         }
 
-        const parsed: AccessToken | RefreshToken | null = parser(jwt);
+        const parsed: AccessToken | RefreshToken | WorkloadAccessToken | null = parser(jwt);
 
         if (parsed === null) {
 
-            throw new TokenError("INVALID_JWT", "Token claims do not match the 4.0.0 contract.");
+            throw new TokenError("INVALID_JWT", "Token claims do not match the 4.1.0 contract.");
         }
 
         if (!parsed.verifyExpiration(new Date())) {

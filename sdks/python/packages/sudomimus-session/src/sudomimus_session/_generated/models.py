@@ -103,7 +103,7 @@ class RefreshResponse(BaseModel):
     claims: ClaimsStateView
     accessToken: str = Field(
         ...,
-        description="Newly issued short-lived access token JWT carrying payload `sid` and pairwise `sub` with a fresh `jti`.",
+        description="Newly issued short-lived access token JWT carrying payload `sid`\nand owner Account pairwise `sub` with a fresh `jti`. A\nWorkload-descended session uses media type\n`vnd.sudomimus.workload-access+jwt` and adds exact pairwise\n`act: {sub}`; an Account session uses\n`vnd.sudomimus.application-access+jwt` and has no `act`.\n",
     )
     refreshToken: str = Field(
         ...,
@@ -117,7 +117,7 @@ class IntrospectRequest(BaseModel):
     )
     accessToken: str = Field(
         ...,
-        description="Signed access credential identifying the session to inspect; its own `exp` is intentionally ignored.",
+        description="Signed Account or Workload access credential identifying the session to inspect; its own `exp` is intentionally ignored.",
     )
 
 
@@ -207,7 +207,7 @@ class RevokeAllRequest(BaseModel):
     )
     subject: str = Field(
         ...,
-        description="Application-visible sector subject (`sub`) for the account to revoke.",
+        description="Application-visible owner Account sector subject (`sub`). Revocation advances the shared Account/Application authority and ends both human and Workload-descended sessions for that subject.",
     )
 
 

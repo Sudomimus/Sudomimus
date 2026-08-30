@@ -36,7 +36,10 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
         Requests.Add(new RecordedRequest(
             request.Method,
             request.RequestUri,
-            body));
+            body,
+            request.Headers.TryGetValues("Authorization", out var values)
+                ? values.Single()
+                : null));
 
         if (_responses.Count == 0)
         {
@@ -46,4 +49,8 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     }
 }
 
-internal sealed record RecordedRequest(HttpMethod Method, Uri? RequestUri, string? Body);
+internal sealed record RecordedRequest(
+    HttpMethod Method,
+    Uri? RequestUri,
+    string? Body,
+    string? Authorization);

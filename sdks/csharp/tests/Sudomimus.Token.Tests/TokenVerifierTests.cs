@@ -27,6 +27,18 @@ public class TokenVerifierTests
     }
 
     [Fact]
+    public async Task VerifyWorkloadAccessTokenAsync_ExposesOwnerAndActorSubjects()
+    {
+        var keys = TestHelpers.GenerateRsaKeyPair();
+        var jwt = TestHelpers.MintWorkloadAccessToken(keys.PrivateKeyPem);
+
+        var token = await MakeVerifier(keys.PublicKeyPem).VerifyWorkloadAccessTokenAsync(jwt);
+
+        Assert.Equal("owner-subject", token.Body.Subject);
+        Assert.Equal("workload-subject", token.Body.Actor.Subject);
+    }
+
+    [Fact]
     public async Task VerifyAccessTokenAsync_ThrowsWrongTokenType_OnRefreshToken()
     {
         var keys = TestHelpers.GenerateRsaKeyPair();

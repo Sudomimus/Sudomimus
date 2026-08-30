@@ -14,9 +14,11 @@ from sudomimus_native import (
     AsyncNativeClient,
     CreateErrandRequest,
     DirectIssueAccessKeyRequest,
+    DirectIssuePublicKeyRequest,
     DirectIssueSteamTicketRequest,
     NativeApiError,
     NativeClient,
+    PublicKeyCredential,
     Status,
 )
 
@@ -90,6 +92,25 @@ def test_direct_issue_access_key() -> None:
                 accessKeySecret=ACCESS_KEY_SECRET,
             )
         )
+    assert result.accessToken == "a.b.c"
+
+
+def test_direct_issue_public_key_binds_exact_body() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = request.content
+        captured["authorization"] = request.headers["Authorization"]
+        return _token_response(request)
+
+    credential = PublicKeyCredential("pky_test", lambda _input: bytes([7]) * 64)
+    with _client(handler) as client:
+        result = client.direct_issue_public_key(
+            DirectIssuePublicKeyRequest(applicationAnchor="my-app"), credential
+        )
+
+    assert captured["body"] == b'{"applicationAnchor":"my-app"}'
+    assert captured["authorization"].startswith("SudomimusPublicKeyJWT ")
     assert result.accessToken == "a.b.c"
 
 

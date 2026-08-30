@@ -12,10 +12,12 @@ from .models import (
     AccessTokenHeader,
     RefreshTokenBody,
     RefreshTokenHeader,
+    WorkloadAccessTokenBody,
+    WorkloadAccessTokenHeader,
 )
 
-HeaderT = TypeVar("HeaderT", AccessTokenHeader, RefreshTokenHeader)
-BodyT = TypeVar("BodyT", AccessTokenBody, RefreshTokenBody)
+HeaderT = TypeVar("HeaderT", AccessTokenHeader, RefreshTokenHeader, WorkloadAccessTokenHeader)
+BodyT = TypeVar("BodyT", AccessTokenBody, RefreshTokenBody, WorkloadAccessTokenBody)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,3 +47,4 @@ class JwtToken(Generic[HeaderT, BodyT]):
 
 AccessToken = JwtToken[AccessTokenHeader, AccessTokenBody]
 RefreshToken = JwtToken[RefreshTokenHeader, RefreshTokenBody]
+WorkloadAccessToken = JwtToken[WorkloadAccessTokenHeader, WorkloadAccessTokenBody]

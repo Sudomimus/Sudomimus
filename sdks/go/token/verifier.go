@@ -31,6 +31,14 @@ func (v *Verifier) VerifyRefreshToken(ctx context.Context, jwt string) (*Refresh
 	return parsed, err
 }
 
+// VerifyWorkloadAccessToken parses and verifies a Workload access token.
+func (v *Verifier) VerifyWorkloadAccessToken(ctx context.Context, jwt string) (*WorkloadAccessToken, error) {
+	parsed, err := verifyWith[WorkloadAccessTokenBody](
+		ctx, v, jwt, WorkloadAccessTokenType, ParseWorkloadAccessToken,
+	)
+	return parsed, err
+}
+
 func verifyWith[TBody any](
 	ctx context.Context,
 	v *Verifier,

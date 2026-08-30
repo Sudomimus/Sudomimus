@@ -17,6 +17,7 @@ from sudomimus_token import (
     decode_base64url,
     encode_base64url,
     parse_access_token,
+    parse_workload_access_token,
     peek_header,
 )
 
@@ -30,10 +31,14 @@ def _keypair() -> tuple[str, str]:
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     ).decode("ascii")
-    public_pem = key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode("ascii")
+    public_pem = (
+        key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("ascii")
+    )
     return private_pem, public_pem
 
 
@@ -78,6 +83,29 @@ def test_verify_access_token_happy_path() -> None:
     assert token.body.sub == "subject-1"
     assert token.body.sid == "session-1"
     assert token.body.aud == ANCHOR
+
+
+def test_verify_workload_access_token_happy_path() -> None:
+    private_pem, public_pem = _keypair()
+    now = int(time.time())
+    jwt = _mint(
+        private_pem,
+        typ="vnd.sudomimus.workload-access+jwt",
+        body={
+            "iss": "https://connect-api.sudomimus.com",
+            "aud": ANCHOR,
+            "sub": "owner-subject",
+            "sid": "session-1",
+            "jti": "access-1",
+            "iat": now,
+            "exp": now + 60,
+            "act": {"sub": "workload-subject"},
+        },
+    )
+    parsed = parse_workload_access_token(jwt)
+    assert parsed.body.act.sub == "workload-subject"
+    verified = TokenVerifier(lambda _aud, _kid: public_pem).verify_workload_access_token(jwt)
+    assert verified.body.sub == "owner-subject"
 
 
 def test_access_token_rejects_profile_claims() -> None:

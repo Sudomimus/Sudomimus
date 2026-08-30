@@ -48,6 +48,15 @@ class DirectIssueAccessKeyRequest(BaseModel):
     )
 
 
+class DirectIssuePublicKeyRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    applicationAnchor: str = Field(
+        ..., description="Public anchor identifying the integrating application."
+    )
+
+
 class DirectIssueSteamTicketRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -58,6 +67,9 @@ class DirectIssueSteamTicketRequest(BaseModel):
     steamTicketHex: str = Field(
         ...,
         description='Hex-encoded Steam Web API auth ticket bytes returned from\n`ISteamUser::GetAuthTicketForWebApi("sudomimus")`. Hexadecimal\ncharacters are case-insensitive.\n',
+        max_length=5120,
+        min_length=2,
+        pattern="^(?:[0-9a-fA-F]{2}){1,2560}$",
     )
     steamAppId: int = Field(
         ...,
@@ -194,7 +206,7 @@ class DirectIssueAccessKeyResponse(BaseModel):
     applicationAnchor: str
     accessToken: str = Field(
         ...,
-        description="Short-lived access token (JWT). Payload `sub` is the pairwise\nsector subject, `sid` identifies the session, and\n`jti` identifies this token instance. It contains no profile claims\nor raw account identifier; use Session API `/userinfo` for current\nshared identity data.\n",
+        description="Account credentials use media type\n`vnd.sudomimus.application-access+jwt`. Workload credentials use\n`vnd.sudomimus.workload-access+jwt` and add exact\n`act: {sub: <pairwise-workload-subject>}`. In both cases payload\n`sub` is the owner Account's pairwise sector subject, `sid`\nidentifies the session, and `jti` identifies this token instance.\nThe token contains no profile claims or raw Account/Workload\nidentifier; use Session API `/userinfo` for current shared data.\n",
     )
     refreshToken: str = Field(
         ...,

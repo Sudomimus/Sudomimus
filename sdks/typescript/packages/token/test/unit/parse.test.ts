@@ -5,7 +5,7 @@
  * @description Parse.test
  */
 
-import { parseAccessToken, parseRefreshToken } from "../../src/parse";
+import { parseAccessToken, parseRefreshToken, parseWorkloadAccessToken } from "../../src/parse";
 import {
     APPLICATION_ANCHOR,
     generateRsaKeyPair,
@@ -52,6 +52,31 @@ describe("parseAccessToken", () => {
             firstName: "Ada",
         } as Partial<import("../../src").AccessTokenBody> });
 
+        expect(parseAccessToken(jwt)).toBeNull();
+    });
+});
+
+describe("parseWorkloadAccessToken", () => {
+
+    it("requires and exposes the pairwise workload actor", () => {
+
+        const { privateKey } = generateRsaKeyPair();
+        const issuedAt = Math.floor(Date.now() / 1000);
+        const jwt = mintAccessToken(privateKey, {
+            tokenType: "vnd.sudomimus.workload-access+jwt",
+            body: {
+                iss: "https://connect-api.sudomimus.com",
+                aud: APPLICATION_ANCHOR,
+                sub: "owner-subject",
+                sid: "session-1",
+                jti: "access-1",
+                iat: issuedAt,
+                exp: issuedAt + 3600,
+                act: { sub: "workload-subject" },
+            } as Partial<import("../../src").AccessTokenBody>,
+        });
+
+        expect(parseWorkloadAccessToken(jwt)?.body.act.sub).toBe("workload-subject");
         expect(parseAccessToken(jwt)).toBeNull();
     });
 });

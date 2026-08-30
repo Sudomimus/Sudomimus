@@ -14,6 +14,7 @@ from ._generated.models import (
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
     DirectIssueDeniedError,
+    DirectIssuePublicKeyRequest,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
     ErrandStatusResponse,
@@ -21,6 +22,7 @@ from ._generated.models import (
 )
 from .constants import PRODUCTION_BASE_URL
 from .errors import NativeApiError
+from .public_key_assertion import PublicKeyCredential, sign_public_key_request
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 
@@ -69,27 +71,35 @@ class NativeClient:
         request: DirectIssueSteamTicketRequest,
     ) -> DirectIssueSteamTicketResponse:
         """Exchange a Steam Web API auth ticket for application tokens."""
-        return self._post(
-            "/direct-issue/steam-ticket", request, DirectIssueSteamTicketResponse
-        )
+        return self._post("/direct-issue/steam-ticket", request, DirectIssueSteamTicketResponse)
 
     def direct_issue_access_key(
         self,
         request: DirectIssueAccessKeyRequest,
     ) -> DirectIssueAccessKeyResponse:
         """Exchange an access-key credential for application tokens."""
-        return self._post(
-            "/direct-issue/access-key", request, DirectIssueAccessKeyResponse
+        return self._post("/direct-issue/access-key", request, DirectIssueAccessKeyResponse)
+
+    def direct_issue_public_key(
+        self,
+        request: DirectIssuePublicKeyRequest,
+        credential: PublicKeyCredential,
+    ) -> DirectIssueAccessKeyResponse:
+        """Exchange a fresh signed Ed25519 assertion for application tokens."""
+        signed = sign_public_key_request(request, credential)
+        response = self._client.post(
+            f"{self._base_url}/direct-issue/public-key",
+            content=signed.body,
+            headers={**_JSON_HEADERS, "Authorization": signed.authorization},
         )
+        return _handle(response, DirectIssueAccessKeyResponse)
 
     def create_errand(
         self,
         request: CreateErrandRequest,
     ) -> CreateErrandResponse:
         """Proactively mint an errand for a user you already authenticated."""
-        return self._post(
-            "/errand", request, CreateErrandResponse
-        )
+        return self._post("/errand", request, CreateErrandResponse)
 
     def errand_status(
         self,

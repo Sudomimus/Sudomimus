@@ -131,6 +131,11 @@ public sealed class SessionClient
         CancellationToken ct = default)
         => _tokenVerifier.VerifyRefreshTokenAsync(jwt, ct);
 
+    public Task<JwtToken<WorkloadAccessTokenBody>> VerifyWorkloadAccessTokenAsync(
+        string jwt,
+        CancellationToken ct = default)
+        => _tokenVerifier.VerifyWorkloadAccessTokenAsync(jwt, ct);
+
     public Task<RefreshResponse> RefreshAsync(RefreshRequest request, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);

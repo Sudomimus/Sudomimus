@@ -16,6 +16,7 @@ from sudomimus_token import (
     RefreshToken,
     TokenError,
     TokenErrorCode,
+    WorkloadAccessToken,
     rsa_jwk_to_pem,
 )
 
@@ -131,6 +132,9 @@ class AsyncSessionClient:
 
     async def verify_refresh_token(self, jwt: str) -> RefreshToken:
         return await self._verifier.verify_refresh_token(jwt)
+
+    async def verify_workload_access_token(self, jwt: str) -> WorkloadAccessToken:
+        return await self._verifier.verify_workload_access_token(jwt)
 
     async def refresh(self, request: RefreshRequest) -> RefreshResponse:
         return await self._post("/refresh", request, RefreshResponse)

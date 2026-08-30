@@ -26,6 +26,13 @@ public static class TokenParser
     public static JwtToken<RefreshTokenBody> ParseRefreshToken(string jwt) =>
         Parse<RefreshTokenBody>(jwt, TokenVerifier.RefreshTokenType, ValidateRefreshTokenBody);
 
+    /// <summary>Parse a Workload access token carrying pairwise <c>act.sub</c>.</summary>
+    public static JwtToken<WorkloadAccessTokenBody> ParseWorkloadAccessToken(string jwt) =>
+        Parse<WorkloadAccessTokenBody>(
+            jwt,
+            TokenVerifier.WorkloadAccessTokenType,
+            ValidateWorkloadAccessTokenBody);
+
     /// <summary>
     /// Decode and return only the header segment. Useful for inspecting the
     /// token media type before committing to a full typed parse — e.g.
@@ -172,7 +179,7 @@ public static class TokenParser
             || !string.Equals(header.Type, expectedTokenType, StringComparison.Ordinal)
             || string.IsNullOrEmpty(header.KeyId))
         {
-            throw new TokenException(TokenErrorCode.InvalidJwt, "JWT protected header does not match the 4.0.0 contract.");
+            throw new TokenException(TokenErrorCode.InvalidJwt, "JWT protected header does not match the 4.1.0 contract.");
         }
     }
 
@@ -186,7 +193,7 @@ public static class TokenParser
             || body.IssuedAt < 0
             || body.ExpiresAt < 1)
         {
-            throw new TokenException(TokenErrorCode.InvalidJwt, "Access-token payload does not match the 4.0.0 contract.");
+            throw new TokenException(TokenErrorCode.InvalidJwt, "Access-token payload does not match the 4.1.0 contract.");
         }
     }
 
@@ -200,7 +207,24 @@ public static class TokenParser
             || body.ExpiresAt < 1
             || body.RotationVersion < 1)
         {
-            throw new TokenException(TokenErrorCode.InvalidJwt, "Refresh-token payload does not match the 4.0.0 contract.");
+            throw new TokenException(TokenErrorCode.InvalidJwt, "Refresh-token payload does not match the 4.1.0 contract.");
+        }
+    }
+
+    private static void ValidateWorkloadAccessTokenBody(WorkloadAccessTokenBody body)
+    {
+        if (!IsAbsoluteUri(body.Issuer)
+            || string.IsNullOrEmpty(body.Audience)
+            || string.IsNullOrEmpty(body.Subject)
+            || string.IsNullOrEmpty(body.SessionId)
+            || string.IsNullOrEmpty(body.JwtId)
+            || body.IssuedAt < 0
+            || body.ExpiresAt < 1
+            || string.IsNullOrEmpty(body.Actor?.Subject))
+        {
+            throw new TokenException(
+                TokenErrorCode.InvalidJwt,
+                "Workload access-token payload does not match the 4.1.0 contract.");
         }
     }
 

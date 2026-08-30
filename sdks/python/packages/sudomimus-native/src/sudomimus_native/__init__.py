@@ -14,6 +14,7 @@ from ._generated.models import (
     CreateErrandResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
+    DirectIssuePublicKeyRequest,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
     ErrandHandoff,
@@ -29,6 +30,13 @@ from .async_client import AsyncNativeClient
 from .client import NativeClient
 from .constants import PRODUCTION_BASE_URL, STEAM_TICKET_IDENTITY
 from .errors import NativeApiError
+from .public_key_assertion import (
+    PUBLIC_KEY_ASSERTION_AUDIENCE,
+    PUBLIC_KEY_ASSERTION_TYPE,
+    PublicKeyCredential,
+    SignedPublicKeyRequest,
+    sign_public_key_request,
+)
 
 __all__ = [
     "PRODUCTION_BASE_URL",
@@ -40,6 +48,7 @@ __all__ = [
     "CreateErrandResponse",
     "DirectIssueAccessKeyRequest",
     "DirectIssueAccessKeyResponse",
+    "DirectIssuePublicKeyRequest",
     "DirectIssueSteamTicketRequest",
     "DirectIssueSteamTicketResponse",
     "ErrandHandoff",
@@ -47,7 +56,12 @@ __all__ = [
     "NativeApiError",
     "NativeClient",
     "NativeError",
+    "PUBLIC_KEY_ASSERTION_AUDIENCE",
+    "PUBLIC_KEY_ASSERTION_TYPE",
+    "PublicKeyCredential",
     "Requirement",
     "State",
     "Status",
+    "SignedPublicKeyRequest",
+    "sign_public_key_request",
 ]

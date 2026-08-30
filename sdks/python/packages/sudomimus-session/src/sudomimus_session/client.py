@@ -16,6 +16,7 @@ from sudomimus_token import (
     TokenError,
     TokenErrorCode,
     TokenVerifier,
+    WorkloadAccessToken,
     rsa_jwk_to_pem,
 )
 
@@ -134,6 +135,9 @@ class SessionClient:
 
     def verify_refresh_token(self, jwt: str) -> RefreshToken:
         return self._verifier.verify_refresh_token(jwt)
+
+    def verify_workload_access_token(self, jwt: str) -> WorkloadAccessToken:
+        return self._verifier.verify_workload_access_token(jwt)
 
     def refresh(self, request: RefreshRequest) -> RefreshResponse:
         return self._post("/refresh", request, RefreshResponse)

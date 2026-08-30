@@ -1067,7 +1067,7 @@ wheels = [
 
 [[package]]
 name = "sudomimus-connect"
-version = "4.0.0"
+version = "4.1.0"
 source = { editable = "packages/sudomimus-connect" }
 dependencies = [
     { name = "httpx" },
@@ -1086,7 +1086,7 @@ requires-dist = [
 
 [[package]]
 name = "sudomimus-device"
-version = "4.0.0"
+version = "4.1.0"
 source = { editable = "packages/sudomimus-device" }
 dependencies = [
     { name = "httpx" },
@@ -1103,7 +1103,7 @@ requires-dist = [
 
 [[package]]
 name = "sudomimus-native"
-version = "4.0.0"
+version = "4.1.0"
 source = { editable = "packages/sudomimus-native" }
 dependencies = [
     { name = "httpx" },
@@ -1153,7 +1153,7 @@ dev = [
 
 [[package]]
 name = "sudomimus-session"
-version = "4.0.0"
+version = "4.1.0"
 source = { editable = "packages/sudomimus-session" }
 dependencies = [
     { name = "httpx" },
@@ -1170,7 +1170,7 @@ requires-dist = [
 
 [[package]]
 name = "sudomimus-token"
-version = "4.0.0"
+version = "4.1.0"
 source = { editable = "packages/sudomimus-token" }
 dependencies = [
     { name = "cryptography" },

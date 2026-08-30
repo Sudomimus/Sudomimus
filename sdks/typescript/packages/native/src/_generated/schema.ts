@@ -45,6 +45,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/direct-issue/public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange an Ed25519 public-key assertion for application tokens.
+         * @description Authenticates an Account or one of its Agent/Automation principals with
+         *     a compact JWT signed by a registered Ed25519 key. The credential's
+         *     immutable Application/Sector applicability must include the named
+         *     application. Account credentials issue ordinary application access
+         *     tokens; Workload credentials issue the dedicated Workload access-token
+         *     type with pairwise `act.sub`. Credential rejection uses the single
+         *     opaque reason `PublicKeyDirectDenied`.
+         *
+         *     The JOSE header must be exact `{alg:"EdDSA",
+         *     typ:"vnd.sudomimus.public-key-assertion+jwt",kid:"pky_..."}`. Claims
+         *     must be exact `iss`, `aud`, `iat`, `exp`, `jti`, and `requestHash`;
+         *     `iss` equals `kid`, `aud` is `sudomimus-native-public-key`, lifetime is
+         *     at most 60 seconds, and `requestHash` is base64url SHA-256 of the exact
+         *     request-body bytes. Every retry uses a new random 128-bit `jti`.
+         */
+        post: operations["directIssuePublicKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/direct-issue/steam-ticket": {
         parameters: {
             query?: never;
@@ -149,15 +182,22 @@ export interface components {
              */
             accessKeySecret: string;
         };
+        DirectIssuePublicKeyRequest: {
+            /** @description Public anchor identifying the integrating application. */
+            applicationAnchor: string;
+        };
         DirectIssueAccessKeyResponse: {
             claims: components["schemas"]["ClaimsStateView"];
             applicationAnchor: string;
             /**
-             * @description Short-lived access token (JWT). Payload `sub` is the pairwise
-             *     sector subject, `sid` identifies the session, and
-             *     `jti` identifies this token instance. It contains no profile claims
-             *     or raw account identifier; use Session API `/userinfo` for current
-             *     shared identity data.
+             * @description Account credentials use media type
+             *     `vnd.sudomimus.application-access+jwt`. Workload credentials use
+             *     `vnd.sudomimus.workload-access+jwt` and add exact
+             *     `act: {sub: <pairwise-workload-subject>}`. In both cases payload
+             *     `sub` is the owner Account's pairwise sector subject, `sid`
+             *     identifies the session, and `jti` identifies this token instance.
+             *     The token contains no profile claims or raw Account/Workload
+             *     identifier; use Session API `/userinfo` for current shared data.
              */
             accessToken: string;
             /** @description Long-lived refresh token JWT with stable payload `sid`, version identifier `jti`, and positive `rotationVersion`. It contains no user identifier. Use Session API `/refresh` for renewal without re-presenting the access key. */
@@ -435,6 +475,119 @@ export interface operations {
                 content?: never;
             };
             /** @description Access-key issuance is temporarily unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    directIssuePublicKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectIssuePublicKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Tokens issued. */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["CredentialCacheControl"];
+                    Pragma: components["headers"]["CredentialPragma"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectIssueAccessKeyResponse"];
+                };
+            };
+            /** @description Malformed request body or public-key assertion syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Reason `PublicKeyDirectDenied`: the credential or signed assertion
+             *     was rejected without revealing whether the key exists or which
+             *     principal owns it.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Application rule, Account lifecycle, email-domain policy, or claim
+             *     requirements refused issuance. Claim-gate responses use the same
+             *     `claims` and `errand` handoff as AccessKey issuance.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectIssueDeniedError"];
+                };
+            };
+            /** @description Application anchor not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description The assertion `jti` was already seen, or identity authority changed
+             *     during issuance. Sign a fresh assertion and retry the complete
+             *     exchange.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many public-key attempts. Back off before retrying. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Public-key issuance failed with an empty response body. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Public-key issuance is temporarily unavailable. */
             503: {
                 headers: {
                     [name: string]: unknown;

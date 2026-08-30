@@ -14,6 +14,8 @@ export type DirectIssueSteamTicketRequest = components["schemas"]["DirectIssueSt
 export type DirectIssueSteamTicketResponse = components["schemas"]["DirectIssueSteamTicketResponse"];
 export type DirectIssueAccessKeyRequest = components["schemas"]["DirectIssueAccessKeyRequest"];
 export type DirectIssueAccessKeyResponse = components["schemas"]["DirectIssueAccessKeyResponse"];
+export type DirectIssuePublicKeyRequest = components["schemas"]["DirectIssuePublicKeyRequest"];
+export type DirectIssuePublicKeyResponse = DirectIssueAccessKeyResponse;
 export type ClaimsStateView = components["schemas"]["ClaimsStateView"];
 export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementStateView"];
 export type ErrandHandoff = components["schemas"]["ErrandHandoff"];
@@ -33,6 +35,14 @@ export type NativeErrorBody = components["schemas"]["DirectIssueDeniedError"];
 export interface NativeClientOptions {
     baseUrl?: string;
     fetch?: typeof globalThis.fetch;
+}
+
+/** Registered Ed25519 credential used by public-key direct issue. */
+export interface PublicKeyCredential {
+    /** Registered public-key identifier (`pky_...`). */
+    keyId: string;
+    /** Sign the supplied JOSE signing input and return a raw 64-byte Ed25519 signature. */
+    sign: (signingInput: Uint8Array) => Uint8Array | Promise<Uint8Array>;
 }
 
 /**

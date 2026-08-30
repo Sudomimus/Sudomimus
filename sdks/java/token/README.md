@@ -8,9 +8,13 @@ Mirrors [`@sudomimus/token`](../../typescript/packages/token) (TypeScript) and [
 
 ```kotlin
 dependencies {
-    implementation("com.sudomimus:sudomimus-token:4.0.0")
+    implementation("com.sudomimus:sudomimus-token:4.1.0")
 }
 ```
+
+`verifyWorkloadAccessToken` validates Agent/Automation tokens; the owner
+Account is `body.subject` and the pairwise Workload actor is
+`body.actor.subject`.
 
 ## Usage
 

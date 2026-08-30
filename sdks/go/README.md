@@ -16,7 +16,7 @@ Module path: `github.com/sudomimus/sudomimus-go/v4`
 | `github.com/sudomimus/sudomimus-go/v4/token` | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | `github.com/sudomimus/sudomimus-go/v4/connect` | Browser inquiry establish / status / redeem / info | planned |
 | `github.com/sudomimus/sudomimus-go/v4/session` | Refresh-token session lifecycle | planned |
-| `github.com/sudomimus/sudomimus-go/v4/native` | Direct-issue (Steam ticket / access key) | planned |
+| `github.com/sudomimus/sudomimus-go/v4/native` | Direct-issue (Steam / access key / public key) | planned |
 
 ## Install
 
@@ -48,6 +48,10 @@ if err != nil {
 }
 fmt.Println(tok.Body.Subject, tok.Body.SessionID, tok.Body.Audience)
 ```
+
+`VerifyWorkloadAccessToken` validates Agent/Automation tokens and exposes the
+pairwise actor at `tok.Body.Actor.Subject` while `tok.Body.Subject` identifies
+the owner Account.
 
 The verifier performs, in order: parse → `typ` matches the Sudomimus
 access/refresh media type → payload `aud` and header `kid` are non-empty →

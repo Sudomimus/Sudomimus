@@ -33,6 +33,15 @@ class AccessTokenHeader(BaseModel):
     typ: Literal["vnd.sudomimus.application-access+jwt"]
 
 
+class WorkloadAccessTokenHeader(BaseModel):
+    """Exact JOSE protected header of a Workload access token."""
+
+    model_config = ConfigDict(extra="forbid")
+    alg: Literal["RS256"]
+    kid: str = Field(min_length=1)
+    typ: Literal["vnd.sudomimus.workload-access+jwt"]
+
+
 class RefreshTokenHeader(BaseModel):
     """Exact JOSE protected header of an application refresh token."""
 
@@ -55,6 +64,19 @@ class AccessTokenBody(BaseModel):
     exp: int = Field(ge=1)
 
     _validate_issuer = field_validator("iss")(_validate_absolute_uri)
+
+
+class WorkloadActor(BaseModel):
+    """Pairwise Workload actor embedded in a Workload access token."""
+
+    model_config = ConfigDict(extra="forbid")
+    sub: str = Field(min_length=1)
+
+
+class WorkloadAccessTokenBody(AccessTokenBody):
+    """Application access-token claims plus the exact Workload actor."""
+
+    act: WorkloadActor
 
 
 class RefreshTokenBody(BaseModel):

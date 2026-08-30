@@ -115,6 +115,44 @@ public sealed class NativeClient
     }
 
     /// <summary>
+    /// Exchange a fresh assertion signed by a registered Ed25519 public-key
+    /// credential for Account or Workload application tokens.
+    /// </summary>
+    public async Task<DirectIssueAccessKeyResponse> DirectIssuePublicKeyAsync(
+        DirectIssuePublicKeyRequest request,
+        PublicKeyCredential credential,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(credential);
+        var signed = await PublicKeyAssertion
+            .SignAsync(request, credential, s_jsonOptions, cancellationToken)
+            .ConfigureAwait(false);
+        using var content = new ByteArrayContent(signed.Body);
+        content.Headers.ContentType = new("application/json");
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri(_baseUrl, "/direct-issue/public-key"))
+        {
+            Content = content,
+        };
+        httpRequest.Headers.Accept.ParseAdd("application/json");
+        httpRequest.Headers.TryAddWithoutValidation("Authorization", signed.Authorization);
+
+        using var response = await _http.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await TryReadErrorBodyAsync(response, cancellationToken).ConfigureAwait(false);
+            throw new NativeApiException(response.StatusCode, errorBody?.Reason, errorBody);
+        }
+
+        var parsed = await response.Content
+            .ReadFromJsonAsync<DirectIssueAccessKeyResponse>(s_jsonOptions, cancellationToken)
+            .ConfigureAwait(false);
+        return parsed ?? throw new NativeApiException(response.StatusCode, "EmptyResponseBody", null);
+    }
+
+    /// <summary>
     /// Proactively mint an errand for a user you already authenticated.
     /// </summary>
     /// <exception cref="NativeApiException">

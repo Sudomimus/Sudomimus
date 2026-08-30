@@ -12,6 +12,7 @@ import {
     rsaJwkToPem,
     type AccessToken,
     type RefreshToken,
+    type WorkloadAccessToken,
 } from "@sudomimus/token";
 import {
     CLIENT_JWT_AUTH_SCHEME,
@@ -138,6 +139,11 @@ export class SessionClient {
     public verifyRefreshToken(jwt: string): Promise<RefreshToken> {
 
         return this._tokenVerifier.verifyRefreshToken(jwt);
+    }
+
+    public verifyWorkloadAccessToken(jwt: string): Promise<WorkloadAccessToken> {
+
+        return this._tokenVerifier.verifyWorkloadAccessToken(jwt);
     }
 
     public async refresh(request: RefreshRequest): Promise<RefreshResponse> {

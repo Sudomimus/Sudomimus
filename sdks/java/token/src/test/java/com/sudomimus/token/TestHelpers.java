@@ -14,7 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Mints compact RS256 fixtures matching the 4.0.0 token contract.
+ * Mints compact RS256 fixtures matching the 4.1.0 token contract.
  */
 final class TestHelpers {
 

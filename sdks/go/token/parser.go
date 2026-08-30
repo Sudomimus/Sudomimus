@@ -34,6 +34,8 @@ func (t *JWT[TBody]) VerifyExpiration(now time.Time) bool {
 		expiresAt = body.ExpiresAt
 	case RefreshTokenBody:
 		expiresAt = body.ExpiresAt
+	case WorkloadAccessTokenBody:
+		expiresAt = body.ExpiresAt
 	}
 	if expiresAt == 0 {
 		return false
@@ -60,6 +62,11 @@ func ParseAccessToken(jwt string) (*AccessToken, error) {
 // ParseRefreshToken parses a Sudomimus refresh token without verifying anything.
 func ParseRefreshToken(jwt string) (*RefreshToken, error) {
 	return parse(jwt, RefreshTokenType, validateRefreshTokenBody)
+}
+
+// ParseWorkloadAccessToken parses a Workload access token without verification.
+func ParseWorkloadAccessToken(jwt string) (*WorkloadAccessToken, error) {
+	return parse(jwt, WorkloadAccessTokenType, validateWorkloadAccessTokenBody)
 }
 
 // PeekHeader decodes only the header segment. Useful for inspecting the key
@@ -118,10 +125,10 @@ func parse[TBody any](
 		return nil, newError(ErrInvalidJWT, "failed to deserialize body: %s", err)
 	}
 	if err := validateHeader(header, expectedTokenType); err != nil {
-		return nil, newError(ErrInvalidJWT, "protected header does not match the 4.0.0 contract: %s", err)
+		return nil, newError(ErrInvalidJWT, "protected header does not match the 4.1.0 contract: %s", err)
 	}
 	if err := validateBody(body); err != nil {
-		return nil, newError(ErrInvalidJWT, "payload does not match the 4.0.0 contract: %s", err)
+		return nil, newError(ErrInvalidJWT, "payload does not match the 4.1.0 contract: %s", err)
 	}
 
 	signingInput := []byte(parts[0] + "." + parts[1])
@@ -194,6 +201,15 @@ func validateRefreshTokenBody(body RefreshTokenBody) error {
 	if !isAbsoluteURI(body.Issuer) || body.Audience == "" || body.SessionID == "" ||
 		body.JwtID == "" || body.IssuedAt < 0 || body.ExpiresAt < 1 || body.RotationVersion < 1 {
 		return errors.New("refresh-token claims are missing or out of range")
+	}
+	return nil
+}
+
+func validateWorkloadAccessTokenBody(body WorkloadAccessTokenBody) error {
+	if !isAbsoluteURI(body.Issuer) || body.Audience == "" || body.Subject == "" ||
+		body.SessionID == "" || body.JwtID == "" || body.IssuedAt < 0 || body.ExpiresAt < 1 ||
+		body.Actor.Subject == "" {
+		return errors.New("workload access-token claims are missing or out of range")
 	}
 	return nil
 }

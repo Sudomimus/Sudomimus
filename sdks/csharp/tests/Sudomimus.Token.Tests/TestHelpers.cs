@@ -6,7 +6,7 @@ using Sudomimus.Token;
 namespace Sudomimus.Token.Tests;
 
 /// <summary>
-/// Mints compact RS256 fixtures matching the 4.0.0 token contract.
+/// Mints compact RS256 fixtures matching the 4.1.0 token contract.
 /// </summary>
 internal static class TestHelpers
 {
@@ -91,6 +91,31 @@ internal static class TestHelpers
             iat,
             exp = iat + 30 * 24 * 3600,
             rotationVersion = 1,
+        };
+        return MintToken(header, body, privateKeyPem);
+    }
+
+    public static string MintWorkloadAccessToken(
+        string privateKeyPem,
+        string applicationAnchor = "anchor-1")
+    {
+        var iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var header = new
+        {
+            alg = "RS256",
+            typ = TokenVerifier.WorkloadAccessTokenType,
+            kid = "key-1",
+        };
+        var body = new
+        {
+            iss = "https://connect-api.sudomimus.com",
+            aud = applicationAnchor,
+            sub = "owner-subject",
+            sid = "session-1",
+            jti = "access-1",
+            iat,
+            exp = iat + 3600,
+            act = new { sub = "workload-subject" },
         };
         return MintToken(header, body, privateKeyPem);
     }

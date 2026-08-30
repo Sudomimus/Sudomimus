@@ -1,6 +1,6 @@
 # @sudomimus/token
 
-TypeScript SDK for parsing and verifying [Sudomimus](https://sudomimus.com) access and refresh JWTs.
+TypeScript SDK for parsing and verifying [Sudomimus](https://sudomimus.com) Account access, Workload access, and refresh JWTs.
 
 This package is for the *consumer* of a token — typically an application backend validating a bearer token on each request. It contains the typed `AccessToken` / `RefreshToken` shapes, pure parsers, a signature/expiration verifier, JWK conversion, and a `TokenError` with stable error codes. It has no HTTP client; you provide a `PublicKeyResolver` that returns an application's public key by `applicationAnchor` and JWT `kid`.
 
@@ -29,6 +29,10 @@ if (token !== null) {
 ```
 
 `parseAccessToken` / `parseRefreshToken` decode without verifying anything. They return an `ApplicationToken` instance or `null` on malformed input.
+
+For Agent/Automation tokens, use `parseWorkloadAccessToken` or
+`verifyWorkloadAccessToken`; the typed body exposes the pairwise actor as
+`token.body.act.sub` while `token.body.sub` remains the owner Account subject.
 
 ### Verifying
 

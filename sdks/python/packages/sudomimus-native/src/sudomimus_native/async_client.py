@@ -12,12 +12,14 @@ from ._generated.models import (
     CreateErrandResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
+    DirectIssuePublicKeyRequest,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
     ErrandStatusResponse,
 )
 from .client import _JSON_HEADERS, _handle, _ResponseT
 from .constants import PRODUCTION_BASE_URL
+from .public_key_assertion import PublicKeyCredential, sign_public_key_request
 
 
 class AsyncNativeClient:
@@ -67,18 +69,28 @@ class AsyncNativeClient:
         request: DirectIssueAccessKeyRequest,
     ) -> DirectIssueAccessKeyResponse:
         """Exchange an access-key credential for application tokens."""
-        return await self._post(
-            "/direct-issue/access-key", request, DirectIssueAccessKeyResponse
+        return await self._post("/direct-issue/access-key", request, DirectIssueAccessKeyResponse)
+
+    async def direct_issue_public_key(
+        self,
+        request: DirectIssuePublicKeyRequest,
+        credential: PublicKeyCredential,
+    ) -> DirectIssueAccessKeyResponse:
+        """Exchange a fresh signed Ed25519 assertion for application tokens."""
+        signed = sign_public_key_request(request, credential)
+        response = await self._client.post(
+            f"{self._base_url}/direct-issue/public-key",
+            content=signed.body,
+            headers={**_JSON_HEADERS, "Authorization": signed.authorization},
         )
+        return _handle(response, DirectIssueAccessKeyResponse)
 
     async def create_errand(
         self,
         request: CreateErrandRequest,
     ) -> CreateErrandResponse:
         """Proactively mint an errand for a user you already authenticated."""
-        return await self._post(
-            "/errand", request, CreateErrandResponse
-        )
+        return await self._post("/errand", request, CreateErrandResponse)
 
     async def errand_status(
         self,

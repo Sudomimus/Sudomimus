@@ -1,6 +1,6 @@
 # @sudomimus/native
 
-TypeScript SDK for the [Sudomimus](https://sudomimus.com) Native API — the direct-issue gateway for native clients (desktop apps, games, headless processes). The client presents a platform-issued proof (a Steam Web API auth ticket) or a long-lived access-key credential and receives application access + refresh tokens in a single round trip. Claim-gated logins may return an errand browser handoff; no Connect inquiry establishment is required.
+TypeScript SDK for the [Sudomimus](https://sudomimus.com) Native API — the direct-issue gateway for native clients (desktop apps, games, headless processes). The client presents a Steam ticket, access key, or signed Ed25519 public-key assertion and receives application access + refresh tokens in one round trip.
 
 ## Install
 
@@ -51,6 +51,20 @@ const tokens = await client.directIssueAccessKey({
     accessKeyIdentifier: "acs_k_01890c5e-1234-4abc-9def-0123456789ab",
     accessKeySecret: "acs_t_<64-char lowercase hex secret>",
 });
+```
+
+### Public key
+
+Provide the registered `pky_...` ID and an Ed25519 signing callback. The SDK binds the exact body bytes, creates a fresh 60-second assertion and 128-bit `jti`, and sends both atomically:
+
+```typescript
+const tokens = await client.directIssuePublicKey(
+    { applicationAnchor: "your-app-anchor" },
+    {
+        keyId: "pky_...",
+        sign: async (input) => myEd25519Signer.sign(input), // raw 64-byte signature
+    },
+);
 ```
 
 ### Renewing tokens
@@ -119,6 +133,9 @@ import type {
     DirectIssueSteamTicketResponse,
     DirectIssueAccessKeyRequest,
     DirectIssueAccessKeyResponse,
+    DirectIssuePublicKeyRequest,
+    DirectIssuePublicKeyResponse,
+    PublicKeyCredential,
     ClaimsStateView,
     ClaimRequirementStateView,
     ErrandHandoff,

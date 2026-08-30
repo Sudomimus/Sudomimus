@@ -34,6 +34,8 @@ consent-gated identity and claim state with Bearer authentication.
 
 The client also exposes `ApplicationJwksAsync`,
 `ResolveApplicationPublicKeyAsync`, `VerifyAccessTokenAsync`, and
-`VerifyRefreshTokenAsync`. JWKS responses honor `Cache-Control: max-age` with
+`VerifyRefreshTokenAsync`. `VerifyWorkloadAccessTokenAsync` validates the
+dedicated Agent/Automation token type and exposes its pairwise actor.
+JWKS responses honor `Cache-Control: max-age` with
 a 5-minute fallback; an unknown `kid` triggers one forced refresh before
 `UnknownKeyId` is returned.

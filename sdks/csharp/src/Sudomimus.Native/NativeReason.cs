@@ -48,4 +48,8 @@ public static class NativeReason
     public const string InvalidAccessKeyIdentifier = "InvalidAccessKeyIdentifier";
     public const string InvalidAccessKeySecret = "InvalidAccessKeySecret";
     public const string AccessKeyDirectDenied = "AccessKeyDirectDenied";
+
+    // -- Public-key credential (public-key flow) --
+
+    public const string PublicKeyDirectDenied = "PublicKeyDirectDenied";
 }

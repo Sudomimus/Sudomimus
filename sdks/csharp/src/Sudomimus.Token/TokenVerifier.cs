@@ -23,6 +23,7 @@ public sealed class TokenVerifier
 {
     public const string AccessTokenType = "vnd.sudomimus.application-access+jwt";
     public const string RefreshTokenType = "vnd.sudomimus.application-refresh+jwt";
+    public const string WorkloadAccessTokenType = "vnd.sudomimus.workload-access+jwt";
 
     private readonly PublicKeyResolver _resolver;
     private readonly Func<DateTimeOffset> _clock;
@@ -52,6 +53,12 @@ public sealed class TokenVerifier
     /// </summary>
     public Task<JwtToken<RefreshTokenBody>> VerifyRefreshTokenAsync(string jwt, CancellationToken ct = default)
         => VerifyAsync(jwt, RefreshTokenType, TokenParser.ParseRefreshToken, ct);
+
+    /// <summary>Parse and verify a Workload access token.</summary>
+    public Task<JwtToken<WorkloadAccessTokenBody>> VerifyWorkloadAccessTokenAsync(
+        string jwt,
+        CancellationToken ct = default)
+        => VerifyAsync(jwt, WorkloadAccessTokenType, TokenParser.ParseWorkloadAccessToken, ct);
 
     private async Task<JwtToken<TBody>> VerifyAsync<TBody>(
         string jwt,

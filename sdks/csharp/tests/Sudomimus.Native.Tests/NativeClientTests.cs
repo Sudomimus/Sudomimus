@@ -11,6 +11,49 @@ public class NativeClientTests
     private static readonly string ValidAccessKeySecret = "acs_t_" + new string('a', 64);
 
     [Fact]
+    public async Task DirectIssuePublicKeyAsync_SignsAndSendsTheExactBody()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.OK, """
+            {
+                "applicationAnchor": "anchor-1",
+                "accessToken": "a-jwt",
+                "refreshToken": "r-jwt",
+                "claims": {
+                    "email": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                }
+            }
+            """);
+        using var http = new HttpClient(handler);
+        var client = new NativeClient("https://native.example.com", http);
+        byte[]? signingInput = null;
+
+        var response = await client.DirectIssuePublicKeyAsync(
+            new DirectIssuePublicKeyRequest { ApplicationAnchor = "anchor-1" },
+            new PublicKeyCredential
+            {
+                KeyId = "pky_test",
+                SignAsync = (input, _) =>
+                {
+                    signingInput = input.ToArray();
+                    return ValueTask.FromResult(new byte[64]);
+                },
+            });
+
+        var sent = Assert.Single(handler.Requests);
+        Assert.Equal("https://native.example.com/direct-issue/public-key", sent.RequestUri!.ToString());
+        Assert.Equal("{\"applicationAnchor\":\"anchor-1\"}", sent.Body);
+        Assert.StartsWith("SudomimusPublicKeyJWT ", sent.Authorization);
+        Assert.NotNull(signingInput);
+        Assert.Equal(1, System.Text.Encoding.ASCII.GetString(signingInput!).Count(c => c == '.'));
+        Assert.Equal("a-jwt", response.AccessToken);
+    }
+
+    [Fact]
     public void Constructor_NormalizesBaseUrlTrailingSlash()
     {
         using var http = new HttpClient();

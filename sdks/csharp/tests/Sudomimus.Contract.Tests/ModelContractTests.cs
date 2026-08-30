@@ -67,6 +67,7 @@ public sealed class ModelContractTests
         // ---- Native: direct-issue DTOs ----
         { "native", "DirectIssueAccessKeyRequest", typeof(Native.DirectIssueAccessKeyRequest) },
         { "native", "DirectIssueAccessKeyResponse", typeof(Native.DirectIssueAccessKeyResponse) },
+        { "native", "DirectIssuePublicKeyRequest", typeof(Native.DirectIssuePublicKeyRequest) },
         { "native", "DirectIssueSteamTicketRequest", typeof(Native.DirectIssueSteamTicketRequest) },
         { "native", "DirectIssueSteamTicketResponse", typeof(Native.DirectIssueSteamTicketResponse) },
 

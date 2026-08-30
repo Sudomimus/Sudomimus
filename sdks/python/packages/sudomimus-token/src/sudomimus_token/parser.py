@@ -16,12 +16,14 @@ from .models import (
     JwtHeader,
     RefreshTokenBody,
     RefreshTokenHeader,
+    WorkloadAccessTokenBody,
+    WorkloadAccessTokenHeader,
 )
 from .token import JwtToken
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
-_HeaderT = TypeVar("_HeaderT", AccessTokenHeader, RefreshTokenHeader)
-_BodyT = TypeVar("_BodyT", AccessTokenBody, RefreshTokenBody)
+_HeaderT = TypeVar("_HeaderT", AccessTokenHeader, RefreshTokenHeader, WorkloadAccessTokenHeader)
+_BodyT = TypeVar("_BodyT", AccessTokenBody, RefreshTokenBody, WorkloadAccessTokenBody)
 
 
 def peek_header(jwt: str) -> JwtHeader:
@@ -49,6 +51,13 @@ def parse_access_token(jwt: str) -> JwtToken[AccessTokenHeader, AccessTokenBody]
 def parse_refresh_token(jwt: str) -> JwtToken[RefreshTokenHeader, RefreshTokenBody]:
     """Parse a Sudomimus refresh token (header + :class:`RefreshTokenBody`)."""
     return _parse(jwt, RefreshTokenHeader, RefreshTokenBody)
+
+
+def parse_workload_access_token(
+    jwt: str,
+) -> JwtToken[WorkloadAccessTokenHeader, WorkloadAccessTokenBody]:
+    """Parse a Workload access token with its pairwise ``act.sub``."""
+    return _parse(jwt, WorkloadAccessTokenHeader, WorkloadAccessTokenBody)
 
 
 def peek_body(jwt: str) -> dict[str, Any]:

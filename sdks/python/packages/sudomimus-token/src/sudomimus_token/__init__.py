@@ -20,12 +20,22 @@ from .models import (
     RefreshTokenBody,
     RefreshTokenHeader,
     UserInfoResponse,
+    WorkloadAccessTokenBody,
+    WorkloadAccessTokenHeader,
+    WorkloadActor,
 )
-from .parser import parse_access_token, parse_refresh_token, peek_body, peek_header
-from .token import AccessToken, JwtToken, RefreshToken
+from .parser import (
+    parse_access_token,
+    parse_refresh_token,
+    parse_workload_access_token,
+    peek_body,
+    peek_header,
+)
+from .token import AccessToken, JwtToken, RefreshToken, WorkloadAccessToken
 from .verifier import (
     ACCESS_TOKEN_TYPE,
     REFRESH_TOKEN_TYPE,
+    WORKLOAD_ACCESS_TOKEN_TYPE,
     AsyncPublicKeyResolver,
     AsyncTokenVerifier,
     PublicKeyResolver,
@@ -35,6 +45,7 @@ from .verifier import (
 __all__ = [
     "ACCESS_TOKEN_TYPE",
     "REFRESH_TOKEN_TYPE",
+    "WORKLOAD_ACCESS_TOKEN_TYPE",
     "AccessToken",
     "AccessTokenBody",
     "AccessTokenHeader",
@@ -53,12 +64,17 @@ __all__ = [
     "TokenErrorCode",
     "TokenVerifier",
     "UserInfoResponse",
+    "WorkloadAccessToken",
+    "WorkloadAccessTokenBody",
+    "WorkloadAccessTokenHeader",
+    "WorkloadActor",
     "create_jwt",
     "decode_base64url",
     "encode_base64url",
     "parse_access_token",
     "parse_id_token",
     "parse_refresh_token",
+    "parse_workload_access_token",
     "peek_header",
     "peek_body",
     "sign_rs256",

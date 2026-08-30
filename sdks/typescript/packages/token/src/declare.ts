@@ -26,6 +26,17 @@ export type AccessTokenBody = {
     readonly exp: number;
 };
 
+export type WorkloadAccessTokenHeader = {
+    readonly alg: "RS256";
+    readonly kid: string;
+    readonly typ: "vnd.sudomimus.workload-access+jwt";
+};
+
+export type WorkloadAccessTokenBody = AccessTokenBody & {
+    /** Pairwise, application-visible Agent/Automation subject. */
+    readonly act: { readonly sub: string };
+};
+
 export type RefreshTokenHeader = {
     readonly alg: "RS256";
     readonly kid: string;
@@ -43,6 +54,7 @@ export type RefreshTokenBody = {
 };
 
 export type AccessToken = ApplicationToken<AccessTokenHeader, AccessTokenBody>;
+export type WorkloadAccessToken = ApplicationToken<WorkloadAccessTokenHeader, WorkloadAccessTokenBody>;
 export type RefreshToken = ApplicationToken<RefreshTokenHeader, RefreshTokenBody>;
 
 export type PublicKeyResolver = (

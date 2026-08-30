@@ -44,6 +44,9 @@ verified = client.verify_access_token(access_token)
 print(verified.body.sub, verified.header.kid)
 ```
 
+For Agent/Automation tokens use `verify_workload_access_token`; the pairwise
+actor is `verified.body.act.sub`.
+
 JWKS responses honor `Cache-Control: max-age` (with a 5-minute fallback). An
 unknown `kid` causes one forced refresh before `UNKNOWN_KEY_ID` is raised.
 

@@ -7,18 +7,32 @@ from datetime import UTC, datetime
 from typing import TypeVar
 
 from .errors import TokenError, TokenErrorCode
-from .models import AccessTokenBody, AccessTokenHeader, RefreshTokenBody, RefreshTokenHeader
-from .parser import parse_access_token, parse_refresh_token, peek_body, peek_header
+from .models import (
+    AccessTokenBody,
+    AccessTokenHeader,
+    RefreshTokenBody,
+    RefreshTokenHeader,
+    WorkloadAccessTokenBody,
+    WorkloadAccessTokenHeader,
+)
+from .parser import (
+    parse_access_token,
+    parse_refresh_token,
+    parse_workload_access_token,
+    peek_body,
+    peek_header,
+)
 from .token import JwtToken
 
 ACCESS_TOKEN_TYPE = "vnd.sudomimus.application-access+jwt"
 REFRESH_TOKEN_TYPE = "vnd.sudomimus.application-refresh+jwt"
+WORKLOAD_ACCESS_TOKEN_TYPE = "vnd.sudomimus.workload-access+jwt"
 
 PublicKeyResolver = Callable[[str, str], str]
 AsyncPublicKeyResolver = Callable[[str, str], Awaitable[str]]
 
-_HeaderT = TypeVar("_HeaderT", AccessTokenHeader, RefreshTokenHeader)
-_BodyT = TypeVar("_BodyT", AccessTokenBody, RefreshTokenBody)
+_HeaderT = TypeVar("_HeaderT", AccessTokenHeader, RefreshTokenHeader, WorkloadAccessTokenHeader)
+_BodyT = TypeVar("_BodyT", AccessTokenBody, RefreshTokenBody, WorkloadAccessTokenBody)
 
 
 def _now_utc() -> datetime:
@@ -94,6 +108,11 @@ class TokenVerifier:
     def verify_refresh_token(self, jwt: str) -> JwtToken[RefreshTokenHeader, RefreshTokenBody]:
         return self._verify(jwt, REFRESH_TOKEN_TYPE, parse_refresh_token)
 
+    def verify_workload_access_token(
+        self, jwt: str
+    ) -> JwtToken[WorkloadAccessTokenHeader, WorkloadAccessTokenBody]:
+        return self._verify(jwt, WORKLOAD_ACCESS_TOKEN_TYPE, parse_workload_access_token)
+
     def _verify(
         self,
         jwt: str,
@@ -118,15 +137,18 @@ class AsyncTokenVerifier:
         self._resolver = resolver
         self._clock = clock
 
-    async def verify_access_token(
-        self, jwt: str
-    ) -> JwtToken[AccessTokenHeader, AccessTokenBody]:
+    async def verify_access_token(self, jwt: str) -> JwtToken[AccessTokenHeader, AccessTokenBody]:
         return await self._verify(jwt, ACCESS_TOKEN_TYPE, parse_access_token)
 
     async def verify_refresh_token(
         self, jwt: str
     ) -> JwtToken[RefreshTokenHeader, RefreshTokenBody]:
         return await self._verify(jwt, REFRESH_TOKEN_TYPE, parse_refresh_token)
+
+    async def verify_workload_access_token(
+        self, jwt: str
+    ) -> JwtToken[WorkloadAccessTokenHeader, WorkloadAccessTokenBody]:
+        return await self._verify(jwt, WORKLOAD_ACCESS_TOKEN_TYPE, parse_workload_access_token)
 
     async def _verify(
         self,
