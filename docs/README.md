@@ -2,7 +2,7 @@
 
 Open-source SDKs for the [Sudomimus](https://sudomimus.com) authentication and authorization platform.
 
-This repository hosts client SDKs for the public Sudomimus APIs, organized by language. Each language ships one SDK per public API service (for example, `connect` for token exchange and `native` for the native client entry point).
+This repository hosts client SDKs for the public Sudomimus APIs, organized by language, plus framework integrations above those SDKs. Each language ships one SDK per public API service (for example, `connect` for token exchange and `native` for the native client entry point).
 
 ## SDK status
 
@@ -24,6 +24,21 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 | C# / .NET | [`Sudomimus.Session`](sdks/csharp/src/Sudomimus.Session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
 | Go | [`github.com/sudomimus/sudomimus-go/token`](sdks/go/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
 | Java | [`com.sudomimus:sudomimus-token`](sdks/java/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
+
+## Framework integrations
+
+These packages adapt the ordinary Connect callback and Session lifecycle to
+web frameworks. They sit above the API SDKs and do not use OIDC.
+
+| Framework | Package | Status |
+| --- | --- | --- |
+| Next.js App Router | [`@sudomimus/nextjs`](sdks/typescript/packages/nextjs) | alpha |
+| React Router Framework Mode | [`@sudomimus/react-router`](sdks/typescript/packages/react-router) | alpha |
+| Nuxt Node/Nitro | [`@sudomimus/nuxt`](sdks/typescript/packages/nuxt) | alpha |
+| Django | [`sudomimus-django`](sdks/python/packages/sudomimus-django) | alpha |
+
+The TypeScript integrations share [`@sudomimus/web`](sdks/typescript/packages/web)
+for login state, session rotation, and the durable storage contract.
 
 ## Repository layout
 

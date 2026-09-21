@@ -1,7 +1,7 @@
 TS_SDK := sdks/typescript
 CSHARP_SDK := sdks/csharp
 PYTHON_SDK := sdks/python
-PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src packages/sudomimus-session/src
+PYTHON_SRC := packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src packages/sudomimus-session/src packages/sudomimus-django/src
 GO_SDK := sdks/go
 JAVA_SDK := sdks/java
 NUGET_SOURCE := https://api.nuget.org/v3/index.json
@@ -275,6 +275,11 @@ build-py: clean-build-py
 	cd $(PYTHON_SDK) && uv build --package sudomimus-connect --out-dir dist
 	cd $(PYTHON_SDK) && uv build --package sudomimus-device --out-dir dist
 	cd $(PYTHON_SDK) && uv build --package sudomimus-session --out-dir dist
+	cd $(PYTHON_SDK) && uv build --package sudomimus-django --out-dir dist
+
+.PHONY: build-django-py
+build-django-py: clean-build-py
+	cd $(PYTHON_SDK) && uv build --package sudomimus-django --out-dir dist
 
 .PHONY: build-token-py
 build-token-py: clean-build-py
