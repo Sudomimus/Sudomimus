@@ -12,6 +12,12 @@ This workspace hosts the Python SDKs published to PyPI.
 | [`sudomimus-native`](packages/sudomimus-native) | [`specs/native.yaml`](../../specs/native.yaml) | Direct-issue (Steam ticket / access key) |
 | [`sudomimus-session`](packages/sudomimus-session) | [`specs/session.yaml`](../../specs/session.yaml) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) |
 
+## Framework integrations
+
+| Package | Purpose |
+| --- | --- |
+| [`sudomimus-django`](packages/sudomimus-django) | Django session integration for ordinary Connect login |
+
 ## Tooling
 
 - [uv](https://docs.astral.sh/uv) workspaces (Python 3.11+)
@@ -27,7 +33,7 @@ cd sdks/python
 uv sync
 uv run python tasks.py generate    # regenerate packages/*/src/sudomimus_*/_generated/models.py
 uv run ruff check
-uv run mypy packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src packages/sudomimus-session/src
+uv run mypy packages/sudomimus-token/src packages/sudomimus-native/src packages/sudomimus-connect/src packages/sudomimus-device/src packages/sudomimus-session/src packages/sudomimus-django/src
 uv run pytest
 uv run pytest --cov=sudomimus_token --cov=sudomimus_native --cov=sudomimus_connect --cov=sudomimus_device --cov=sudomimus_session --cov-report=term-missing
 ```
