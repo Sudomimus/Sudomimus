@@ -12,6 +12,17 @@ This workspace hosts the TypeScript / JavaScript SDKs published to npm under the
 | [`@sudomimus/native`](packages/native) | [`specs/native.yaml`](../../specs/native.yaml) | Direct-issue (Steam / access key / public key) |
 | [`@sudomimus/session`](packages/session) | [`specs/session.yaml`](../../specs/session.yaml) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) |
 
+## Framework integrations
+
+These packages use the ordinary Connect callback and Session APIs. They are not OIDC clients.
+
+| Package | Purpose |
+| --- | --- |
+| [`@sudomimus/web`](packages/web) | Shared server-side login/session core and storage contract |
+| [`@sudomimus/nextjs`](packages/nextjs) | Next.js App Router handlers |
+| [`@sudomimus/react-router`](packages/react-router) | React Router Framework Mode loaders/actions |
+| [`@sudomimus/nuxt`](packages/nuxt) | Nuxt server routes on the Node/Nitro preset |
+
 ## Tooling
 
 - [pnpm](https://pnpm.io) workspaces

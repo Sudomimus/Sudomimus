@@ -1,0 +1,22 @@
+{
+    "name": "@sudomimus/web",
+    "version": "0.1.0",
+    "description": "Server-side Sudomimus Connect web login and session core",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+    "files": ["dist", "README.md", "LICENSE"],
+    "publishConfig": { "access": "public" },
+    "scripts": {
+        "compile": "tsc --project typescript/tsconfig.compile.json",
+        "lint": "eslint src",
+        "test": "jest",
+        "release": "pnpm lint && pnpm test && pnpm compile",
+        "release:dry-run": "pnpm release && pnpm pack --pack-destination /tmp && pnpm publish --dry-run --no-git-checks --access=public",
+        "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
+    },
+    "dependencies": { "@sudomimus/connect": "workspace:*", "@sudomimus/session": "workspace:*" },
+    "devDependencies": { "@types/jest": "catalog:", "@types/node": "catalog:", "typescript": "catalog:", "eslint": "catalog:", "jest": "catalog:", "ts-jest": "catalog:" }
+}
