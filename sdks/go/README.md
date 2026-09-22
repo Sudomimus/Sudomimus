@@ -13,7 +13,7 @@ Module path: `github.com/sudomimus/sudomimus-go/v4`
 
 | Package | Purpose | Status |
 | --- | --- | --- |
-| `github.com/sudomimus/sudomimus-go/v4/token` | Parse and verify Sudomimus access / refresh JWTs | alpha |
+| `github.com/sudomimus/sudomimus-go/v4/token` | Parse and verify Sudomimus access / refresh JWTs | stable |
 | `github.com/sudomimus/sudomimus-go/v4/connect` | Browser inquiry establish / status / redeem / info | planned |
 | `github.com/sudomimus/sudomimus-go/v4/session` | Refresh-token session lifecycle | planned |
 | `github.com/sudomimus/sudomimus-go/v4/native` | Direct-issue (Steam / access key / public key) | planned |
