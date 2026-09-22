@@ -8,22 +8,22 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 
 | Language | Package | Purpose | Status |
 | --- | --- | --- | --- |
-| TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
-| TypeScript | [`@sudomimus/device`](sdks/typescript/packages/device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | alpha |
-| TypeScript | [`@sudomimus/token`](sdks/typescript/packages/token) | Parse and verify Account / Workload access and refresh JWTs | alpha |
-| TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Direct-issue (Steam / access key / public key) | alpha |
-| TypeScript | [`@sudomimus/session`](sdks/typescript/packages/session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
-| Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
-| Python | [`sudomimus-device`](sdks/python/packages/sudomimus-device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | alpha |
-| Python | [`sudomimus-token`](sdks/python/packages/sudomimus-token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
-| Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Direct-issue (Steam ticket / access key) | alpha |
-| Python | [`sudomimus-session`](sdks/python/packages/sudomimus-session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
-| C# / .NET | [`Sudomimus.Connect`](sdks/csharp/src/Sudomimus.Connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | alpha |
-| C# / .NET | [`Sudomimus.Token`](sdks/csharp/src/Sudomimus.Token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
-| C# / .NET | [`Sudomimus.Native`](sdks/csharp/src/Sudomimus.Native) | Direct-issue (Steam ticket / access key) | alpha |
-| C# / .NET | [`Sudomimus.Session`](sdks/csharp/src/Sudomimus.Session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | alpha |
-| Go | [`github.com/sudomimus/sudomimus-go/token`](sdks/go/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
-| Java | [`com.sudomimus:sudomimus-token`](sdks/java/token) | Parse and verify Sudomimus access / refresh JWTs | alpha |
+| TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
+| TypeScript | [`@sudomimus/device`](sdks/typescript/packages/device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | stable |
+| TypeScript | [`@sudomimus/token`](sdks/typescript/packages/token) | Parse and verify Account / Workload access and refresh JWTs | stable |
+| TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Direct-issue (Steam / access key / public key) | stable |
+| TypeScript | [`@sudomimus/session`](sdks/typescript/packages/session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
+| Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
+| Python | [`sudomimus-device`](sdks/python/packages/sudomimus-device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | stable |
+| Python | [`sudomimus-token`](sdks/python/packages/sudomimus-token) | Parse and verify Sudomimus access / refresh JWTs | stable |
+| Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Direct-issue (Steam ticket / access key) | stable |
+| Python | [`sudomimus-session`](sdks/python/packages/sudomimus-session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
+| C# / .NET | [`Sudomimus.Connect`](sdks/csharp/src/Sudomimus.Connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
+| C# / .NET | [`Sudomimus.Token`](sdks/csharp/src/Sudomimus.Token) | Parse and verify Sudomimus access / refresh JWTs | stable |
+| C# / .NET | [`Sudomimus.Native`](sdks/csharp/src/Sudomimus.Native) | Direct-issue (Steam ticket / access key) | stable |
+| C# / .NET | [`Sudomimus.Session`](sdks/csharp/src/Sudomimus.Session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
+| Go | [`github.com/sudomimus/sudomimus-go/token`](sdks/go/token) | Parse and verify Sudomimus access / refresh JWTs | stable |
+| Java | [`com.sudomimus:sudomimus-token`](sdks/java/token) | Parse and verify Sudomimus access / refresh JWTs | stable |
 
 ## Framework integrations
 
@@ -32,10 +32,10 @@ web frameworks. They sit above the API SDKs and do not use OIDC.
 
 | Framework | Package | Status |
 | --- | --- | --- |
-| Next.js App Router | [`@sudomimus/nextjs`](sdks/typescript/packages/nextjs) | alpha |
-| React Router Framework Mode | [`@sudomimus/react-router`](sdks/typescript/packages/react-router) | alpha |
-| Nuxt Node/Nitro | [`@sudomimus/nuxt`](sdks/typescript/packages/nuxt) | alpha |
-| Django | [`sudomimus-django`](sdks/python/packages/sudomimus-django) | alpha |
+| Next.js App Router | [`@sudomimus/nextjs`](sdks/typescript/packages/nextjs) | stable |
+| React Router Framework Mode | [`@sudomimus/react-router`](sdks/typescript/packages/react-router) | stable |
+| Nuxt Node/Nitro | [`@sudomimus/nuxt`](sdks/typescript/packages/nuxt) | stable |
+| Django | [`sudomimus-django`](sdks/python/packages/sudomimus-django) | stable |
 
 The TypeScript integrations share [`@sudomimus/web`](sdks/typescript/packages/web)
 for login state, session rotation, and the durable storage contract.
