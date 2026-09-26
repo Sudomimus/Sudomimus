@@ -5,14 +5,17 @@
     "type": "module",
     "description": "Sudomimus Connect SDK example — React/Vite browser login flow.",
     "scripts": {
+        "server": "node server.mjs",
         "dev": "vite",
         "build": "tsc && vite build",
         "preview": "vite preview",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "check:server": "node --check server.mjs"
     },
     "dependencies": {
         "@sudomimus/connect": "link:../../../sdks/typescript/packages/connect",
         "@sudomimus/session": "link:../../../sdks/typescript/packages/session",
+        "@sudomimus/web": "link:../../../sdks/typescript/packages/web",
         "react": "^18.3.1",
         "react-dom": "^18.3.1"
     },

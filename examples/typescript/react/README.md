@@ -1,74 +1,41 @@
-# Sudomimus Connect — React example
+# Sudomimus Connect — React and Node example
 
-Minimal Vite + React MVP demonstrating the full login flow with the
-[`@sudomimus/connect`](../../../sdks/typescript/packages/connect),
-[`@sudomimus/session`](../../../sdks/typescript/packages/session), and
-[`@sudomimus/token`](../../../sdks/typescript/packages/token) SDKs,
-**entirely in the browser**.
-
-> ⚠️ **DEMO ONLY.** This example asks the user to paste the application's
-> RS256 private key into a browser textarea. Real integrations must sign the
-> `/establish` JWT on a backend — never bundle or accept private keys in
-> client code.
+Vite serves the React UI on `http://localhost:5173`. A small Node backend uses
+`@sudomimus/web` for the Connect callback and Session lifecycle. The application
+private key, inquiry hidden key, and tokens stay on the backend; the browser
+receives only an HttpOnly session cookie and a displayed subject.
 
 ## Prerequisites
 
-1. **Compile the local SDK packages** (this example links to local source):
+- Node.js 22+ and pnpm.
+- A Sudomimus application with a `CALLBACK` return rule allowing
+  `http://localhost:5173/auth/callback`.
+- Its application anchor and client-auth private key (PKCS#8 PEM).
 
-   ```bash
-   cd ../../../sdks/typescript
-   pnpm install
-   pnpm --filter @sudomimus/connect compile
-   pnpm --filter @sudomimus/session compile
-   cd -
-   ```
-
-2. **Register an application** in the Sudomimus admin console. You need:
-   - The `applicationAnchor`.
-   - The application's **client-auth private key** in PEM (PKCS#8, RS256).
-   - A `CALLBACK` return rule whose allowed callback domain includes
-     `http://localhost:5173` (the Vite dev server URL).
-
-## Run
+Compile the local SDKs before running the example:
 
 ```bash
-pnpm install
-pnpm dev
+cd ../../../sdks/typescript
+pnpm install --frozen-lockfile
+pnpm compile
+cd ../../examples/typescript/react
+pnpm install --frozen-lockfile
 ```
 
-Open <http://localhost:5173>.
+In one terminal, provide the credentials to the backend and start it:
 
-1. Paste the `applicationAnchor`.
-2. Paste the full PEM private key (`-----BEGIN PRIVATE KEY-----` ... `-----END PRIVATE KEY-----`).
-3. Click **Login**.
-4. You'll be redirected to `via.sudomimus.com` to authenticate (passkey or
-   email).
-5. The login UI redirects you back to `http://localhost:5173/?exposure-key=...&confirmation-key=...`.
-6. The page calls `/redeem`, decodes the access token, seeds a
-   `RotatingSessionClient`, calls Session `/refresh`, and renders the
-   logged-in user (`subject`, `firstName`, `lastName?`).
+```bash
+export SUDOMIMUS_APPLICATION_ANCHOR='your-anchor'
+export SUDOMIMUS_PRIVATE_KEY_PEM="$(cat /path/to/private-key.pem)"
+pnpm server
+```
 
-## How it works
+In another terminal, run `pnpm dev` from this directory and open
+<http://localhost:5173>. Click **Log in**, finish authentication at Sudomimus,
+then use **Log out** to revoke the session.
 
-- The SDK's `ConnectClient.establish()` signs a client-auth JWT (RS256) and
-  attaches it as `Authorization: SudomimusClientJWT <jwt>`.
-- The `hiddenKey` returned by `/establish` is stashed in `sessionStorage`
-  keyed by `exposureKey` so it survives the redirect roundtrip.
-- On the callback landing, the Connect SDK client calls `/redeem`, then the
-  Session SDK owns `/refresh` and `/logout` using the returned refresh token.
-
-## Why a BYO signer?
-
-The SDK's built-in `signEstablishClientJwt` helper uses Node's
-`crypto.createSign`. Browsers don't ship that API, so this example passes
-its own `clientAuth.signer` to `ConnectClient` — see
-[`src/browser-signer.ts`](./src/browser-signer.ts) — which constructs and
-signs the JWT using the Web Crypto API (`SubtleCrypto`) instead. The
-unused Node `crypto` import inside the SDK is aliased to a stub in
-[`vite.config.ts`](./vite.config.ts) so Vite still resolves the import
-even though it's never executed.
-
-For the same reason, this demo decodes the access token's body inline
-without verifying its signature. Production code should verify access
-tokens on a backend (or via SubtleCrypto), never trust an unverified
-client-side decode for security decisions.
+This example uses `MemoryWebAuthStore`, so restarting the backend discards login
+state. For deployment, use a shared durable `WebAuthStore` as described in the
+[`@sudomimus/web` README](../../../sdks/typescript/packages/web/README.md),
+serve the site over HTTPS, and keep the private key in server-side secret
+storage. The Node backend here is intended for local development.

@@ -14,6 +14,9 @@ importers:
       '@sudomimus/session':
         specifier: link:../../../sdks/typescript/packages/session
         version: link:../../../sdks/typescript/packages/session
+      '@sudomimus/web':
+        specifier: link:../../../sdks/typescript/packages/web
+        version: link:../../../sdks/typescript/packages/web
       react:
         specifier: ^18.3.1
         version: 18.3.1
