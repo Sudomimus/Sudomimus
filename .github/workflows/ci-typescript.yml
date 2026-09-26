@@ -5,11 +5,13 @@ on:
     branches: [master]
     paths:
       - "sdks/typescript/**"
+      - "examples/typescript/**"
       - "specs"
       - ".github/workflows/ci-typescript.yml"
   pull_request:
     paths:
       - "sdks/typescript/**"
+      - "examples/typescript/**"
       - "specs"
       - ".github/workflows/ci-typescript.yml"
 
@@ -50,3 +52,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm compile
       - run: pnpm test
+      - name: Check Node examples
+        working-directory: examples/typescript/node
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm typecheck

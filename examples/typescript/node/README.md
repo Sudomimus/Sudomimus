@@ -1,5 +1,11 @@
 # Sudomimus Connect — Node example
 
+The separate [Device API example](src/device.ts) shows public-client login
+without an application private key. Configure a Device authorization rule,
+compile `@sudomimus/device` and `@sudomimus/session`, then run `pnpm device`.
+It prints the verification URL and user code, polls until authorization, then
+refreshes and logs out through Session. Tokens are kept only in memory.
+
 Minimal CLI demonstrating a full login flow with the
 [`@sudomimus/connect`](../../../sdks/typescript/packages/connect),
 [`@sudomimus/session`](../../../sdks/typescript/packages/session), and
@@ -48,10 +54,10 @@ The script then:
 - Polls `/status-poll` every 2 seconds.
 - Once `REALIZED`, calls `/redeem`, verifies the access token, and prints:
 
+  ```text
+  ✓ Login successful. subject=subject-...
   ```
 
 - Seeds a `RotatingSessionClient` with the returned pair and calls
   `/refresh` once.
 - Calls Session `/logout` via the rotating client.
-  ✓ Login successful. subject=subject-...
-  ```

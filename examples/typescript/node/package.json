@@ -6,10 +6,12 @@
     "description": "Sudomimus Connect SDK example — Node CLI login flow.",
     "scripts": {
         "start": "tsx src/index.ts",
+        "device": "tsx src/device.ts",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
         "@sudomimus/connect": "link:../../../sdks/typescript/packages/connect",
+        "@sudomimus/device": "link:../../../sdks/typescript/packages/device",
         "@sudomimus/session": "link:../../../sdks/typescript/packages/session"
     },
     "devDependencies": {
