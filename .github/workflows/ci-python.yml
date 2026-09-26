@@ -5,11 +5,13 @@ on:
     branches: [master]
     paths:
       - "sdks/python/**"
+      - "examples/python/**"
       - "specs"
       - ".github/workflows/ci-python.yml"
   pull_request:
     paths:
       - "sdks/python/**"
+      - "examples/python/**"
       - "specs"
       - ".github/workflows/ci-python.yml"
 
@@ -48,3 +50,10 @@ jobs:
       - run: uv run ruff check
       - run: uv run mypy packages/*/src
       - run: uv run pytest
+      - name: Check Python examples
+        env:
+          SUDOMIMUS_APPLICATION_ANCHOR: ci-example
+          SUDOMIMUS_PRIVATE_KEY_PEM: ci-example
+        run: |
+          uv run python -m py_compile ../../examples/python/login_example.py ../../examples/python/django/*.py
+          uv run python ../../examples/python/django/manage.py check

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Sudomimus Django example</title></head>
+<body>
+  <h1>Sudomimus Django example</h1>
+  {% if subject %}
+    <p>Logged in as {{ subject }}</p>
+    <form method="post" action="/auth/logout">{% csrf_token %}<button>Log out</button></form>
+  {% else %}
+    <form method="post" action="/auth/start">{% csrf_token %}<button>Log in</button></form>
+  {% endif %}
+</body>
+</html>
