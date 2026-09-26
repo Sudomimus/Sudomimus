@@ -10,6 +10,8 @@ Thank you for your interest in contributing. This repository hosts open-source S
 - `sdks/csharp/` — C# / .NET 8 SDKs (dotnet solution, NuGet packages)
 - `examples/` — usage examples per language
 
+SDK package publishing is described in [docs/sdk-publishing.md](docs/sdk-publishing.md).
+
 ## Branching and commits
 
 - Work on a feature branch off `master`. Branch names should be short and descriptive (e.g. `feat/connect-redeem`, `fix/python-typing`).

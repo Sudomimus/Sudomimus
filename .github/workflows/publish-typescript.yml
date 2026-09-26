@@ -1,0 +1,53 @@
+name: Publish TypeScript SDKs
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "sdks/typescript/packages/*/package.json"
+
+concurrency:
+  group: publish-typescript
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.18.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+          cache-dependency-path: sdks/typescript/pnpm-lock.yaml
+      - run: pnpm -C sdks/typescript install --frozen-lockfile
+      - run: pnpm -C sdks/typescript generate
+      - name: Verify generated types are committed
+        run: git diff --exit-code -- sdks/typescript/packages
+      - run: pnpm -C sdks/typescript lint
+      - run: pnpm -C sdks/typescript compile
+      - run: pnpm -C sdks/typescript test
+      - name: Publish changed packages in dependency order
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN" || { echo "NPM_TOKEN secret is required" >&2; exit 1; }
+          changed="$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- sdks/typescript/packages)"
+          for package in token session connect device native web nextjs nuxt react-router; do
+            manifest="sdks/typescript/packages/$package/package.json"
+            if grep -Fxq "$manifest" <<< "$changed"; then
+              pnpm -C "sdks/typescript/packages/$package" publish --no-git-checks --access=public
+            fi
+          done

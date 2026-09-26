@@ -1,0 +1,45 @@
+name: Publish C# SDKs
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "sdks/csharp/src/*/*.csproj"
+
+concurrency:
+  group: publish-csharp
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: dotnet restore sdks/csharp/Sudomimus.slnx
+      - run: dotnet test sdks/csharp/Sudomimus.slnx --no-restore --configuration Release
+      - name: Publish changed packages in dependency order
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          test -n "$NUGET_API_KEY" || { echo "NUGET_API_KEY secret is required" >&2; exit 1; }
+          changed="$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- sdks/csharp/src)"
+          for package in Token Connect Session Native; do
+            manifest="sdks/csharp/src/Sudomimus.$package/Sudomimus.$package.csproj"
+            if grep -Fxq "$manifest" <<< "$changed"; then
+              dotnet pack "$manifest" --no-restore --configuration Release --output sdks/csharp/artifacts
+              dotnet nuget push "sdks/csharp/artifacts/Sudomimus.$package.*.nupkg" \
+                --api-key "$NUGET_API_KEY" \
+                --source https://api.nuget.org/v3/index.json
+            fi
+          done

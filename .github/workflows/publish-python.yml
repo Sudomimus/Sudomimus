@@ -1,0 +1,51 @@
+name: Publish Python SDKs
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "sdks/python/packages/*/pyproject.toml"
+
+concurrency:
+  group: publish-python
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+        working-directory: sdks/python
+      - run: uv run ruff check
+        working-directory: sdks/python
+      - run: uv run mypy packages/*/src
+        working-directory: sdks/python
+      - run: uv run pytest
+        working-directory: sdks/python
+      - name: Publish changed packages in dependency order
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          test -n "$UV_PUBLISH_TOKEN" || { echo "UV_PUBLISH_TOKEN secret is required" >&2; exit 1; }
+          changed="$(git -C "$GITHUB_WORKSPACE" diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- sdks/python/packages)"
+          for package in token session connect device native django; do
+            manifest="sdks/python/packages/sudomimus-$package/pyproject.toml"
+            if grep -Fxq "$manifest" <<< "$changed"; then
+              uv build --package "sudomimus-$package" --out-dir dist
+              uv publish "dist/sudomimus_${package}-"*
+            fi
+          done
+        working-directory: sdks/python
