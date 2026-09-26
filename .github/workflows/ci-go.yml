@@ -2,7 +2,7 @@ name: Go SDK
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "sdks/go/**"
       - "specs"

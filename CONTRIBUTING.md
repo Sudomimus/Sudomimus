@@ -12,7 +12,7 @@ Thank you for your interest in contributing. This repository hosts open-source S
 
 ## Branching and commits
 
-- Work on a feature branch off `main`. Branch names should be short and descriptive (e.g. `feat/connect-redeem`, `fix/python-typing`).
+- Work on a feature branch off `master`. Branch names should be short and descriptive (e.g. `feat/connect-redeem`, `fix/python-typing`).
 - Commit messages should describe **why**, not just **what**, in one or two sentences.
 - All committed content (code, comments, docs, commit messages, PR descriptions) must be written in English.
 

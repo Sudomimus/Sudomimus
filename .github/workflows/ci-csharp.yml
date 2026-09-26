@@ -2,7 +2,7 @@ name: C# SDKs
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "sdks/csharp/**"
       - "specs"

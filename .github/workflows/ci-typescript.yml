@@ -2,7 +2,7 @@ name: TypeScript SDKs
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "sdks/typescript/**"
       - "specs"
