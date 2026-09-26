@@ -58,10 +58,7 @@ On success the example prints the decoded access-token user plus the per-claim
 view (policy + the user's decision, so you can see why a claim is or isn't in
 the token):
 
-```
-
-It then seeds `RotatingSessionClient`, calls Session `/refresh` once, and
-logs out through Session `/logout`.
+```text
 ✓ Login successful.
   subject:           subject-...
   firstName:         <name or SteamID64>
@@ -72,6 +69,9 @@ logs out through Session `/logout`.
     staticAvatar     requirement=OFF                state=UNKNOWN
     animatedAvatar   requirement=OFF                state=UNKNOWN
 ```
+
+It then seeds `RotatingSessionClient`, calls Session `/refresh` once, and
+logs out through Session `/logout`.
 
 ## Claim-gated logins (errands)
 

@@ -49,7 +49,7 @@ sdks/python/             Python SDKs (uv workspace)
 sdks/csharp/             C# / .NET 8 SDKs (dotnet solution, NuGet packages)
 sdks/go/                 Go SDKs (single module, github.com/sudomimus/sudomimus-go)
 sdks/java/               Java SDKs (Gradle Kotlin DSL multi-module, JDK 17)
-examples/                Per-language usage examples
+examples/                Runnable usage examples (see examples/README.md)
 ```
 
 See [`sdks/typescript/README.md`](sdks/typescript/README.md), [`sdks/python/README.md`](sdks/python/README.md), [`sdks/go/README.md`](sdks/go/README.md), [`sdks/java/README.md`](sdks/java/README.md), and the per-project READMEs under [`sdks/csharp/src/`](sdks/csharp/src) for language-specific development instructions. The repo-root [`Makefile`](Makefile) exposes consistent `compile-*`, `test-*`, `coverage-*`, and `pack-*` targets across all languages.

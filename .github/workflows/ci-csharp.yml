@@ -5,11 +5,13 @@ on:
     branches: [master]
     paths:
       - "sdks/csharp/**"
+      - "examples/csharp/**"
       - "specs"
       - ".github/workflows/ci-csharp.yml"
   pull_request:
     paths:
       - "sdks/csharp/**"
+      - "examples/csharp/**"
       - "specs"
       - ".github/workflows/ci-csharp.yml"
 
@@ -29,3 +31,7 @@ jobs:
           dotnet-version: "8.0.x"
       - run: dotnet restore Sudomimus.slnx
       - run: dotnet test Sudomimus.slnx --no-restore --configuration Release
+      - name: Build console example
+        run: dotnet build ../../examples/csharp/console/Sudomimus.Examples.Console.csproj --configuration Release
+      - name: Build Godot example
+        run: dotnet build ../../examples/csharp/godot/Game.csproj --configuration Release
