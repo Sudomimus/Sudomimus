@@ -15,7 +15,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://sudomimus.com"
-Repository = "https://github.com/sudomimus/sudomimus"
+Repository = "https://github.com/Sudomimus/Sudomimus"
 
 [build-system]
 requires = ["hatchling"]

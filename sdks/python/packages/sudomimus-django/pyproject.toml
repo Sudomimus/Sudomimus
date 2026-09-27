@@ -10,7 +10,7 @@ dependencies = ["Django>=4.2", "sudomimus-connect==4.1.0", "sudomimus-session==4
 
 [project.urls]
 Homepage = "https://sudomimus.com"
-Repository = "https://github.com/sudomimus/sudomimus"
+Repository = "https://github.com/Sudomimus/Sudomimus"
 
 [build-system]
 requires = ["hatchling"]
