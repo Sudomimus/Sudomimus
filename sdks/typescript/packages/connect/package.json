@@ -5,7 +5,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/sudomimus/sudomimus.git",
+        "url": "https://github.com/Sudomimus/Sudomimus.git",
         "directory": "sdks/typescript/packages/connect"
     },
     "type": "module",

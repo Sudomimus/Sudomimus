@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -31,6 +32,7 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: pnpm
           cache-dependency-path: sdks/typescript/pnpm-lock.yaml
+      - run: npm install --global npm@^11.5.1
       - run: pnpm -C sdks/typescript install --frozen-lockfile
       - run: pnpm -C sdks/typescript generate
       - name: Verify generated types are committed
@@ -40,14 +42,14 @@ jobs:
       - run: pnpm -C sdks/typescript test
       - name: Publish changed packages in dependency order
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           BEFORE_SHA: ${{ github.event.before }}
         run: |
-          test -n "$NODE_AUTH_TOKEN" || { echo "NPM_TOKEN secret is required" >&2; exit 1; }
           changed="$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- sdks/typescript/packages)"
           for package in token session connect device native web nextjs nuxt react-router; do
             manifest="sdks/typescript/packages/$package/package.json"
             if grep -Fxq "$manifest" <<< "$changed"; then
-              pnpm -C "sdks/typescript/packages/$package" publish --no-git-checks --access=public
+              package_dist="$(mktemp -d)"
+              pnpm -C "sdks/typescript/packages/$package" pack --pack-destination "$package_dist"
+              npm publish "$package_dist"/*.tgz --access=public
             fi
           done

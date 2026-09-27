@@ -14,11 +14,19 @@ in the push. If several manifests change, packages publish in dependency order.
 The workflows do not compare version fields. A manifest edit without a new
 package version may fail when the registry rejects the existing version.
 
-Before the first run, add these GitHub Actions repository secrets:
+Before the first npm release, configure GitHub Actions as a trusted publisher
+for each existing npm package. Use organization `Sudomimus`, repository
+`Sudomimus`, workflow filename `publish-typescript.yml`, no environment, and
+allow direct `npm publish`. The workflow uses npm OIDC authentication and needs
+no npm token. A package must exist on npm before its trusted publisher can be
+configured. Its `package.json` must also include a `repository.url` that matches
+the GitHub repository. Add that field before the first trusted release of a new
+package.
+
+Before the first PyPI and NuGet runs, add these GitHub Actions repository secrets:
 
 | Secret | Used by |
 | --- | --- |
-| `NPM_TOKEN` | npm publishing for the `@sudomimus` scope |
 | `UV_PUBLISH_TOKEN` | PyPI publishing for the `sudomimus-*` projects |
 | `NUGET_API_KEY` | NuGet publishing for the `Sudomimus.*` packages |
 
