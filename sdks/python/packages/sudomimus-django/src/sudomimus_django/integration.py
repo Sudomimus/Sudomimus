@@ -18,8 +18,10 @@ from django.http import (  # type: ignore[import-untyped]
 from sudomimus_connect import (  # type: ignore[import-untyped]
     ConnectClient,
     EstablishRequest,
+    Payload,
     RedeemRequest,
     ReturnMethodCallback,
+    ReturnMethodDeclaration,
 )
 from sudomimus_session import (  # type: ignore[import-untyped]
     LogoutRequest,
@@ -76,9 +78,13 @@ class ConnectDjango:
         inquiry = self.connect.establish(
             EstablishRequest(
                 applicationAnchor=self.config.application_anchor,
+                authenticationConstraints=None,
+                realizeConstraints=None,
                 returnMethods=[
-                    ReturnMethodCallback(
-                        type="CALLBACK", payload={"callbackUrl": self.config.callback_url}
+                    ReturnMethodDeclaration(
+                        root=ReturnMethodCallback(
+                            type="CALLBACK", payload=Payload(callbackUrl=self.config.callback_url)
+                        )
                     )
                 ],
             )

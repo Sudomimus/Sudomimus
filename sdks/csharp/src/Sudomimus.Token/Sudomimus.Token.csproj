@@ -6,7 +6,7 @@
         <Description>Parse and verify Sudomimus access and refresh JWTs (RS256). Mirrors the
             @sudomimus/token TypeScript SDK and the on-wire format used by Sudomimus Connect and
             Native APIs.</Description>
-        <PackageTags>sudomimus;jwt;rs256;auth;token;sdk</PackageTags>
+        <PackageTags>sudomimus;jwt;rs256;auth;token;sdk;identity</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591</NoWarn>

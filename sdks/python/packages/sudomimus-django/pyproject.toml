@@ -2,6 +2,7 @@
 name = "sudomimus-django"
 version = "0.1.0"
 description = "Django integration for Sudomimus Connect browser login"
+keywords = ["sudomimus", "authentication", "sdk"]
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

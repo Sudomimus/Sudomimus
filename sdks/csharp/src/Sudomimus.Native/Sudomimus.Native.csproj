@@ -7,7 +7,7 @@
             access keys, or signed Ed25519 credentials for application access and refresh tokens, surfaces the
             per-claim consent view, and carries the errand recovery handoff for claim-gated logins.
             Generic .NET package usable from any C# runtime (consoles, Godot, Unity, ASP.NET).</Description>
-        <PackageTags>sudomimus;steam;auth;godot;sdk</PackageTags>
+        <PackageTags>sudomimus;steam;auth;godot;sdk;identity</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591</NoWarn>

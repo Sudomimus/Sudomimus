@@ -2,6 +2,7 @@
 name = "sudomimus-device"
 version = "4.1.0"
 description = "Sudomimus Device SDK — public-client device authorization with manual or automatic polling."
+keywords = ["sudomimus", "authentication", "sdk"]
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

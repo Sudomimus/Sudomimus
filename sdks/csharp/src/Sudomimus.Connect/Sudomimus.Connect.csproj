@@ -6,7 +6,7 @@
         <Description>HTTP client for the Sudomimus Connect API — establish authentication inquiries,
             poll status, redeem tokens, and fetch application metadata. Redeem responses carry the
             per-claim consent view.</Description>
-        <PackageTags>sudomimus;auth;connect;jwt;sdk</PackageTags>
+        <PackageTags>sudomimus;auth;connect;jwt;sdk;identity</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591</NoWarn>

@@ -2,6 +2,7 @@
 name = "sudomimus-connect"
 version = "4.1.0"
 description = "Sudomimus Connect SDK — establish authentication inquiries, poll status, redeem tokens, and fetch application metadata."
+keywords = ["sudomimus", "authentication", "sdk"]
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

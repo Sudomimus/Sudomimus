@@ -11,6 +11,11 @@ public static class AuthenticationMethod
     public const string SteamTicket = "STEAM_TICKET";
     public const string SteamOpenId = "STEAM_OPENID";
     public const string AccessKeyDirect = "ACCESS_KEY_DIRECT";
+    public const string AgentAccessKeyDirect = "AGENT_ACCESS_KEY_DIRECT";
+    public const string AutomationAccessKeyDirect = "AUTOMATION_ACCESS_KEY_DIRECT";
+    public const string PublicKeyDirect = "PUBLIC_KEY_DIRECT";
+    public const string AgentPublicKeyDirect = "AGENT_PUBLIC_KEY_DIRECT";
+    public const string AutomationPublicKeyDirect = "AUTOMATION_PUBLIC_KEY_DIRECT";
     public const string GoogleOAuth = "GOOGLE_OAUTH";
     public const string GitHubOAuth = "GITHUB_OAUTH";
     public const string DiscordOAuth = "DISCORD_OAUTH";
