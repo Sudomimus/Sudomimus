@@ -468,7 +468,10 @@ export interface operations {
              *     - `RefreshTokenFamilyCompromised` — a stale token version was used;
              *       the session is now revoked.
              *
-             *     Some unrecoverable rotation conflicts return an empty 401 body.
+             *     A public reason uses the `application/json` body below. An
+             *     unrecoverable rotation conflict whose classification is wire-private
+             *     instead returns an empty 401 body and omits `Content-Type`; clients
+             *     must inspect body presence before parsing JSON.
              */
             401: {
                 headers: {

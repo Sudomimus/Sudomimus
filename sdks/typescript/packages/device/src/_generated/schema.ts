@@ -184,7 +184,9 @@ export interface components {
         /**
          * @description Error response body for failures outside the device polling state
          *     machine. `/device-token` polling states use `DeviceTokenError`.
-         *     Invalid JSON request bodies return `InvalidBody`.
+         *     Invalid JSON request bodies return `InvalidBody`. Responses documented
+         *     without `content` are status-only, have an empty body, and omit
+         *     `Content-Type`; clients inspect body presence before parsing JSON.
          */
         Error: {
             /** @description Stable machine-readable reason code. */
