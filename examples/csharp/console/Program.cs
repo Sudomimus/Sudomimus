@@ -141,7 +141,7 @@ if (!string.IsNullOrEmpty(firstLine))
 JwtToken<AccessTokenBody> parsed;
 if (publicKeyPem is not null)
 {
-    var verifier = new TokenVerifier((_, _) => Task.FromResult(publicKeyPem));
+    var verifier = new TokenVerifier((_, _, _) => Task.FromResult(publicKeyPem));
     try
     {
         parsed = await verifier.VerifyAccessTokenAsync(accessToken);
@@ -162,11 +162,6 @@ else
 Console.WriteLine();
 Console.WriteLine("✓ Login successful.");
 Console.WriteLine($"  subject:           {parsed.Body.Subject}");
-Console.WriteLine($"  firstName:         {parsed.Body.FirstName}");
-if (!string.IsNullOrEmpty(parsed.Body.LastName))
-{
-    Console.WriteLine($"  lastName:          {parsed.Body.LastName}");
-}
 
 // The claims view explains why each shareable claim is or is not in the token
 // (policy joined with the user's decision) — present even when the claim itself

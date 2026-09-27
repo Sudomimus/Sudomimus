@@ -90,7 +90,7 @@ console.log("\nInquiry realized. Calling /redeem ...");
 const redeemed = await client.redeem({ exposureKey, hiddenKey, confirmationKey });
 const verified = await client.verifyAccessToken(redeemed.accessToken);
 
-console.log(`\n✓ Login successful. subject=${verified.body.subject}`);
+console.log(`\n✓ Login successful. subject=${verified.body.sub}`);
 
 // Demonstrate refresh-token rotation. The store would be backed by a
 // database row, Redis hash, or cookie jar in a real integration —

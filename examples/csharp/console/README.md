@@ -54,14 +54,13 @@ You'll be prompted in order:
 4. (Optional) the application's public PEM key, ended by
    `-----END PUBLIC KEY-----`. Press Enter on the first line to skip.
 
-On success the example prints the decoded access-token user plus the per-claim
+On success the example prints the decoded access-token subject plus the per-claim
 view (policy + the user's decision, so you can see why a claim is or isn't in
 the token):
 
 ```text
 ✓ Login successful.
   subject:           subject-...
-  firstName:         <name or SteamID64>
   claims:
     email            requirement=REQUIRED           state=GRANTED
     firstName        requirement=OFF                state=UNKNOWN

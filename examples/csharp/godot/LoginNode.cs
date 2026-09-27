@@ -303,9 +303,7 @@ public partial class LoginNode : Control
             // verify them with Sudomimus.Token's TokenVerifier.
             var parsed = TokenParser.ParseAccessToken(accessToken);
             _statusLabel.Text = "✓ Login successful.";
-            var text =
-                $"subject:           {parsed.Body.Subject}\n" +
-                $"firstName:         {parsed.Body.FirstName}";
+            var text = $"subject:           {parsed.Body.Subject}";
             if (claims is not null)
             {
                 text +=
