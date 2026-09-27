@@ -299,7 +299,7 @@ export interface components {
             /** @description Localized application display name. */
             applicationName: string;
         };
-        AuthenticationRuleConstraint: components["schemas"]["AuthenticationRuleConstraintPasskeyUsernameless"] | components["schemas"]["AuthenticationRuleConstraintPasskeyReasoned"] | components["schemas"]["AuthenticationRuleConstraintEmailVerification"] | components["schemas"]["AuthenticationRuleConstraintSteamTicket"] | components["schemas"]["AuthenticationRuleConstraintSteamOpenId"] | components["schemas"]["AuthenticationRuleConstraintAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintGoogleOAuth"] | components["schemas"]["AuthenticationRuleConstraintGitHubOAuth"] | components["schemas"]["AuthenticationRuleConstraintDiscordOAuth"] | components["schemas"]["AuthenticationRuleConstraintBattleNetOAuth"] | components["schemas"]["AuthenticationRuleConstraintXOAuth"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationApplicationManaged"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationDomainManaged"];
+        AuthenticationRuleConstraint: components["schemas"]["AuthenticationRuleConstraintPasskeyUsernameless"] | components["schemas"]["AuthenticationRuleConstraintPasskeyReasoned"] | components["schemas"]["AuthenticationRuleConstraintEmailVerification"] | components["schemas"]["AuthenticationRuleConstraintSteamTicket"] | components["schemas"]["AuthenticationRuleConstraintSteamOpenId"] | components["schemas"]["AuthenticationRuleConstraintAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAgentAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAutomationAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAgentPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAutomationPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintGoogleOAuth"] | components["schemas"]["AuthenticationRuleConstraintGitHubOAuth"] | components["schemas"]["AuthenticationRuleConstraintDiscordOAuth"] | components["schemas"]["AuthenticationRuleConstraintBattleNetOAuth"] | components["schemas"]["AuthenticationRuleConstraintXOAuth"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationApplicationManaged"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationDomainManaged"];
         AuthenticationRuleConstraintCommon: {
             /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
             accessTokenTtlSeconds?: number;
@@ -371,6 +371,61 @@ export interface components {
              * @enum {string}
              */
             method: "ACCESS_KEY_DIRECT";
+        };
+        AuthenticationRuleConstraintAgentAccessKeyDirect: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "AGENT_ACCESS_KEY_DIRECT";
+            payload: components["schemas"]["AuthenticationRuleAgentAccessKeyDirectPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "AGENT_ACCESS_KEY_DIRECT";
+        };
+        AuthenticationRuleConstraintAutomationAccessKeyDirect: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "AUTOMATION_ACCESS_KEY_DIRECT";
+            payload: components["schemas"]["AuthenticationRuleAutomationAccessKeyDirectPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "AUTOMATION_ACCESS_KEY_DIRECT";
+        };
+        AuthenticationRuleConstraintPublicKeyDirect: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "PUBLIC_KEY_DIRECT";
+            payload: components["schemas"]["AuthenticationRulePublicKeyDirectPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "PUBLIC_KEY_DIRECT";
+        };
+        AuthenticationRuleConstraintAgentPublicKeyDirect: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "AGENT_PUBLIC_KEY_DIRECT";
+            payload: components["schemas"]["AuthenticationRuleAgentPublicKeyDirectPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "AGENT_PUBLIC_KEY_DIRECT";
+        };
+        AuthenticationRuleConstraintAutomationPublicKeyDirect: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "AUTOMATION_PUBLIC_KEY_DIRECT";
+            payload: components["schemas"]["AuthenticationRuleAutomationPublicKeyDirectPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "AUTOMATION_PUBLIC_KEY_DIRECT";
         };
         AuthenticationRuleConstraintGoogleOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
             /** @enum {string} */
@@ -479,6 +534,11 @@ export interface components {
         AuthenticationRuleSteamOpenIdPayload: Record<string, never>;
         /** @description Enables Native API `/direct-issue/access-key` authentication. */
         AuthenticationRuleAccessKeyDirectPayload: Record<string, never>;
+        AuthenticationRuleAgentAccessKeyDirectPayload: Record<string, never>;
+        AuthenticationRuleAutomationAccessKeyDirectPayload: Record<string, never>;
+        AuthenticationRulePublicKeyDirectPayload: Record<string, never>;
+        AuthenticationRuleAgentPublicKeyDirectPayload: Record<string, never>;
+        AuthenticationRuleAutomationPublicKeyDirectPayload: Record<string, never>;
         /**
          * @description Empty `allowedHostedDomains` means no hosted-domain gating. A
          *     non-empty list requires an exact, case-insensitive match against the

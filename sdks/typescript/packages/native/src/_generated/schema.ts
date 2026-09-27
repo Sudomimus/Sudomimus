@@ -36,7 +36,11 @@ export interface paths {
          *     access and refresh tokens. The key must belong to the named
          *     application, remain active, and satisfy its configured authorization
          *     rules. Credential rejection uses the single opaque reason
-         *     `AccessKeyDirectDenied`.
+         *     `AccessKeyDirectDenied`. After credential proof, Layer 1 requires the
+         *     exact `ACCESS_KEY_DIRECT` (Account), `AGENT_ACCESS_KEY_DIRECT` (Agent),
+         *     or `AUTOMATION_ACCESS_KEY_DIRECT` (Automation) rule. The method is
+         *     derived from the credential-bound principal, never from a request
+         *     parameter; accepting one principal kind does not admit the others.
          */
         post: operations["directIssueAccessKey"];
         delete?: never;
@@ -62,7 +66,11 @@ export interface paths {
          *     application. Account credentials issue ordinary application access
          *     tokens; Workload credentials issue the dedicated Workload access-token
          *     type with pairwise `act.sub`. Credential rejection uses the single
-         *     opaque reason `PublicKeyDirectDenied`.
+         *     opaque reason `PublicKeyDirectDenied`. After signature and replay
+         *     verification, Layer 1 requires `PUBLIC_KEY_DIRECT` (Account),
+         *     `AGENT_PUBLIC_KEY_DIRECT` (Agent), or `AUTOMATION_PUBLIC_KEY_DIRECT`
+         *     (Automation), selected from the credential-bound principal's immutable
+         *     kind. Each rule has an empty payload and admits only its exact method.
          *
          *     The JOSE header must be exact `{alg:"EdDSA",
          *     typ:"vnd.sudomimus.public-key-assertion+jwt",kid:"pky_..."}`. Claims

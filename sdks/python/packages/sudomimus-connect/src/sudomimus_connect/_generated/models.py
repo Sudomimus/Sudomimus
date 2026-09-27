@@ -315,32 +315,52 @@ class Method5(StrEnum):
 
 
 class Method6(StrEnum):
-    GOOGLE_OAUTH = "GOOGLE_OAUTH"
+    AGENT_ACCESS_KEY_DIRECT = "AGENT_ACCESS_KEY_DIRECT"
 
 
 class Method7(StrEnum):
-    GITHUB_OAUTH = "GITHUB_OAUTH"
+    AUTOMATION_ACCESS_KEY_DIRECT = "AUTOMATION_ACCESS_KEY_DIRECT"
 
 
 class Method8(StrEnum):
-    DISCORD_OAUTH = "DISCORD_OAUTH"
+    PUBLIC_KEY_DIRECT = "PUBLIC_KEY_DIRECT"
 
 
 class Method9(StrEnum):
-    BATTLENET_OAUTH = "BATTLENET_OAUTH"
+    AGENT_PUBLIC_KEY_DIRECT = "AGENT_PUBLIC_KEY_DIRECT"
 
 
 class Method10(StrEnum):
-    X_OAUTH = "X_OAUTH"
+    AUTOMATION_PUBLIC_KEY_DIRECT = "AUTOMATION_PUBLIC_KEY_DIRECT"
 
 
 class Method11(StrEnum):
+    GOOGLE_OAUTH = "GOOGLE_OAUTH"
+
+
+class Method12(StrEnum):
+    GITHUB_OAUTH = "GITHUB_OAUTH"
+
+
+class Method13(StrEnum):
+    DISCORD_OAUTH = "DISCORD_OAUTH"
+
+
+class Method14(StrEnum):
+    BATTLENET_OAUTH = "BATTLENET_OAUTH"
+
+
+class Method15(StrEnum):
+    X_OAUTH = "X_OAUTH"
+
+
+class Method16(StrEnum):
     ENTERPRISE_FEDERATION_APPLICATION_MANAGED = (
         "ENTERPRISE_FEDERATION_APPLICATION_MANAGED"
     )
 
 
-class Method12(StrEnum):
+class Method17(StrEnum):
     ENTERPRISE_FEDERATION_DOMAIN_MANAGED = "ENTERPRISE_FEDERATION_DOMAIN_MANAGED"
 
 
@@ -419,6 +439,36 @@ class AuthenticationRuleAccessKeyDirectPayload(BaseModel):
 
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleAgentAccessKeyDirectPayload(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleAutomationAccessKeyDirectPayload(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRulePublicKeyDirectPayload(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleAgentPublicKeyDirectPayload(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleAutomationPublicKeyDirectPayload(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
@@ -737,6 +787,39 @@ class AuthenticationRuleConstraintAccessKeyDirect(AuthenticationRuleConstraintCo
     payload: AuthenticationRuleAccessKeyDirectPayload
 
 
+class AuthenticationRuleConstraintAgentAccessKeyDirect(
+    AuthenticationRuleConstraintCommon
+):
+    method: Literal["AGENT_ACCESS_KEY_DIRECT"]
+    payload: AuthenticationRuleAgentAccessKeyDirectPayload
+
+
+class AuthenticationRuleConstraintAutomationAccessKeyDirect(
+    AuthenticationRuleConstraintCommon
+):
+    method: Literal["AUTOMATION_ACCESS_KEY_DIRECT"]
+    payload: AuthenticationRuleAutomationAccessKeyDirectPayload
+
+
+class AuthenticationRuleConstraintPublicKeyDirect(AuthenticationRuleConstraintCommon):
+    method: Literal["PUBLIC_KEY_DIRECT"]
+    payload: AuthenticationRulePublicKeyDirectPayload
+
+
+class AuthenticationRuleConstraintAgentPublicKeyDirect(
+    AuthenticationRuleConstraintCommon
+):
+    method: Literal["AGENT_PUBLIC_KEY_DIRECT"]
+    payload: AuthenticationRuleAgentPublicKeyDirectPayload
+
+
+class AuthenticationRuleConstraintAutomationPublicKeyDirect(
+    AuthenticationRuleConstraintCommon
+):
+    method: Literal["AUTOMATION_PUBLIC_KEY_DIRECT"]
+    payload: AuthenticationRuleAutomationPublicKeyDirectPayload
+
+
 class AuthenticationRuleConstraintGoogleOAuth(AuthenticationRuleConstraintCommon):
     method: Literal["GOOGLE_OAUTH"]
     payload: AuthenticationRuleGoogleOAuthPayload
@@ -817,6 +900,11 @@ class AuthenticationRuleConstraint(
         | AuthenticationRuleConstraintSteamTicket
         | AuthenticationRuleConstraintSteamOpenId
         | AuthenticationRuleConstraintAccessKeyDirect
+        | AuthenticationRuleConstraintAgentAccessKeyDirect
+        | AuthenticationRuleConstraintAutomationAccessKeyDirect
+        | AuthenticationRuleConstraintPublicKeyDirect
+        | AuthenticationRuleConstraintAgentPublicKeyDirect
+        | AuthenticationRuleConstraintAutomationPublicKeyDirect
         | AuthenticationRuleConstraintGoogleOAuth
         | AuthenticationRuleConstraintGitHubOAuth
         | AuthenticationRuleConstraintDiscordOAuth
@@ -833,6 +921,11 @@ class AuthenticationRuleConstraint(
         | AuthenticationRuleConstraintSteamTicket
         | AuthenticationRuleConstraintSteamOpenId
         | AuthenticationRuleConstraintAccessKeyDirect
+        | AuthenticationRuleConstraintAgentAccessKeyDirect
+        | AuthenticationRuleConstraintAutomationAccessKeyDirect
+        | AuthenticationRuleConstraintPublicKeyDirect
+        | AuthenticationRuleConstraintAgentPublicKeyDirect
+        | AuthenticationRuleConstraintAutomationPublicKeyDirect
         | AuthenticationRuleConstraintGoogleOAuth
         | AuthenticationRuleConstraintGitHubOAuth
         | AuthenticationRuleConstraintDiscordOAuth
