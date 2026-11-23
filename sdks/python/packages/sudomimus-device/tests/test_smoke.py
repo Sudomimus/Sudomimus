@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 import httpx
 import pytest
+from pydantic import ValidationError
 from sudomimus_device import (
     PRODUCTION_BASE_URL,
     AsyncDeviceAuthenticator,
@@ -26,6 +28,9 @@ from sudomimus_session import AsyncInMemoryTokenStore, InMemoryTokenStore, Token
 
 Handler = Callable[[httpx.Request], httpx.Response]
 DEVICE_CODE = "dvc_" + "a" * 64
+URL_FIXTURES = json.loads(
+    (Path(__file__).resolve().parents[4] / "fixtures/device-verification-urls.json").read_text()
+)
 
 
 def _sync_client(handler: Handler) -> DeviceClient:
@@ -57,8 +62,8 @@ def _token_json() -> dict:
             "email": {"requirement": "OFF", "state": "UNKNOWN"},
             "firstName": {"requirement": "OPTIONAL", "state": "GRANTED"},
             "lastName": {"requirement": "OPTIONAL", "state": "DENIED"},
-            "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
-            "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+            "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+            "avatarAnimation": {"requirement": "OFF", "state": "UNKNOWN"},
         },
     }
 
@@ -98,6 +103,46 @@ def test_device_authorize() -> None:
     assert captured["url"].endswith("/device-authorize")
     assert captured["body"] == {"applicationAnchor": "my-app"}
     assert result.userCode.root == "ABCD-1234"
+
+
+@pytest.mark.parametrize("field", ["verificationUri", "verificationUriComplete"])
+@pytest.mark.parametrize("url", URL_FIXTURES["rejected"])
+def test_device_authorize_rejects_invalid_urls_before_normalization(field: str, url: str) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={**_auth_json(), field: url})
+
+    with _sync_client(handler) as client, pytest.raises(ValidationError) as error:
+        client.device_authorize(DeviceAuthorizeRequest(applicationAnchor="my-app"))
+    assert error.value.errors()[0]["loc"] == (field,)
+
+
+@pytest.mark.parametrize("url", URL_FIXTURES["accepted"])
+def test_device_authorize_accepts_allowed_verification_urls(url: str) -> None:
+    response = {**_auth_json(), "verificationUri": url, "verificationUriComplete": url}
+    with _sync_client(lambda _: httpx.Response(200, json=response)) as client:
+        result = client.device_authorize(DeviceAuthorizeRequest(applicationAnchor="my-app"))
+    assert str(result.verificationUri) == url
+
+
+def test_async_device_authorize_validates_urls_and_accepts_loopback_http() -> None:
+    async def run() -> None:
+        response = _auth_json()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json=response)
+
+        async with _async_client(handler) as client:
+            request = DeviceAuthorizeRequest(applicationAnchor="my-app")
+            response["verificationUriComplete"] = "https://example.test/device "
+            with pytest.raises(ValidationError):
+                await client.device_authorize(request)
+
+            response["verificationUri"] = "http://[::1]:3000/device"
+            response["verificationUriComplete"] = "http://[::1]:3000/device?user_code=ABCD-1234"
+            authorization = await client.device_authorize(request)
+            assert str(authorization.verificationUri) == "http://[::1]:3000/device"
+
+    asyncio.run(run())
 
 
 def test_device_token() -> None:
@@ -173,6 +218,7 @@ def test_authorize_and_poll_persists_tokens() -> None:
         store=store,
         open_url=lambda url, _auth: opened.append(url),
         sleep=lambda seconds: sleeps.append(seconds),
+        now=lambda: 0,
     )
 
     result = auth.authorize_and_poll(
@@ -183,7 +229,7 @@ def test_authorize_and_poll_persists_tokens() -> None:
     assert result.tokens.refreshToken == "refresh.jwt"
     assert captured_paths == ["/device-authorize", "/device-token", "/device-token"]
     assert opened == ["https://sudomimus.com/device?user_code=ABCD-1234"]
-    assert sleeps == [5]
+    assert sleeps == [5, 5]
     assert progress[0].error == "authorization_pending"
     pair = store.load()
     assert pair is not None
@@ -215,10 +261,10 @@ def test_slow_down_updates_interval() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return responses.pop(0)
 
-    auth = DeviceAuthenticator(_sync_client(handler), sleep=sleeps.append)
+    auth = DeviceAuthenticator(_sync_client(handler), sleep=sleeps.append, now=lambda: 0)
     auth.poll_for_token(DeviceAuthorizeResponse.model_validate({**_auth_json(), "interval": 2}))
 
-    assert sleeps == [9]
+    assert sleeps == [2, 9]
 
 
 def test_terminal_token_error_surfaces() -> None:
@@ -235,10 +281,10 @@ def test_poll_timeout() -> None:
     now = {"value": 1000.0}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(400, json={"error": "authorization_pending"})
+        pytest.fail("A poll must not start at or after the deadline.")
 
-    def sleep(_seconds: float) -> None:
-        now["value"] = 3000.0
+    def sleep(seconds: float) -> None:
+        now["value"] += seconds
 
     auth = DeviceAuthenticator(
         _sync_client(handler),
@@ -277,16 +323,23 @@ def test_async_client_and_authenticator() -> None:
     async def run() -> tuple[str, str | None]:
         store = AsyncInMemoryTokenStore()
         opened: list[str] = []
+        sleeps: list[float] = []
+
+        async def sleep(seconds: float) -> None:
+            sleeps.append(seconds)
+
         async with _async_client(handler) as client:
             auth = AsyncDeviceAuthenticator(
                 client,
                 store=store,
                 open_url=lambda url, _auth: opened.append(url),
-                sleep=lambda _seconds: asyncio.sleep(0),
+                sleep=sleep,
+                now=lambda: 0,
             )
             result = await auth.authorize_and_poll(
                 DeviceAuthorizeRequest(applicationAnchor="my-app")
             )
+            assert sleeps == [5, 5]
             pair = await store.load()
             return result.tokens.accessToken, pair.refresh_token if pair else None
 

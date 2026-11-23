@@ -68,6 +68,26 @@ def test_verify_id_token_happy_path() -> None:
     assert token.body.sub == "subject-1"
 
 
+def test_verify_id_token_hybrid_hashes() -> None:
+    private, public = _keypair()
+    jwt = _mint_id_token(
+        private, c_hash="q6YkQhEr3xBAZbQpN9Ntxg", at_hash="DTNOqrvYa2Ufhf5qWcRsSA"
+    )
+    parsed = verify_id_token(
+        jwt, public, authorization_code="code-sample", access_token="access.signed.value"
+    )
+    assert parsed.body.c_hash == "q6YkQhEr3xBAZbQpN9Ntxg"
+    with pytest.raises(TokenError) as code_error:
+        verify_id_token(jwt, public, authorization_code="other")
+    assert code_error.value.code == TokenErrorCode.WRONG_CODE_HASH
+    with pytest.raises(TokenError) as access_error:
+        verify_id_token(jwt, public, access_token="other")
+    assert access_error.value.code == TokenErrorCode.WRONG_ACCESS_TOKEN_HASH
+    with pytest.raises(TokenError) as missing:
+        verify_id_token(_mint_id_token(private), public, authorization_code="code-sample")
+    assert missing.value.code == TokenErrorCode.WRONG_CODE_HASH
+
+
 def test_verify_id_token_expired() -> None:
     private_pem, public_pem = _keypair()
     past = int(time.time()) - 10

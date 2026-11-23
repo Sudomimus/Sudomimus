@@ -9,13 +9,13 @@ from pydantic import BaseModel
 
 from ._generated.models import (
     DeviceAuthorizeRequest,
-    DeviceAuthorizeResponse,
     DeviceTokenRequest,
     DeviceTokenResponse,
     HealthResponse,
 )
 from .client import _JSON_HEADERS, _handle, _ResponseT
 from .constants import PRODUCTION_BASE_URL
+from .models import DeviceAuthorizeResponse
 
 
 class AsyncDeviceClient:

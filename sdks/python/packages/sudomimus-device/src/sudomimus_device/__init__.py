@@ -11,7 +11,6 @@ from ._generated.models import (
     ClaimRequirementStateView,
     ClaimsStateView,
     DeviceAuthorizeRequest,
-    DeviceAuthorizeResponse,
     DeviceTokenError,
     DeviceTokenRequest,
     DeviceTokenResponse,
@@ -30,6 +29,7 @@ from .authenticator import (
 from .client import DeviceClient
 from .constants import PRODUCTION_BASE_URL
 from .errors import DeviceApiError, DevicePollTimeoutError, DeviceTokenApiError
+from .models import DeviceAuthorizeResponse
 
 __all__ = [
     "PRODUCTION_BASE_URL",

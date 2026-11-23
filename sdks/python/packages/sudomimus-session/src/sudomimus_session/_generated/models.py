@@ -85,8 +85,11 @@ class ClaimsStateView(BaseModel):
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    staticAvatar: ClaimRequirementStateView
-    animatedAvatar: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
+    avatarAnimation: ClaimRequirementStateView = Field(
+        ...,
+        description="Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission.",
+    )
 
 
 class RefreshRequest(BaseModel):
@@ -134,12 +137,12 @@ class UserInfoResponse(BaseModel):
     given_name: str | None = None
     family_name: str | None = Field(
         None,
-        description="The approved surname. Empty when the account legitimately has no surname.",
+        description="The approved structured surname. Empty when an approved structured first name is known and the account has no surname. A complete display name alone does not establish this claim.",
     )
     picture: AnyUrl | None = None
     picture_animated: AnyUrl | None = Field(
         None,
-        description="Sudomimus private claim for the sector-scoped animated avatar URL.",
+        description="Sector-scoped avatar animation URL when requested. Uses the same source as picture. Account animation requires both avatar grants; otherwise returns the account static URL. Virtual animation needs no account consent.",
     )
 
 

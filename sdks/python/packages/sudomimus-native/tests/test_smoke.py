@@ -5,19 +5,24 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 import httpx
 import pytest
 from pydantic import ValidationError
 from sudomimus_native import (
     PRODUCTION_BASE_URL,
+    AgreementAcceptance,
     AsyncNativeClient,
     CreateErrandRequest,
     DirectIssueAccessKeyRequest,
+    DirectIssueDeniedError,
     DirectIssuePublicKeyRequest,
+    DirectIssueSteamTicketConflictError,
     DirectIssueSteamTicketRequest,
     NativeApiError,
     NativeClient,
+    NativeError,
     PublicKeyCredential,
     Status,
 )
@@ -25,6 +30,7 @@ from sudomimus_native import (
 Handler = Callable[[httpx.Request], httpx.Response]
 ACCESS_KEY_IDENTIFIER = "acs_k_11111111-1111-4111-8111-111111111111"
 ACCESS_KEY_SECRET = "acs_t_" + ("0" * 64)
+TERMS = json.loads((Path(__file__).resolve().parents[4] / "fixtures/native-terms.json").read_text())
 
 
 def _client(handler: Handler) -> NativeClient:
@@ -42,8 +48,8 @@ def _token_response(request: httpx.Request) -> httpx.Response:
                 "email": {"requirement": "OFF", "state": "UNKNOWN"},
                 "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                 "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
-                "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                "avatarAnimation": {"requirement": "OFF", "state": "UNKNOWN"},
             },
         },
     )
@@ -81,6 +87,76 @@ def test_direct_issue_steam_ticket() -> None:
     }
     assert result.accessToken == "a.b.c"
     assert result.refreshToken == "d.e.f"
+
+
+def test_steam_terms_challenge_and_revision_conflict() -> None:
+    checksum = TERMS["steamChallenge"]["agreement"]["locales"]["zh-CN"]["contentSha256"]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if "agreementAcceptance" not in body:
+            assert body["steamTicketHex"] == "abcd"
+            return httpx.Response(403, json=TERMS["steamChallenge"])
+
+        assert body["steamTicketHex"] == "ef01"
+        assert body["agreementAcceptance"] == {
+            "revision": 2, "locale": "zh-CN", "contentSha256": checksum, "confirmed": True,
+        }
+        return httpx.Response(409, json=TERMS["steamConflict"])
+
+    with _client(handler) as client:
+        with pytest.raises(NativeApiError) as refused:
+            client.direct_issue_steam_ticket(
+                DirectIssueSteamTicketRequest(
+                    applicationAnchor="my-app", steamTicketHex="abcd", steamAppId=480,
+                )
+            )
+        denial = refused.value.body
+        assert isinstance(denial, DirectIssueDeniedError)
+        assert denial.agreement is not None
+        locale = denial.agreement.locales.zh_CN
+        assert locale.document.sections[0].paragraphs == ["Read these terms."]
+
+        with pytest.raises(NativeApiError) as conflict:
+            client.direct_issue_steam_ticket(
+                DirectIssueSteamTicketRequest(
+                    applicationAnchor="my-app",
+                    steamTicketHex="ef01",
+                    steamAppId=480,
+                    agreementAcceptance=AgreementAcceptance(
+                        revision=denial.agreement.requiredRevision,
+                        locale="zh-CN",
+                        contentSha256=locale.contentSha256,
+                        confirmed=True,
+                    ),
+                )
+            )
+
+    assert isinstance(conflict.value.body, DirectIssueSteamTicketConflictError)
+    assert conflict.value.body.requiredRevision == 3
+
+
+@pytest.mark.parametrize(
+    ("status", "name", "error_type"),
+    [
+        (409, "credentialConflict", NativeError),
+        (403, "browserRequired", DirectIssueDeniedError),
+    ],
+)
+def test_access_key_retains_its_own_error_model(status: int, name: str, error_type: type) -> None:
+    with (
+        _client(lambda _: httpx.Response(status, json=TERMS[name])) as client,
+        pytest.raises(NativeApiError) as failure,
+    ):
+        client.direct_issue_access_key(
+            DirectIssueAccessKeyRequest(
+                applicationAnchor="my-app",
+                accessKeyIdentifier=ACCESS_KEY_IDENTIFIER,
+                accessKeySecret=ACCESS_KEY_SECRET,
+            )
+        )
+    assert isinstance(failure.value.body, error_type)
+    assert failure.value.body.model_dump(mode="json", exclude_none=True) == TERMS[name]
 
 
 def test_direct_issue_access_key() -> None:
@@ -257,8 +333,8 @@ def test_create_errand() -> None:
                     "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
                     "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                     "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                    "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
-                    "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                    "avatarAnimation": {"requirement": "OFF", "state": "UNKNOWN"},
                 },
             },
         )
@@ -302,8 +378,8 @@ def test_async_create_errand() -> None:
                         "email": {"requirement": "REQUIRED", "state": "UNKNOWN"},
                         "firstName": {"requirement": "OFF", "state": "UNKNOWN"},
                         "lastName": {"requirement": "OFF", "state": "UNKNOWN"},
-                        "staticAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
-                        "animatedAvatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "avatar": {"requirement": "OFF", "state": "UNKNOWN"},
+                        "avatarAnimation": {"requirement": "OFF", "state": "UNKNOWN"},
                     },
                 },
             )

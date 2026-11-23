@@ -5,12 +5,14 @@ on:
     branches: [master]
     paths:
       - "sdks/python/**"
+      - "sdks/fixtures/**"
       - "examples/python/**"
       - "specs"
       - ".github/workflows/ci-python.yml"
   pull_request:
     paths:
       - "sdks/python/**"
+      - "sdks/fixtures/**"
       - "examples/python/**"
       - "specs"
       - ".github/workflows/ci-python.yml"

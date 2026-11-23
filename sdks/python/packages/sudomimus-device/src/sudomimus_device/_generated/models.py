@@ -67,10 +67,12 @@ class DeviceAuthorizeResponse(BaseModel):
     deviceCode: DeviceCode
     userCode: UserCode
     verificationUri: AnyUrl = Field(
-        ..., description="Browser page where the user enters or confirms `userCode`."
+        ...,
+        description="Absolute HTTPS browser URL without credentials or surrounding whitespace. HTTP is permitted only for local development on localhost, 127.0.0.1, or [::1]. Clients must reject control characters before display or launch. The user enters or confirms `userCode` on this page.",
     )
     verificationUriComplete: AnyUrl = Field(
-        ..., description="Browser URL pre-filled with `userCode`."
+        ...,
+        description="Browser URL pre-filled with `userCode`. The same scheme, host, credential, whitespace, and control-character constraints as verificationUri apply.",
     )
     expiresIn: int = Field(
         ...,
@@ -155,16 +157,19 @@ class ClaimRequirementStateView(BaseModel):
 
 class ClaimsStateView(BaseModel):
     """
-    Per-claim view across the five shareable claims - why a claim is or is
-    not present in the minted token.
+    Live policy and consent view for UserInfo disclosure. Avatar animation is
+    subordinate to account-avatar consent; profile values are not in tokens.
 
     """
 
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    staticAvatar: ClaimRequirementStateView
-    animatedAvatar: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
+    avatarAnimation: ClaimRequirementStateView = Field(
+        ...,
+        description="Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission.",
+    )
 
 
 class Error1(BaseModel):

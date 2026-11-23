@@ -9,8 +9,10 @@ signed by the **platform** key (resolve it from the OIDC JWKS by the header
 from __future__ import annotations
 
 import binascii
+from base64 import urlsafe_b64encode
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from hashlib import sha256
 
 from pydantic import ValidationError
 
@@ -78,13 +80,15 @@ def verify_id_token(
     audience: str | None = None,
     issuer: str | None = None,
     nonce: str | None = None,
+    authorization_code: str | None = None,
+    access_token: str | None = None,
     now: datetime | None = None,
 ) -> IdToken:
     """Verify an OIDC id_token against a platform public key.
 
-    Checks the body ``exp``, the RS256 signature, and any supplied
-    ``audience`` / ``issuer`` / ``nonce`` expectations. Returns the parsed
-    token or raises :class:`TokenError`.
+    Checks the expiry, RS256 signature, and supplied identity expectations.
+    Pass the companion authorization code and access token to check their
+    signed hashes. An absent or mismatched expected hash raises TokenError.
     """
     parsed = parse_id_token(jwt)
     current = now if now is not None else datetime.now(tz=UTC)
@@ -92,7 +96,7 @@ def verify_id_token(
     if datetime.fromtimestamp(parsed.body.exp, tz=UTC) <= current:
         raise TokenError(TokenErrorCode.EXPIRED, "id_token has expired.")
 
-    if not parsed.verify_signature(platform_public_key_pem):
+    if parsed.header.alg != "RS256" or not parsed.verify_signature(platform_public_key_pem):
         raise TokenError(
             TokenErrorCode.INVALID_SIGNATURE,
             "id_token signature does not match the platform public key.",
@@ -116,4 +120,24 @@ def verify_id_token(
             "id_token `nonce` does not match the value sent at /authorize.",
         )
 
+    if authorization_code is not None and not _matches_hash(
+        authorization_code, parsed.body.c_hash
+    ):
+        raise TokenError(
+            TokenErrorCode.WRONG_CODE_HASH, "id_token c_hash does not match the authorization code."
+        )
+
+    if access_token is not None and not _matches_hash(access_token, parsed.body.at_hash):
+        raise TokenError(
+            TokenErrorCode.WRONG_ACCESS_TOKEN_HASH,
+            "id_token at_hash does not match the access token.",
+        )
+
     return parsed
+
+
+def _matches_hash(value: str, claim: str | None) -> bool:
+    if not value or not value.isascii():
+        return False
+    digest = sha256(value.encode("ascii")).digest()[:16]
+    return claim == urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")

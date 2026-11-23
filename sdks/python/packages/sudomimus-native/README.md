@@ -80,3 +80,22 @@ from sudomimus_native import (
 ## License
 
 [MIT](../../../../LICENSE)
+
+## Basic Terms confirmation
+
+If Steam direct issue returns `403 LegalAgreementRequired`, use `agreement`
+from the error body. Render the complete `document` from one locale, including
+its table and links, and obtain explicit confirmation. Request a fresh Steam
+ticket and send `agreementAcceptance` with the displayed `requiredRevision`,
+the selected `locale`, its `contentSha256`, and `confirmed: true`.
+
+A `409 LegalAgreementRevisionMismatch` carries the current `requiredRevision`.
+Start a fresh attempt to retrieve the current challenge and ask the player to
+confirm that version. For AccessKey or PublicKey, display `termsUrl` and ask the
+account holder to accept the terms during a browser sign-in before retrying.
+
+The `DirectIssueDeniedError` body exposes the typed `agreement` and
+`termsUrl`. Its locale snapshots are available at `agreement.locales.en_US`
+and `agreement.locales.zh_CN`. Pass an `AgreementAcceptance` to the new
+`DirectIssueSteamTicketRequest`. The `DirectIssueSteamTicketConflictError` body
+exposes `requiredRevision` on a revision conflict.

@@ -13,11 +13,11 @@ from sudomimus_session import AsyncTokenStore, TokenPair, TokenStore
 
 from ._generated.models import (
     DeviceAuthorizeRequest,
-    DeviceAuthorizeResponse,
     DeviceTokenRequest,
     DeviceTokenResponse,
 )
 from .errors import DevicePollTimeoutError, DeviceTokenApiError
+from .models import DeviceAuthorizeResponse
 
 if TYPE_CHECKING:
     from .async_client import AsyncDeviceClient
@@ -46,6 +46,49 @@ OpenUrl = Callable[[str, DeviceAuthorizeResponse], None]
 PollCallback = Callable[[DevicePollProgress], None]
 AsyncOpenUrl = Callable[[str, DeviceAuthorizeResponse], None | Awaitable[None]]
 AsyncPollCallback = Callable[[DevicePollProgress], None | Awaitable[None]]
+
+
+@dataclass(slots=True)
+class _PollSchedule:
+    authorization: DeviceAuthorizeResponse
+    deadline: float
+    next_poll_at: float
+    interval: float
+    attempt: int = 0
+
+    @classmethod
+    def start(
+        cls,
+        authorization: DeviceAuthorizeResponse,
+        started_at: float,
+        timeout: float | None,
+    ) -> _PollSchedule:
+        lifetime = float(authorization.expiresIn)
+        if timeout is not None:
+            lifetime = min(lifetime, timeout)
+        interval = float(authorization.interval)
+        return cls(authorization, started_at + lifetime, started_at + interval, interval)
+
+    def wait_seconds(self, now: float) -> float:
+        return max(0.0, min(self.deadline, self.next_poll_at) - now)
+
+    def begin_poll(self, now: float) -> None:
+        if now >= self.deadline:
+            raise DevicePollTimeoutError(self.authorization)
+        self.attempt += 1
+
+    def retry(self, error: DeviceTokenApiError, now: float) -> DevicePollProgress | None:
+        if error.error not in {"authorization_pending", "slow_down"}:
+            return None
+        if error.error == "slow_down":
+            self.interval = float(error.interval) if error.interval else self.interval + 5
+        self.next_poll_at = now + self.interval
+        return DevicePollProgress(
+            authorization=self.authorization,
+            attempt=self.attempt,
+            error=str(error.error),
+            next_interval_seconds=self.interval,
+        )
 
 
 class DeviceAuthenticator:
@@ -91,6 +134,7 @@ class DeviceAuthenticator:
     ) -> DeviceAuthorizationResult:
         """Start device authorization, optionally open the browser, then poll."""
         authorization = self._client.device_authorize(request)
+        schedule = _PollSchedule.start(authorization, self._now(), poll_timeout_seconds)
         if on_authorize is not None:
             on_authorize(authorization)
 
@@ -98,12 +142,7 @@ class DeviceAuthenticator:
         if opener is not None:
             opener(str(authorization.verificationUriComplete), authorization)
 
-        tokens = self.poll_for_token(
-            authorization,
-            store=store,
-            on_poll=on_poll,
-            poll_timeout_seconds=poll_timeout_seconds,
-        )
+        tokens = self._poll_for_token(schedule, store, on_poll)
         return DeviceAuthorizationResult(authorization=authorization, tokens=tokens)
 
     def poll_for_token(
@@ -115,37 +154,34 @@ class DeviceAuthenticator:
         poll_timeout_seconds: float | None = None,
     ) -> DeviceTokenResponse:
         """Poll an existing device authorization session until tokens issue."""
-        deadline = self._deadline(authorization, poll_timeout_seconds)
-        interval = float(max(1, authorization.interval))
-        attempt = 0
+        schedule = _PollSchedule.start(authorization, self._now(), poll_timeout_seconds)
+        return self._poll_for_token(schedule, store, on_poll)
 
+    def _poll_for_token(
+        self,
+        schedule: _PollSchedule,
+        store: TokenStore | None,
+        on_poll: PollCallback | None,
+    ) -> DeviceTokenResponse:
+        request = DeviceTokenRequest(deviceCode=schedule.authorization.deviceCode)
         while True:
-            if self._now() > deadline:
-                raise DevicePollTimeoutError(authorization)
+            wait = schedule.wait_seconds(self._now())
+            if wait > 0:
+                self._sleep(wait)
+            schedule.begin_poll(self._now())
 
-            attempt += 1
             try:
-                tokens = self._client.device_token(
-                    DeviceTokenRequest(deviceCode=authorization.deviceCode)
-                )
-                self._persist(tokens, store)
-                return tokens
-            except DeviceTokenApiError as exc:
-                if exc.error not in {"authorization_pending", "slow_down"}:
+                tokens = self._client.device_token(request)
+            except DeviceTokenApiError as error:
+                progress = schedule.retry(error, self._now())
+                if progress is None:
                     raise
-                if exc.error == "slow_down":
-                    next_interval = exc.interval if exc.interval is not None else interval + 5
-                    interval = float(max(1, next_interval))
                 if on_poll is not None:
-                    on_poll(
-                        DevicePollProgress(
-                            authorization=authorization,
-                            attempt=attempt,
-                            error=str(exc.error),
-                            next_interval_seconds=interval,
-                        )
-                    )
-                self._sleep(min(interval, max(0.0, deadline - self._now())))
+                    on_poll(progress)
+                continue
+
+            self._persist(tokens, store)
+            return tokens
 
     def seed(self, tokens: TokenPair) -> None:
         """Persist a token pair into the configured store."""
@@ -167,17 +203,6 @@ class DeviceAuthenticator:
         if store is None:
             return
         store.save(TokenPair(access_token=tokens.accessToken, refresh_token=tokens.refreshToken))
-
-    def _deadline(
-        self,
-        authorization: DeviceAuthorizeResponse,
-        poll_timeout_seconds: float | None,
-    ) -> float:
-        expires_at = self._now() + max(1, authorization.expiresIn)
-        if poll_timeout_seconds is None:
-            return expires_at
-        timeout_at = self._now() + max(0.0, poll_timeout_seconds)
-        return min(expires_at, timeout_at)
 
     def _require_store(self, method: str) -> TokenStore:
         if self._store is None:
@@ -223,6 +248,7 @@ class AsyncDeviceAuthenticator:
     ) -> DeviceAuthorizationResult:
         """Start device authorization, optionally open the browser, then poll."""
         authorization = await self._client.device_authorize(request)
+        schedule = _PollSchedule.start(authorization, self._now(), poll_timeout_seconds)
         if on_authorize is not None:
             await _maybe_await(on_authorize(authorization))
 
@@ -230,12 +256,7 @@ class AsyncDeviceAuthenticator:
         if opener is not None:
             await _maybe_await(opener(str(authorization.verificationUriComplete), authorization))
 
-        tokens = await self.poll_for_token(
-            authorization,
-            store=store,
-            on_poll=on_poll,
-            poll_timeout_seconds=poll_timeout_seconds,
-        )
+        tokens = await self._poll_for_token(schedule, store, on_poll)
         return DeviceAuthorizationResult(authorization=authorization, tokens=tokens)
 
     async def poll_for_token(
@@ -247,39 +268,34 @@ class AsyncDeviceAuthenticator:
         poll_timeout_seconds: float | None = None,
     ) -> DeviceTokenResponse:
         """Poll an existing device authorization session until tokens issue."""
-        deadline = self._deadline(authorization, poll_timeout_seconds)
-        interval = float(max(1, authorization.interval))
-        attempt = 0
+        schedule = _PollSchedule.start(authorization, self._now(), poll_timeout_seconds)
+        return await self._poll_for_token(schedule, store, on_poll)
 
+    async def _poll_for_token(
+        self,
+        schedule: _PollSchedule,
+        store: AsyncTokenStore | None,
+        on_poll: AsyncPollCallback | None,
+    ) -> DeviceTokenResponse:
+        request = DeviceTokenRequest(deviceCode=schedule.authorization.deviceCode)
         while True:
-            if self._now() > deadline:
-                raise DevicePollTimeoutError(authorization)
+            wait = schedule.wait_seconds(self._now())
+            if wait > 0:
+                await self._sleep(wait)
+            schedule.begin_poll(self._now())
 
-            attempt += 1
             try:
-                tokens = await self._client.device_token(
-                    DeviceTokenRequest(deviceCode=authorization.deviceCode)
-                )
-                await self._persist(tokens, store)
-                return tokens
-            except DeviceTokenApiError as exc:
-                if exc.error not in {"authorization_pending", "slow_down"}:
+                tokens = await self._client.device_token(request)
+            except DeviceTokenApiError as error:
+                progress = schedule.retry(error, self._now())
+                if progress is None:
                     raise
-                if exc.error == "slow_down":
-                    next_interval = exc.interval if exc.interval is not None else interval + 5
-                    interval = float(max(1, next_interval))
                 if on_poll is not None:
-                    await _maybe_await(
-                        on_poll(
-                            DevicePollProgress(
-                                authorization=authorization,
-                                attempt=attempt,
-                                error=str(exc.error),
-                                next_interval_seconds=interval,
-                            )
-                        )
-                    )
-                await self._sleep(min(interval, max(0.0, deadline - self._now())))
+                    await _maybe_await(on_poll(progress))
+                continue
+
+            await self._persist(tokens, store)
+            return tokens
 
     async def seed(self, tokens: TokenPair) -> None:
         """Persist a token pair into the configured store."""
@@ -307,17 +323,6 @@ class AsyncDeviceAuthenticator:
         await store.save(
             TokenPair(access_token=tokens.accessToken, refresh_token=tokens.refreshToken)
         )
-
-    def _deadline(
-        self,
-        authorization: DeviceAuthorizeResponse,
-        poll_timeout_seconds: float | None,
-    ) -> float:
-        expires_at = self._now() + max(1, authorization.expiresIn)
-        if poll_timeout_seconds is None:
-            return expires_at
-        timeout_at = self._now() + max(0.0, poll_timeout_seconds)
-        return min(expires_at, timeout_at)
 
     def _require_store(self, method: str) -> AsyncTokenStore:
         if self._store is None:

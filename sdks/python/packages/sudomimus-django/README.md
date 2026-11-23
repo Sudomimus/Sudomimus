@@ -38,3 +38,11 @@ method must serialize the callback across all workers for each session ID, so
 concurrent refreshes cannot overwrite the rotated token. Keep Django's CSRF
 middleware enabled for the POST start/logout views. The callback URL must be
 permitted by the application's CALLBACK ReturnRule.
+
+When redemption requires Basic Terms or current claim consent, or the
+Inquiry's identity authority is stale, the callback consumes the pending login
+and redirects to `reauthentication_url`. It defaults to `after_logout_url`.
+Serve a sign-in page there with a CSRF-protected POST to `start`. When refresh
+requires Basic Terms, `current` returns `None` and marks the stored session as
+requiring reauthentication. `logout` can still revoke it with the stored
+refresh token.

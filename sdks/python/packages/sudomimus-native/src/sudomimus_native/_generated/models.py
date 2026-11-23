@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -57,6 +58,29 @@ class DirectIssuePublicKeyRequest(BaseModel):
     )
 
 
+class Locale(StrEnum):
+    en_US = "en-US"
+    zh_CN = "zh-CN"
+
+
+class AgreementAcceptance(BaseModel):
+    """
+    Present only after the native client displayed the complete
+    versioned basic terms and received an affirmative confirmation.
+    A prior `LegalAgreementRequired` response supplies the text and
+    digest. Use a new Steam ticket for this retry.
+
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    revision: int = Field(..., ge=1)
+    locale: Locale
+    contentSha256: str = Field(..., pattern="^[a-f0-9]{64}$")
+    confirmed: Literal[True]
+
+
 class DirectIssueSteamTicketRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -75,6 +99,10 @@ class DirectIssueSteamTicketRequest(BaseModel):
         ...,
         description="Steam App ID under which the ticket was generated. Must be\nallow-listed by the application's `STEAM_TICKET` authentication\nrule. Steam binds tickets to their issuing App ID; passing a\ndifferent value fails verification.\n",
         ge=1,
+    )
+    agreementAcceptance: AgreementAcceptance | None = Field(
+        None,
+        description="Present only after the native client displayed the complete\nversioned basic terms and received an affirmative confirmation.\nA prior `LegalAgreementRequired` response supplies the text and\ndigest. Use a new Steam ticket for this retry.\n",
     )
 
 
@@ -120,17 +148,20 @@ class ClaimRequirementStateView(BaseModel):
 
 class ClaimsStateView(BaseModel):
     """
-    Per-claim view across the five shareable claims, carried on both
-    the 200 (why is a claim absent from the minted token) and the
-    claim-gate 403 (what is still owed).
+    Policy and consent view for UserInfo disclosure, carried on both
+    the 200 response and claim-gate 403 (what is still owed). Avatar
+    animation is subordinate and never blocks admission.
 
     """
 
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    staticAvatar: ClaimRequirementStateView
-    animatedAvatar: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
+    avatarAnimation: ClaimRequirementStateView = Field(
+        ...,
+        description="Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission.",
+    )
 
 
 class ErrandHandoff(BaseModel):
@@ -149,17 +180,65 @@ class ErrandHandoff(BaseModel):
     expiresAt: AwareDatetime
 
 
-class DirectIssueDeniedError(BaseModel):
-    """
-    403 body. For the claim-gate reasons (`ClaimConsentRequired`,
-    `RequiredClaimDataMissing`) the `claims` view and the `errand`
-    handoff are present; for every other reason only `reason` is set.
-
-    """
-
+class DirectIssueSteamTicketConflictError(BaseModel):
     reason: str = Field(..., description="Stable machine-readable reason code.")
-    claims: ClaimsStateView | None = None
-    errand: ErrandHandoff | None = None
+    requiredRevision: int | None = Field(
+        None,
+        description="Current basic terms revision when the submitted acceptance does not match it.",
+        ge=1,
+    )
+
+
+class Row(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    text: str
+    url: AnyUrl | None = None
+
+
+class Table(BaseModel):
+    """
+    Render the complete reference table and its footer alongside the section paragraphs.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    caption: str
+    columns: list[str] = Field(..., min_length=1)
+    rows: list[list[Row]]
+    footer: str
+
+
+class Link(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    label: str
+    url: AnyUrl
+
+
+class Section(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    heading: str
+    paragraphs: list[str] = Field(..., min_length=1)
+    table: Table | None = Field(
+        None,
+        description="Render the complete reference table and its footer alongside the section paragraphs.",
+    )
+    link: Link | None = None
+
+
+class NativeLegalAgreementDocumentV1(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    schemaVersion: Literal[1]
+    title: str
+    sections: list[Section]
 
 
 class CreateErrandRequest(BaseModel):
@@ -225,3 +304,41 @@ class DirectIssueSteamTicketResponse(BaseModel):
         ...,
         description="Long-lived refresh token JWT with stable payload `sid`, version identifier `jti`, and positive `rotationVersion`. It contains no user identifier. Use Session API `/refresh` to obtain a new access token without re-acquiring a Steam ticket.",
     )
+
+
+class NativeLegalAgreementLocale(BaseModel):
+    contentSha256: str = Field(..., pattern="^[a-f0-9]{64}$")
+    versionUrl: AnyUrl
+    document: NativeLegalAgreementDocumentV1
+
+
+class Locales(BaseModel):
+    en_US: NativeLegalAgreementLocale = Field(..., alias="en-US")
+    zh_CN: NativeLegalAgreementLocale = Field(..., alias="zh-CN")
+
+
+class NativeLegalAgreementChallenge(BaseModel):
+    documentType: Literal["BASIC_TERMS"]
+    requiredRevision: int = Field(..., ge=1)
+    requiredAcceptanceEpoch: int = Field(..., ge=1)
+    locales: Locales
+
+
+class DirectIssueDeniedError(BaseModel):
+    """
+    403 body. For the claim-gate reasons (`ClaimConsentRequired`,
+    `RequiredClaimDataMissing`) the `claims` view and the `errand`
+    handoff are present. For `LegalAgreementRequired`, `agreement` contains
+    the complete versioned basic terms for Steam native presentation, or
+    `termsUrl` identifies the version to accept during browser sign-in for
+    provisioned AccessKey and PublicKey credentials.
+
+    """
+
+    reason: str = Field(..., description="Stable machine-readable reason code.")
+    requiredRevision: int | None = Field(None, ge=1)
+    termsUrl: AnyUrl | None = None
+    confirmation: str | None = None
+    claims: ClaimsStateView | None = None
+    errand: ErrandHandoff | None = None
+    agreement: NativeLegalAgreementChallenge | None = None

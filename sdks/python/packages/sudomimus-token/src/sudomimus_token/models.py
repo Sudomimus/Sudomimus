@@ -120,11 +120,16 @@ class IdTokenBody(BaseModel):
     iat: int
     exp: int
     at_hash: str | None = None
+    c_hash: str | None = None
     nonce: str | None = None
     auth_time: int | None = None
     email: str | None = None
     email_verified: bool | None = None
     name: str | None = None
+    given_name: str | None = None
+    family_name: str | None = None
+    picture: str | None = None
+    picture_animated: str | None = None
     amr: list[str] | None = None
     acr: str | None = None
 
@@ -136,3 +141,7 @@ class UserInfoResponse(BaseModel):
     email: str | None = None
     email_verified: bool | None = None
     name: str | None = None
+    given_name: str | None = None
+    family_name: str | None = None
+    picture: str | None = None
+    picture_animated: str | None = None

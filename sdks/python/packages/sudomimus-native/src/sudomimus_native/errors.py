@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from ._generated.models import DirectIssueDeniedError, Error
+from ._generated.models import DirectIssueDeniedError, DirectIssueSteamTicketConflictError, Error
+
+NativeErrorBody = DirectIssueDeniedError | DirectIssueSteamTicketConflictError | Error
 
 
 class NativeApiError(Exception):
@@ -19,7 +21,7 @@ class NativeApiError(Exception):
         self,
         status: int,
         reason: str | None,
-        body: DirectIssueDeniedError | Error | None,
+        body: NativeErrorBody | None,
     ) -> None:
         message = f"Native API error {status}: {reason}" if reason else f"Native API error {status}"
         super().__init__(message)

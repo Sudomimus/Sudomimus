@@ -6,7 +6,7 @@ from types import TracebackType
 from typing import TypeVar
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ._generated.models import (
     CreateErrandRequest,
@@ -15,13 +15,14 @@ from ._generated.models import (
     DirectIssueAccessKeyResponse,
     DirectIssueDeniedError,
     DirectIssuePublicKeyRequest,
+    DirectIssueSteamTicketConflictError,
     DirectIssueSteamTicketRequest,
     DirectIssueSteamTicketResponse,
     ErrandStatusResponse,
     Error,
 )
 from .constants import PRODUCTION_BASE_URL
-from .errors import NativeApiError
+from .errors import NativeApiError, NativeErrorBody
 from .public_key_assertion import PublicKeyCredential, sign_public_key_request
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
@@ -130,17 +131,24 @@ class NativeClient:
 def _handle(response: httpx.Response, response_model: type[_ResponseT]) -> _ResponseT:
     if response.is_success:
         return response_model.model_validate_json(response.content)
-    error = _try_read_error(response)
+    error = _try_read_error(
+        response, steam_exchange=response_model is DirectIssueSteamTicketResponse
+    )
     raise NativeApiError(response.status_code, error.reason if error else None, error)
 
 
-def _try_read_error(response: httpx.Response) -> DirectIssueDeniedError | Error | None:
+def _try_read_error(response: httpx.Response, *, steam_exchange: bool) -> NativeErrorBody | None:
     if not response.content:
         return None
     try:
+        if response.status_code == 409:
+            error = Error.model_validate_json(response.content)
+            if steam_exchange and error.reason == "LegalAgreementRevisionMismatch":
+                return DirectIssueSteamTicketConflictError.model_validate_json(response.content)
+            return error
         return DirectIssueDeniedError.model_validate_json(response.content)
-    except Exception:
+    except ValidationError:
         try:
             return Error.model_validate_json(response.content)
-        except Exception:
+        except ValidationError:
             return None

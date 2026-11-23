@@ -16,6 +16,7 @@ from django.http import (  # type: ignore[import-untyped]
     HttpResponseRedirect,
 )
 from sudomimus_connect import (  # type: ignore[import-untyped]
+    ConnectApiError,
     ConnectClient,
     EstablishRequest,
     Payload,
@@ -36,6 +37,18 @@ _PENDING = "_sudomimus_pending"
 _SESSION = "_sudomimus_session"
 
 
+def _requires_basic_terms(error: ConnectApiError | SessionApiError) -> bool:
+    return error.status == 403 and error.reason == "LegalAgreementRequired"
+
+
+def _requires_new_inquiry(error: ConnectApiError) -> bool:
+    return (
+        _requires_basic_terms(error)
+        or (error.status == 403 and error.reason == "ClaimConsentRequired")
+        or (error.status == 409 and error.reason == "AuthorizationArtifactStale")
+    )
+
+
 @dataclass(frozen=True)
 class DjangoLoginConfig:
     application_anchor: str
@@ -45,6 +58,7 @@ class DjangoLoginConfig:
     via_url: str = "https://via.sudomimus.com/"
     pending_ttl_seconds: int = 600
     session_ttl_seconds: int = 2592000
+    reauthentication_url: str | None = None
 
     def __post_init__(self) -> None:
         callback = urlsplit(self.callback_url)
@@ -116,13 +130,20 @@ class ConnectDjango:
         ):
             return HttpResponseBadRequest("Invalid or expired login callback")
         del request.session[_PENDING]
-        issued = self.connect.redeem(
-            RedeemRequest(
-                exposureKey=exposure,
-                hiddenKey=pending["hidden"],
-                confirmationKey=confirmation,
+        try:
+            issued = self.connect.redeem(
+                RedeemRequest(
+                    exposureKey=exposure,
+                    hiddenKey=pending["hidden"],
+                    confirmationKey=confirmation,
+                )
             )
-        )
+        except ConnectApiError as error:
+            if _requires_new_inquiry(error):
+                return HttpResponseRedirect(
+                    self.config.reauthentication_url or self.config.after_logout_url
+                )
+            raise
         verified = self.session.verify_access_token(issued.accessToken)
         request.session.cycle_key()
         session_id = uuid.uuid4().hex
@@ -142,8 +163,8 @@ class ConnectDjango:
             return None
 
         def access(value: Credential | None) -> tuple[Credential | None, dict[str, str] | None]:
-            if value is None:
-                return None, None
+            if value is None or value.get("reauthentication_required") is True:
+                return value, None
             if int(value["expires"]) <= time.time() + 30:
                 try:
                     rotated = self.session.refresh(
@@ -152,6 +173,9 @@ class ConnectDjango:
                 except SessionApiError as error:
                     if error.status == 401:
                         return None, None
+                    if _requires_basic_terms(error):
+                        value.update(access="", reauthentication_required=True)
+                        return value, None
                     raise
                 verified = self.session.verify_access_token(rotated.accessToken)
                 if verified.body.sub != value["subject"]:

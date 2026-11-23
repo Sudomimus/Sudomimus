@@ -12,6 +12,15 @@ budgets are exhausted or a bodyless `503` when admission counters are
 unavailable. Both raise `DeviceApiError` with `reason` and `body` set to
 `None`; back off before retrying.
 
+## Browser approval
+
+The client validates both verification URLs before returning authorization
+details to display or open. Use HTTPS or loopback HTTP for local development
+on `localhost`, `127.0.0.1`, or `[::1]`. If the server ends polling with
+`access_denied`, a new browser authorization is required to try again. This
+includes approval recorded before the account accepted the current Basic
+Terms.
+
 ## Manual polling and manual storage
 
 ```python
@@ -41,6 +50,12 @@ while True:
 ```
 
 ## Automatic polling with Connect-compatible storage
+
+Automatic polling waits for the returned interval before the first exchange.
+The authorization lifetime starts when the client receives the authorization
+response. It counts the time spent displaying the code or opening the browser.
+A request that is already in flight can still finish when the polling deadline
+passes.
 
 ```python
 from sudomimus_session import InMemoryTokenStore, RotatingSessionClient, SessionClient

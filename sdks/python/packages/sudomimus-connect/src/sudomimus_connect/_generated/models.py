@@ -121,17 +121,20 @@ class ClaimRequirementStateView(BaseModel):
 
 class ClaimsStateView(BaseModel):
     """
-    Per-claim view across the five shareable claims — why a claim is
-    or is not present in the minted token (policy OFF, never asked,
-    declined, or granted).
+    Policy and consent view for UserInfo disclosure (policy OFF, never asked,
+    declined, or granted). Avatar animation is subordinate to avatar
+    consent. Profile values are not carried in tokens.
 
     """
 
     email: ClaimRequirementStateView
     firstName: ClaimRequirementStateView
     lastName: ClaimRequirementStateView
-    staticAvatar: ClaimRequirementStateView
-    animatedAvatar: ClaimRequirementStateView
+    avatar: ClaimRequirementStateView
+    avatarAnimation: ClaimRequirementStateView = Field(
+        ...,
+        description="Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission.",
+    )
 
 
 class RedeemResponse(BaseModel):
@@ -355,12 +358,20 @@ class Method15(StrEnum):
 
 
 class Method16(StrEnum):
+    MICROSOFT_OAUTH = "MICROSOFT_OAUTH"
+
+
+class Method17(StrEnum):
+    GITLAB_OAUTH = "GITLAB_OAUTH"
+
+
+class Method18(StrEnum):
     ENTERPRISE_FEDERATION_APPLICATION_MANAGED = (
         "ENTERPRISE_FEDERATION_APPLICATION_MANAGED"
     )
 
 
-class Method17(StrEnum):
+class Method19(StrEnum):
     ENTERPRISE_FEDERATION_DOMAIN_MANAGED = "ENTERPRISE_FEDERATION_DOMAIN_MANAGED"
 
 
@@ -554,6 +565,26 @@ class AuthenticationRuleXOAuthPayload(BaseModel):
     X_OAUTH at all. Empty payload. X is an email-less provider, so
     Layer-2 EMAIL rules fail closed against an X-only account.
 
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleMicrosoftOAuthPayload(BaseModel):
+    """
+    Public Microsoft personal and work or school accounts. Empty payload. Microsoft email claims do not establish mailbox ownership.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+
+class AuthenticationRuleGitLabOAuthPayload(BaseModel):
+    """
+    Public GitLab.com accounts. Empty payload. Email ownership requires a verified email claim from GitLab.com.
     """
 
     model_config = ConfigDict(
@@ -845,6 +876,16 @@ class AuthenticationRuleConstraintXOAuth(AuthenticationRuleConstraintCommon):
     payload: AuthenticationRuleXOAuthPayload
 
 
+class AuthenticationRuleConstraintMicrosoftOAuth(AuthenticationRuleConstraintCommon):
+    method: Literal["MICROSOFT_OAUTH"]
+    payload: AuthenticationRuleMicrosoftOAuthPayload
+
+
+class AuthenticationRuleConstraintGitLabOAuth(AuthenticationRuleConstraintCommon):
+    method: Literal["GITLAB_OAUTH"]
+    payload: AuthenticationRuleGitLabOAuthPayload
+
+
 class AuthenticationRuleConstraintEnterpriseFederationApplicationManaged(
     AuthenticationRuleConstraintCommon
 ):
@@ -910,6 +951,8 @@ class AuthenticationRuleConstraint(
         | AuthenticationRuleConstraintDiscordOAuth
         | AuthenticationRuleConstraintBattleNetOAuth
         | AuthenticationRuleConstraintXOAuth
+        | AuthenticationRuleConstraintGitLabOAuth
+        | AuthenticationRuleConstraintMicrosoftOAuth
         | AuthenticationRuleConstraintEnterpriseFederationApplicationManaged
         | AuthenticationRuleConstraintEnterpriseFederationDomainManaged
     ]
@@ -931,6 +974,8 @@ class AuthenticationRuleConstraint(
         | AuthenticationRuleConstraintDiscordOAuth
         | AuthenticationRuleConstraintBattleNetOAuth
         | AuthenticationRuleConstraintXOAuth
+        | AuthenticationRuleConstraintGitLabOAuth
+        | AuthenticationRuleConstraintMicrosoftOAuth
         | AuthenticationRuleConstraintEnterpriseFederationApplicationManaged
         | AuthenticationRuleConstraintEnterpriseFederationDomainManaged
     ) = Field(..., discriminator="method")

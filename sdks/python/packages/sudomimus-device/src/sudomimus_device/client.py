@@ -10,7 +10,6 @@ from pydantic import BaseModel
 
 from ._generated.models import (
     DeviceAuthorizeRequest,
-    DeviceAuthorizeResponse,
     DeviceTokenError,
     DeviceTokenRequest,
     DeviceTokenResponse,
@@ -19,6 +18,7 @@ from ._generated.models import (
 )
 from .constants import PRODUCTION_BASE_URL
 from .errors import DeviceApiError, DeviceTokenApiError
+from .models import DeviceAuthorizeResponse
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 

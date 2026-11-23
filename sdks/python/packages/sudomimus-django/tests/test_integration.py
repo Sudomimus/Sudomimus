@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import django
+import pytest
 from django.conf import settings
 
 if not settings.configured:
@@ -19,11 +20,13 @@ if not settings.configured:
 
 from django.contrib.sessions.middleware import SessionMiddleware  # noqa: E402
 from django.test import RequestFactory  # noqa: E402
+from sudomimus_connect import ConnectApiError  # noqa: E402
 from sudomimus_django import (  # noqa: E402
     ConnectDjango,
     DjangoLoginConfig,
     MemoryDjangoCredentialStore,
 )
+from sudomimus_session import SessionApiError  # noqa: E402
 
 
 def _request(method: str, path: str, session=None):
@@ -75,3 +78,68 @@ def test_login_refresh_and_logout() -> None:
     assert integration.logout(logout).status_code == 302
     session.logout.assert_called_once()
     assert integration.current(logout) is None
+
+
+@pytest.mark.parametrize(
+    ("status", "reason"),
+    [
+        (403, "LegalAgreementRequired"),
+        (403, "ClaimConsentRequired"),
+        (409, "AuthorizationArtifactStale"),
+    ],
+)
+def test_new_sign_in_preserves_logout_authority(status: int, reason: str) -> None:
+    connect = Mock()
+    connect.establish.side_effect = [
+        SimpleNamespace(exposureKey="exp_one", hiddenKey="hid_one"),
+        SimpleNamespace(exposureKey="exp_two", hiddenKey="hid_two"),
+    ]
+    connect.redeem.side_effect = [
+        ConnectApiError(status, reason, None),
+        SimpleNamespace(accessToken="access-1", refreshToken="refresh-1"),
+    ]
+    session = Mock()
+    session.verify_access_token.return_value = SimpleNamespace(
+        body=SimpleNamespace(sub="subject", exp=1)
+    )
+    session.refresh.side_effect = [
+        SessionApiError(403, "Layer2Denied", None),
+        SessionApiError(403, "LegalAgreementRequired", None),
+    ]
+    integration = ConnectDjango(
+        DjangoLoginConfig(
+            "my-app", "https://example.test/auth/callback", "/home", "/",
+            reauthentication_url="/sign-in",
+        ),
+        connect,
+        session,
+        MemoryDjangoCredentialStore(),
+    )
+
+    start = _request("POST", "/auth/start")
+    integration.start(start)
+    first = _request(
+        "GET", "/auth/callback?exposure-key=exp_one&confirmation-key=cnf_one", start.session
+    )
+    response = integration.callback(first)
+    assert response.status_code == 302
+    assert response["Location"] == "/sign-in"
+    assert integration.callback(first).status_code == 400
+
+    integration.start(start)
+    second = _request(
+        "GET", "/auth/callback?exposure-key=exp_two&confirmation-key=cnf_two", start.session
+    )
+    assert integration.callback(second)["Location"] == "/home"
+    with pytest.raises(SessionApiError, match="Layer2Denied"):
+        integration.current(second)
+    assert integration.current(second) is None
+    assert integration.current(second) is None
+    assert session.refresh.call_count == 2
+
+    logout = _request("POST", "/auth/logout", second.session)
+    assert integration.logout(logout).status_code == 302
+    session.logout.assert_called_once()
+    assert session.logout.call_args.args[0].refreshToken == "refresh-1"
+    assert integration.logout(logout).status_code == 302
+    session.logout.assert_called_once()
