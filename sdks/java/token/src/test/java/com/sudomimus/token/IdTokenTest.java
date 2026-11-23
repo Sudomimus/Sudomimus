@@ -57,6 +57,20 @@ class IdTokenTest {
     }
 
     @Test
+    void verify_hybridCompanionHashes() throws Exception {
+        TestHelpers.RsaKeyPair keys = TestHelpers.generateRsaKeyPair();
+        String jwt = mintIdToken(keys.privateKey,
+                Map.of("c_hash", "q6YkQhEr3xBAZbQpN9Ntxg", "at_hash", "DTNOqrvYa2Ufhf5qWcRsSA"));
+        IdTokenExpectations expected = new IdTokenExpectations()
+                .authorizationCode("code-sample").accessToken("access.signed.value");
+        assertEquals("q6YkQhEr3xBAZbQpN9Ntxg", IdToken.verify(jwt, keys.publicPem, expected).getBody().cHash);
+        assertEquals(TokenErrorCode.WRONG_CODE_HASH, assertThrows(TokenException.class, () ->
+                IdToken.verify(jwt, keys.publicPem, new IdTokenExpectations().authorizationCode("other"))).getCode());
+        assertEquals(TokenErrorCode.WRONG_ACCESS_TOKEN_HASH, assertThrows(TokenException.class, () ->
+                IdToken.verify(jwt, keys.publicPem, new IdTokenExpectations().accessToken("other"))).getCode());
+    }
+
+    @Test
     void verify_expiredThrows() throws Exception {
         TestHelpers.RsaKeyPair keys = TestHelpers.generateRsaKeyPair();
         long past = Instant.now().getEpochSecond() - 10;

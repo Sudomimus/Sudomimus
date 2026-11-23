@@ -15,4 +15,8 @@ public final class UserInfo {
     @JsonProperty("email") public String email;
     @JsonProperty("email_verified") public Boolean emailVerified;
     @JsonProperty("name") public String name;
+    @JsonProperty("given_name") public String givenName;
+    @JsonProperty("family_name") public String familyName;
+    @JsonProperty("picture") public String picture;
+    @JsonProperty("picture_animated") public String pictureAnimated;
 }

@@ -20,11 +20,16 @@ public final class IdTokenBody {
     @JsonProperty("iat") public Long issuedAt;
     @JsonProperty("exp") public Long expiresAt;
     @JsonProperty("at_hash") public String atHash;
+    @JsonProperty("c_hash") public String cHash;
     @JsonProperty("nonce") public String nonce;
     @JsonProperty("auth_time") public Long authTime;
     @JsonProperty("email") public String email;
     @JsonProperty("email_verified") public Boolean emailVerified;
     @JsonProperty("name") public String name;
+    @JsonProperty("given_name") public String givenName;
+    @JsonProperty("family_name") public String familyName;
+    @JsonProperty("picture") public String picture;
+    @JsonProperty("picture_animated") public String pictureAnimated;
     @JsonProperty("amr") public List<String> amr;
     @JsonProperty("acr") public String acr;
 }

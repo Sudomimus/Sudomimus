@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 
 /**
@@ -85,7 +88,7 @@ public final class IdToken {
     /**
      * Verify an OIDC id_token against a platform public key (resolved from the
      * OIDC JWKS). Checks the body {@code exp}, the RS256 signature, and any of
-     * the supplied audience/issuer/nonce expectations.
+     * the supplied identity and companion token expectations.
      */
     public static IdToken verify(String jwt, String platformPublicKeyPem, IdTokenExpectations expectations) {
         IdToken parsed = parse(jwt);
@@ -97,7 +100,7 @@ public final class IdToken {
             throw new TokenException(TokenErrorCode.EXPIRED, "id_token has expired.");
         }
 
-        if (!parsed.verifySignature(platformPublicKeyPem)) {
+        if (!"RS256".equals(parsed.header.algorithm) || !parsed.verifySignature(platformPublicKeyPem)) {
             throw new TokenException(TokenErrorCode.INVALID_SIGNATURE,
                     "id_token signature does not match the platform public key.");
         }
@@ -115,7 +118,29 @@ public final class IdToken {
                     "id_token nonce does not match the value sent at /authorize.");
         }
 
+        if (expect.authorizationCode != null
+                && !matchesCompanionHash(expect.authorizationCode, parsed.body.cHash)) {
+            throw new TokenException(TokenErrorCode.WRONG_CODE_HASH,
+                    "id_token c_hash does not match the authorization code.");
+        }
+        if (expect.accessToken != null && !matchesCompanionHash(expect.accessToken, parsed.body.atHash)) {
+            throw new TokenException(TokenErrorCode.WRONG_ACCESS_TOKEN_HASH,
+                    "id_token at_hash does not match the access token.");
+        }
+
         return parsed;
+    }
+
+    private static boolean matchesCompanionHash(String value, String claim) {
+        if (value.isEmpty() || !StandardCharsets.US_ASCII.newEncoder().canEncode(value)) {
+            return false;
+        }
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.US_ASCII));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(Arrays.copyOf(digest, 16)).equals(claim);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable.", e);
+        }
     }
 
     private static <T> T decodeJson(String segment, Class<T> type, String label) {

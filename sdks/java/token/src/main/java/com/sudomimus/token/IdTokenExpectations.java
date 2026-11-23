@@ -11,10 +11,14 @@ public final class IdTokenExpectations {
     public String audience;
     public String issuer;
     public String nonce;
+    public String authorizationCode;
+    public String accessToken;
     public Instant now;
 
     public IdTokenExpectations audience(String value) { this.audience = value; return this; }
     public IdTokenExpectations issuer(String value) { this.issuer = value; return this; }
     public IdTokenExpectations nonce(String value) { this.nonce = value; return this; }
+    public IdTokenExpectations authorizationCode(String value) { this.authorizationCode = value; return this; }
+    public IdTokenExpectations accessToken(String value) { this.accessToken = value; return this; }
     public IdTokenExpectations now(Instant value) { this.now = value; return this; }
 }

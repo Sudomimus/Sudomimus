@@ -12,4 +12,6 @@ public enum TokenErrorCode {
     WRONG_AUDIENCE,
     WRONG_ISSUER,
     WRONG_NONCE,
+    WRONG_CODE_HASH,
+    WRONG_ACCESS_TOKEN_HASH,
 }
