@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Native
- * @namespace Client
- * @description Native HTTP client
+ * @namespace Root
+ * @description Client
  */
 
 import type {

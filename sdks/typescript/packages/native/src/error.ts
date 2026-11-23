@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Native
- * @namespace Error
- * @description Native API error class
+ * @namespace Root
+ * @description Error
  */
 
 import type { NativeErrorBody } from "./declare.js";

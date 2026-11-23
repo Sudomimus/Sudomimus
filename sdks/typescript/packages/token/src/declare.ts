@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Declare
- * @description Token type declarations
+ * @namespace Root
+ * @description Declare
  */
 
 import type { ApplicationToken } from "./token.js";

@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Scripts
+ * @namespace Scripts_Maintenance_Dependencies
+ * @description Workflow Actions
+ */
+
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";

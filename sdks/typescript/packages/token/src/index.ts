@@ -1,5 +1,5 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
  * @namespace Root
  * @description Index

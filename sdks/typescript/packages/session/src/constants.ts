@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace Constants
- * @description Session client constants
+ * @namespace Root
+ * @description Constants
  */
 
 export const PRODUCTION_BASE_URL = "https://session-api.sudomimus.com";

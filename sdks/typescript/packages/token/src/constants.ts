@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Constants
- * @description Token media type constants
+ * @namespace Root
+ * @description Constants
  */
 
 export const ACCESS_TOKEN_TYPE = "vnd.sudomimus.application-access+jwt";

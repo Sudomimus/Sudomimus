@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Token
+ * @namespace Workspace
+ * @description Jest.config
+ */
+
 /** @type {import("jest").Config} */
 module.exports = {
     preset: "ts-jest",

@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package React Router
+ * @namespace Root
+ * @description Index
+ */
+
 import { ConnectWeb, type WebAuthOptions } from "@sudomimus/web";
 
 type RouteArgs = { request: Request };

@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Parse
- * @description Token parsers
+ * @namespace Root
+ * @description Parse
  */
 
 import type {

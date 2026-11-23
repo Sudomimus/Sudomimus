@@ -1,7 +1,7 @@
 {
     "name": "@sudomimus/sdks-typescript",
     "private": true,
-    "packageManager": "pnpm@11.18.0+sha512.33d83c77da82f49fba836925c6f1b841181ec3132b670639bd012f7075f5c7cf634c5f870147c19aae7478fac01df09d8892e880454896edd23ee9b33757563c",
+    "packageManager": "pnpm@12.21.0",
     "scripts": {
         "iud": "node scripts/maintenance/dependencies/maintenance.ts iud",
         "update-dependencies": "node scripts/maintenance/dependencies/maintenance.ts update-dependencies",
@@ -54,6 +54,7 @@
         "typecheck:tooling": "tsc -p scripts/tsconfig.json"
     },
     "devDependencies": {
+        "@inquirer/checkbox": "catalog:",
         "@types/jest": "catalog:",
         "@types/node": "catalog:",
         "@typescript-eslint/eslint-plugin": "catalog:",
@@ -64,7 +65,6 @@
         "ts-jest": "catalog:",
         "turbo": "catalog:",
         "typescript": "catalog:",
-        "yaml": "catalog:",
-        "@inquirer/checkbox": "catalog:"
+        "yaml": "catalog:"
     }
 }

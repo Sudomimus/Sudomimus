@@ -1,7 +1,7 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace Declare
+ * @namespace Test_Unit
  * @description Declare.test
  */
 

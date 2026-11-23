@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace Constants
- * @description Connect client constants
+ * @namespace Root
+ * @description Constants
  */
 
 export const PRODUCTION_BASE_URL = "https://connect-api.sudomimus.com";

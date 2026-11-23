@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace Error
- * @description Connect API error class
+ * @namespace Root
+ * @description Error
  */
 
 import type { ConnectErrorBody } from "./declare.js";

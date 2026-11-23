@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Native
- * @namespace Constants
- * @description Native client constants
+ * @namespace Root
+ * @description Constants
  */
 
 export const PRODUCTION_BASE_URL = "https://native-api.sudomimus.com";

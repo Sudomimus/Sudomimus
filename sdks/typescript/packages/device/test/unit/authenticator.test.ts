@@ -1,7 +1,7 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Device
- * @namespace Authenticator
+ * @namespace Test_Unit
  * @description Authenticator.test
  */
 

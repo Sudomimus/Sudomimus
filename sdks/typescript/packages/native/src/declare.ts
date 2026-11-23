@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Native
- * @namespace Declare
- * @description Native schema-derived type aliases
+ * @namespace Root
+ * @description Declare
  */
 
 import type { components, paths } from "./_generated/schema.js";

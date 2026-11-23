@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
  * @namespace Test_Helpers
- * @description Shared fetch / response test helpers
+ * @description Fetch
  */
 
 export type FakeResponseSpec = {

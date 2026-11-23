@@ -1,7 +1,7 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Parse
+ * @namespace Test_Unit
  * @description Parse.test
  */
 

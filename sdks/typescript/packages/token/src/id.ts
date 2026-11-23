@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Id
- * @description OIDC id_token and userinfo
+ * @namespace Root
+ * @description Id
  */
 
 import { JWTToken } from "@sudoo/jwt";

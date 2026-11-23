@@ -11,9 +11,20 @@
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
-    "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-    "files": ["dist", "README.md", "LICENSE"],
-    "publishConfig": { "access": "public" },
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "compile": "tsc --project typescript/tsconfig.compile.json",
         "lint": "eslint src",
@@ -22,6 +33,16 @@
         "release:dry-run": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/web pnpm -C ../.. release:dry-run",
         "release:publish": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/web pnpm -C ../.. release:publish"
     },
-    "dependencies": { "@sudomimus/connect": "workspace:*", "@sudomimus/session": "workspace:*" },
-    "devDependencies": { "@types/jest": "catalog:", "@types/node": "catalog:", "typescript": "catalog:", "eslint": "catalog:", "jest": "catalog:", "ts-jest": "catalog:" }
+    "dependencies": {
+        "@sudomimus/connect": "workspace:*",
+        "@sudomimus/session": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/jest": "catalog:",
+        "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "jest": "catalog:",
+        "ts-jest": "catalog:",
+        "typescript": "catalog:"
+    }
 }

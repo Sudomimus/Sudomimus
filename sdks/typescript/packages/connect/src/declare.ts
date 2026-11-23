@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace Declare
- * @description Connect schema-derived type aliases
+ * @namespace Root
+ * @description Declare
  */
 
 import type { components, paths } from "./_generated/schema.js";

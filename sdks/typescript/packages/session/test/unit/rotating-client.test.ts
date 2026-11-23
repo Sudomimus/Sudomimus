@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace RotatingClient
- * @description Rotating-client.test
+ * @namespace Test_Unit
+ * @description Rotating Client.test
  */
 
 import {

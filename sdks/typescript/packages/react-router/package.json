@@ -7,10 +7,39 @@
         "url": "https://github.com/Sudomimus/Sudomimus.git",
         "directory": "sdks/typescript/packages/react-router"
     },
-    "license": "MIT", "type": "module", "main": "dist/index.js", "types": "dist/index.d.ts",
-    "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-    "files": ["dist", "README.md", "LICENSE"], "publishConfig": { "access": "public" },
-    "scripts": { "compile": "tsc --project typescript/tsconfig.compile.json", "lint": "eslint src", "test": "jest --passWithNoTests", "release": "pnpm lint && pnpm test && pnpm compile", "release:dry-run": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/react-router pnpm -C ../.. release:dry-run", "release:publish": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/react-router pnpm -C ../.. release:publish" },
-    "dependencies": { "@sudomimus/web": "workspace:*" },
-    "devDependencies": { "@types/node": "catalog:", "typescript": "catalog:", "eslint": "catalog:", "jest": "catalog:" }
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "compile": "tsc --project typescript/tsconfig.compile.json",
+        "lint": "eslint src",
+        "test": "jest --passWithNoTests",
+        "release": "pnpm lint && pnpm test && pnpm compile",
+        "release:dry-run": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/react-router pnpm -C ../.. release:dry-run",
+        "release:publish": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/react-router pnpm -C ../.. release:publish"
+    },
+    "dependencies": {
+        "@sudomimus/web": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "jest": "catalog:",
+        "typescript": "catalog:"
+    }
 }

@@ -1,7 +1,7 @@
 /**
  * @author WMXPY
  * @package Scripts
- * @namespace Scripts_Validation_Workflows
+ * @namespace Scripts_Validation
  * @description Workflows
  */
 

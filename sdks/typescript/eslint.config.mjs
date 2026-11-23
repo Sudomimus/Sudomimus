@@ -1,7 +1,8 @@
 /**
- * @author Sudomimus Contributors
- * @namespace Config
- * @description ESLint Config
+ * @author WMXPY
+ * @package Root
+ * @namespace Workspace
+ * @description Eslint.config
  */
 
 import typescriptEslint from "@typescript-eslint/eslint-plugin";

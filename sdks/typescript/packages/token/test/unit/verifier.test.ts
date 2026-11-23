@@ -1,7 +1,7 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Verifier
+ * @namespace Test_Unit
  * @description Verifier.test
  */
 

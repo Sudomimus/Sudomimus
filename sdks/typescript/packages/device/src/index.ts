@@ -1,5 +1,5 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Device
  * @namespace Root
  * @description Index

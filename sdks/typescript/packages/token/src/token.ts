@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Token
- * @description Parsed application JWT container
+ * @namespace Root
+ * @description Token
  */
 
 import { createVerify } from "node:crypto";

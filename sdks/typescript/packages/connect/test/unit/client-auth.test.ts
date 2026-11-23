@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace ClientAuth
- * @description Client-auth.test
+ * @namespace Test_Unit
+ * @description Client Auth.test
  */
 
 import { JWTToken } from "@sudoo/jwt";

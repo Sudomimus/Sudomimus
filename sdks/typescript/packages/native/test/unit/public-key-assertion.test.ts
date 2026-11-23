@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Native
+ * @namespace Test_Unit
+ * @description Public Key Assertion.test
+ */
+
 import { createHash } from "node:crypto";
 import { signPublicKeyRequest } from "../../src";
 

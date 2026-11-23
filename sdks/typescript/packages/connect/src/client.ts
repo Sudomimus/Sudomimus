@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace Client
- * @description Connect HTTP client
+ * @namespace Root
+ * @description Client
  */
 
 import { SessionClient } from "@sudomimus/session";

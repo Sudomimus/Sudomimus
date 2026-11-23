@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace RotatingClient
- * @description Refresh-token rotation wrapper around SessionClient
+ * @namespace Root
+ * @description Rotating Client
  */
 
 import type { SessionClient } from "./client.js";

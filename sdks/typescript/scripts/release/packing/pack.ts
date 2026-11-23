@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Scripts
+ * @namespace Scripts_Release_Packing
+ * @description Pack
+ */
+
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";

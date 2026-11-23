@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Native
+ * @namespace Root
+ * @description Public Key Assertion
+ */
+
 /** Helpers for the Native public-key direct-issue assertion. */
 
 import type { DirectIssuePublicKeyRequest, PublicKeyCredential } from "./declare.js";

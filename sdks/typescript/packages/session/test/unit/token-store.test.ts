@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace TokenStore
- * @description Token-store.test
+ * @namespace Test_Unit
+ * @description Token Store.test
  */
 
 import { InMemoryTokenStore } from "../../src";

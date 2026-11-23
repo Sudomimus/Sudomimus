@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
  * @namespace Test_Helpers
- * @description Shared JWT test helpers
+ * @description Jwt
  */
 
 import { createSign, generateKeyPairSync } from "node:crypto";

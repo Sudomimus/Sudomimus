@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace ClientAuth
- * @description Client-auth JWT helpers for /revoke-all
+ * @namespace Root
+ * @description Client Auth
  */
 
 import { JWTCreator } from "@sudoo/jwt";

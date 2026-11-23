@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
  * @namespace Test_Helpers
- * @description Shared fetch / response test helpers
+ * @description Fetch
  */
 
 import type { ApplicationJwksResponse } from "@sudomimus/session";

@@ -1,7 +1,7 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace Client
+ * @namespace Test_Unit
  * @description Client.test
  */
 

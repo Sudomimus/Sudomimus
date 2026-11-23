@@ -1,7 +1,7 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Native
- * @namespace Declare
+ * @namespace Test_Unit
  * @description Declare.test
  */
 

@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Jwks
- * @description RSA JWK conversion helpers
+ * @namespace Root
+ * @description Jwks
  */
 
 export interface RsaJsonWebKey {

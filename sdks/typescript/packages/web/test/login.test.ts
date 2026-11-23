@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Web
+ * @namespace Test
+ * @description Login.test
+ */
+
 import { ConnectApiError, ConnectClient } from "@sudomimus/connect";
 import { SessionApiError, SessionClient } from "@sudomimus/session";
 import { ConnectWeb, MemoryWebAuthStore } from "../src/index.js";

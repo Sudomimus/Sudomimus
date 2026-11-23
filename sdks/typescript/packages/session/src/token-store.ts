@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace TokenStore
- * @description Token-store interface and in-memory default
+ * @namespace Root
+ * @description Token Store
  */
 
 /**

@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Device
- * @namespace Client
- * @description Device HTTP client
+ * @namespace Root
+ * @description Client
  */
 
 import type {

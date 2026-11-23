@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Connect
- * @namespace ClientAuth
- * @description Client-auth JWT helpers for /establish and /revoke-all
+ * @namespace Root
+ * @description Client Auth
  */
 
 import { JWTCreator } from "@sudoo/jwt";

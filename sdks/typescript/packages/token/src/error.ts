@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Error
- * @description Token error class
+ * @namespace Root
+ * @description Error
  */
 
 export type TokenErrorCode =

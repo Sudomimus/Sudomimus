@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace Error
- * @description Session SDK errors
+ * @namespace Root
+ * @description Error
  */
 
 import type { SessionApiErrorBody } from "./declare.js";

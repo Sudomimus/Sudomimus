@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Scripts
+ * @namespace Scripts_Workspace
+ * @description Repository Inventory
+ */
+
 import { existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 

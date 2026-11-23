@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Device
- * @namespace Declare
- * @description Device schema-derived type aliases
+ * @namespace Root
+ * @description Declare
  */
 
 import type { components, paths } from "./_generated/schema.js";

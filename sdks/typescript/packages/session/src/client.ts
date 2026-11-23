@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Session
- * @namespace Client
- * @description Session HTTP client
+ * @namespace Root
+ * @description Client
  */
 
 import { signSessionClientJwt } from "./client-auth.js";

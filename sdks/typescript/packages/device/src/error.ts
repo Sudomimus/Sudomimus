@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Device
- * @namespace Error
- * @description Device SDK errors
+ * @namespace Root
+ * @description Error
  */
 
 import type { DeviceAuthorizeResponse, DeviceErrorBody, DeviceTokenErrorBody } from "./declare.js";

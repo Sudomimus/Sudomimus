@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Nextjs
+ * @namespace Root
+ * @description Index
+ */
+
 import { ConnectWeb, type WebAuthOptions } from "@sudomimus/web";
 
 /** Use in Next.js App Router route.ts files; pass each member as POST or GET. */

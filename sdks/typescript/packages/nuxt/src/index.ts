@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Nuxt
+ * @namespace Root
+ * @description Index
+ */
+
 import { ConnectWeb, type WebAuthOptions } from "@sudomimus/web";
 
 interface NodeEvent {

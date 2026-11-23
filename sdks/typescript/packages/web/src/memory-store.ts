@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Web
+ * @namespace Root
+ * @description Memory Store
+ */
+
 import type { PendingLogin, WebAuthStore, WebSession } from "./index.js";
 
 /** For local development and tests. Use a shared store in production. */

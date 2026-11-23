@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Verifier
- * @description Token verifier
+ * @namespace Root
+ * @description Verifier
  */
 
 import { ACCESS_TOKEN_TYPE, REFRESH_TOKEN_TYPE, WORKLOAD_ACCESS_TOKEN_TYPE } from "./constants.js";

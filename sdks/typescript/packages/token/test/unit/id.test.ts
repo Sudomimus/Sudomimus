@@ -1,7 +1,7 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Token
- * @namespace Id
+ * @namespace Test_Unit
  * @description Id.test
  */
 

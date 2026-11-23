@@ -2,6 +2,7 @@ packages:
   - packages/*
 
 allowBuilds:
+  '@parcel/watcher@2.6.0': true
   unrs-resolver: true
 
 catalog:
@@ -9,15 +10,19 @@ catalog:
   "@sudoo/jwt": 3.6.0
   "@sudoo/token": 1.7.0
   "@types/jest": 30.0.0
-  "@types/node": 26.1.0
-  "@typescript-eslint/eslint-plugin": 8.62.1
-  "@typescript-eslint/parser": 8.62.1
-  eslint: 10.6.0
-  jest: 30.4.2
+  "@types/node": 26.6.6
+  "@typescript-eslint/eslint-plugin": 8.73.0
+  "@typescript-eslint/parser": 8.73.0
+  eslint: 10.15.0
+  jest: 30.5.2
   openapi-typescript: 7.13.0
-  ts-jest: 29.4.11
-  turbo: 2.10.2
+  ts-jest: 29.4.15
+  turbo: 2.11.11
   typescript: 6.0.3
   yaml: 2.9.1
 
 minimumReleaseAge: 10080
+
+updateConfig:
+  ignoreDependencies:
+    - typescript

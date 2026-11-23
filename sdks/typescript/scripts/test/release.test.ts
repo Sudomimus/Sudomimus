@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Scripts
+ * @namespace Scripts_Test
+ * @description Release.test
+ */
+
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";

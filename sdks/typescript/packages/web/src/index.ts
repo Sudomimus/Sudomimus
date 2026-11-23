@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Web
+ * @namespace Root
+ * @description Index
+ */
+
 import { randomUUID } from "node:crypto";
 import { ConnectApiError, ConnectClient, RETURN_METHOD, type RedeemResponse } from "@sudomimus/connect";
 import { SessionApiError, SessionClient } from "@sudomimus/session";

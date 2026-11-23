@@ -1,3 +1,10 @@
+/**
+ * @author WMXPY
+ * @package Scripts
+ * @namespace Scripts_Release_Publishing
+ * @description Targets
+ */
+
 import { publicPackages } from "../versioning/release-plan.ts";
 import { isVersion } from "../versioning/release-history.ts";
 

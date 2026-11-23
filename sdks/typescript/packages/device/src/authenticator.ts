@@ -1,8 +1,8 @@
 /**
- * @author Sudomimus Contributors
+ * @author WMXPY
  * @package Device
- * @namespace Authenticator
- * @description High-level device authorization helper
+ * @namespace Root
+ * @description Authenticator
  */
 
 import type { TokenPair, TokenStore } from "@sudomimus/session";
