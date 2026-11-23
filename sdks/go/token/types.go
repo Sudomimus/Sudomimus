@@ -3,8 +3,8 @@ package token
 import "context"
 
 const (
-	AccessTokenType  = "vnd.sudomimus.application-access+jwt"
-	RefreshTokenType = "vnd.sudomimus.application-refresh+jwt"
+	AccessTokenType         = "vnd.sudomimus.application-access+jwt"
+	RefreshTokenType        = "vnd.sudomimus.application-refresh+jwt"
 	WorkloadAccessTokenType = "vnd.sudomimus.workload-access+jwt"
 )
 
