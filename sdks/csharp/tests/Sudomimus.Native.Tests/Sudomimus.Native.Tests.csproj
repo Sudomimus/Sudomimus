@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\..\fixtures\native-terms.json" Link="native-terms.json" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="..\..\src\Sudomimus.Native\Sudomimus.Native.csproj" />
   </ItemGroup>
 

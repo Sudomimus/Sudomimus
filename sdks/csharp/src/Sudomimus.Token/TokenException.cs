@@ -15,6 +15,8 @@ public enum TokenErrorCode
     WrongAudience,
     WrongIssuer,
     WrongNonce,
+    WrongCodeHash,
+    WrongAccessTokenHash,
 }
 
 /// <summary>

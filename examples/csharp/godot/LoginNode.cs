@@ -18,6 +18,7 @@
 // in across launches.
 
 using Godot;
+using Sudomimus.Examples;
 using Sudomimus.Native;
 using Sudomimus.Session;
 using Sudomimus.Token;
@@ -44,6 +45,8 @@ public partial class LoginNode : Control
     private Node _steam = null!;
 
     private uint _pendingTicketHandle;
+    private string _pendingSteamAnchor = "";
+    private SteamAgreementAcceptance? _pendingSteamAcceptance;
     private RotatingSessionClient? _rotating;
 
     private NativeClient _native = null!;
@@ -104,6 +107,13 @@ public partial class LoginNode : Control
             return;
         }
 
+        RequestSteamTicket(anchor);
+    }
+
+    private void RequestSteamTicket(string anchor, SteamAgreementAcceptance? acceptance = null)
+    {
+        _pendingSteamAnchor = anchor;
+        _pendingSteamAcceptance = acceptance;
         _steamLoginButton.Disabled = true;
         _statusLabel.Text = "Requesting Steam ticket...";
 
@@ -112,6 +122,12 @@ public partial class LoginNode : Control
         // anything else makes the Native API reject the ticket.
         var result = _steam.Call("getAuthTicketForWebApi", NativeConstants.SteamTicketIdentity);
         _pendingTicketHandle = result.AsUInt32();
+        if (_pendingTicketHandle == 0)
+        {
+            _pendingSteamAcceptance = null;
+            _statusLabel.Text = "Steam could not start the ticket request.";
+            _steamLoginButton.Disabled = false;
+        }
     }
 
     // Signature comes from GodotSteam's get_ticket_for_web_api_response
@@ -120,23 +136,26 @@ public partial class LoginNode : Control
     // others as raw bytes. We accept a Variant and normalize.
     private async void OnTicketReady(uint authTicket, int result, uint ticketSize, Variant ticketBuffer)
     {
-        if (authTicket != _pendingTicketHandle)
+        if (_pendingTicketHandle == 0 || authTicket != _pendingTicketHandle)
         {
             return; // Some other ticket request — ignore.
         }
 
-        if (result != 1) // 1 == k_EResultOK
-        {
-            _statusLabel.Text = $"Steam refused to issue a ticket (result={result}).";
-            _steamLoginButton.Disabled = false;
-            return;
-        }
-
-        var ticketHex = NormalizeTicketHex(ticketBuffer);
-        _statusLabel.Text = "Calling /direct-issue/steam-ticket...";
-
+        _pendingTicketHandle = 0;
+        var anchor = _pendingSteamAnchor;
+        var acceptance = _pendingSteamAcceptance;
+        _pendingSteamAcceptance = null;
         try
         {
+            if (result != 1) // 1 == k_EResultOK
+            {
+                _statusLabel.Text = $"Steam refused to issue a ticket (result={result}).";
+                return;
+            }
+
+            var ticketHex = NormalizeTicketHex(ticketBuffer);
+            _statusLabel.Text = "Calling /direct-issue/steam-ticket...";
+
             // Manual mode: one attempt with this freshly-acquired ticket. On a
             // claim gate the SDK opens the errand in the browser and hands it
             // back — a Steam ticket is single-use, so the natural retry is for
@@ -145,9 +164,10 @@ public partial class LoginNode : Control
             var outcome = await _authenticator.TryAuthenticateSteamTicketAsync(_ => Task.FromResult(
                 new DirectIssueSteamTicketRequest
                 {
-                    ApplicationAnchor = _anchorInput.Text.Trim(),
+                    ApplicationAnchor = anchor,
                     SteamTicketHex = ticketHex,
                     SteamAppId = SteamAppId,
+                    AgreementAcceptance = acceptance,
                 }));
 
             switch (outcome)
@@ -160,15 +180,62 @@ public partial class LoginNode : Control
                     break;
             }
         }
+        catch (NativeApiException ex) when (ex.IsLegalAgreementRequired && ex.Body?.Agreement is { } agreement)
+        {
+            ShowSteamTerms(anchor, agreement);
+        }
+        catch (NativeApiException ex) when (ex.Reason == NativeReason.LegalAgreementRevisionMismatch)
+        {
+            _statusLabel.Text = "The terms changed. Click Login with Steam to review the current version.";
+        }
         catch (NativeApiException ex)
         {
             _statusLabel.Text = $"Native API error: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}";
         }
         finally
         {
-            _steam.Call("cancelAuthTicket", _pendingTicketHandle);
+            _steam.Call("cancelAuthTicket", authTicket);
             _steamLoginButton.Disabled = false;
         }
+    }
+
+    private void ShowSteamTerms(string anchor, NativeLegalAgreementChallenge agreement)
+    {
+        var locale = OS.GetLocaleLanguage() == "zh" ? "zh-CN" : "en-US";
+        var snapshot = agreement.Locales[locale];
+        var dialog = new ConfirmationDialog
+        {
+            Title = snapshot.Document.Title,
+            OkButtonText = "Accept and continue",
+            CancelButtonText = "Cancel",
+            Exclusive = true,
+        };
+        dialog.AddChild(new TextEdit
+        {
+            Text = SteamTermsText.Render(snapshot),
+            Editable = false,
+            WrapMode = TextEdit.LineWrappingMode.Boundary,
+            CustomMinimumSize = new Vector2(560, 320),
+        });
+        AddChild(dialog);
+        dialog.Confirmed += () =>
+        {
+            dialog.QueueFree();
+            RequestSteamTicket(anchor, new SteamAgreementAcceptance
+            {
+                Revision = agreement.RequiredRevision,
+                Locale = locale,
+                ContentSha256 = snapshot.ContentSha256,
+                Confirmed = true,
+            });
+        };
+        dialog.Canceled += () =>
+        {
+            dialog.QueueFree();
+            _statusLabel.Text = "Steam login canceled.";
+        };
+        _statusLabel.Text = "Review the current Basic Terms.";
+        dialog.PopupCentered();
     }
 
     // -------- Access-key login path ------------------------------------
@@ -201,6 +268,10 @@ public partial class LoginNode : Control
                 AccessKeySecret = keySecret,
             });
             await OnLoginSucceeded(login);
+        }
+        catch (NativeApiException ex) when (ex.IsLegalAgreementRequired && ex.Body?.TermsUrl is { } termsUrl)
+        {
+            _statusLabel.Text = $"Complete a browser sign-in to accept the Basic Terms, then try again.\n{termsUrl}";
         }
         catch (NativeApiException ex)
         {
@@ -310,8 +381,8 @@ public partial class LoginNode : Control
                     $"\nclaims.email:      {claims.Email.Requirement}/{claims.Email.State}" +
                     $"\nclaims.firstName:  {claims.FirstName.Requirement}/{claims.FirstName.State}" +
                     $"\nclaims.lastName:   {claims.LastName.Requirement}/{claims.LastName.State}" +
-                    $"\nclaims.staticAvatar:   {claims.StaticAvatar.Requirement}/{claims.StaticAvatar.State}" +
-                    $"\nclaims.animatedAvatar: {claims.AnimatedAvatar.Requirement}/{claims.AnimatedAvatar.State}";
+                    $"\nclaims.avatar:   {claims.Avatar.Requirement}/{claims.Avatar.State}" +
+                    $"\nclaims.avatarAnimation: {claims.AvatarAnimation.Requirement}/{claims.AvatarAnimation.State}";
             }
             _resultLabel.Text = text;
         }

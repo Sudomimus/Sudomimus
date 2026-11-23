@@ -19,6 +19,9 @@ public static class NativeReason
     /// <summary>Every required claim is granted, but the account lacks the data.</summary>
     public const string RequiredClaimDataMissing = "RequiredClaimDataMissing";
 
+    public const string LegalAgreementRequired = "LegalAgreementRequired";
+    public const string LegalAgreementRevisionMismatch = "LegalAgreementRevisionMismatch";
+
     // -- Three-layer rule denials (403) --
 
     public const string Layer1Denied = "Layer1Denied";

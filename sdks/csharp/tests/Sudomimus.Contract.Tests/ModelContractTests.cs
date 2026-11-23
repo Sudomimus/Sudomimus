@@ -70,6 +70,9 @@ public sealed class ModelContractTests
         { "native", "DirectIssuePublicKeyRequest", typeof(Native.DirectIssuePublicKeyRequest) },
         { "native", "DirectIssueSteamTicketRequest", typeof(Native.DirectIssueSteamTicketRequest) },
         { "native", "DirectIssueSteamTicketResponse", typeof(Native.DirectIssueSteamTicketResponse) },
+        { "native", "NativeLegalAgreementChallenge", typeof(Native.NativeLegalAgreementChallenge) },
+        { "native", "NativeLegalAgreementLocale", typeof(Native.NativeLegalAgreementLocale) },
+        { "native", "NativeLegalAgreementDocumentV1", typeof(Native.NativeLegalAgreementDocument) },
 
         // ---- Native: claims view + errand handoff ----
         { "native", "ClaimRequirementStateView", typeof(Native.ClaimRequirementStateView) },

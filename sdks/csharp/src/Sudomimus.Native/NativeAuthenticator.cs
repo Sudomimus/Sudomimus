@@ -200,8 +200,46 @@ public sealed class NativeAuthenticator
         {
             DirectIssueSteamTicketRequest request =
                 await requestFactory(cancellationToken).ConfigureAwait(false);
-            DirectIssueSteamTicketResponse response =
-                await _client.DirectIssueSteamTicketAsync(request, cancellationToken).ConfigureAwait(false);
+            var confirm = _options.ConfirmSteamTerms;
+            DirectIssueSteamTicketResponse response;
+            try
+            {
+                response = await _client.DirectIssueSteamTicketAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            catch (NativeApiException exception) when (
+                confirm is not null && exception.IsLegalAgreementRequired && exception.Body?.Agreement is { } agreement)
+            {
+                string? locale = await confirm(agreement, cancellationToken).ConfigureAwait(false);
+                if (locale is null)
+                {
+                    throw;
+                }
+
+                if (!agreement.Locales.TryGetValue(locale, out var displayed))
+                {
+                    throw new InvalidOperationException("The confirmed locale must match a locale from the agreement.");
+                }
+
+                var fresh = await requestFactory(cancellationToken).ConfigureAwait(false);
+                if (string.Equals(request.SteamTicketHex, fresh.SteamTicketHex, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("Confirming the agreement requires a fresh Steam ticket.");
+                }
+
+                var confirmed = request with
+                {
+                    SteamTicketHex = fresh.SteamTicketHex,
+                    AgreementAcceptance = new SteamAgreementAcceptance
+                    {
+                        Revision = agreement.RequiredRevision,
+                        Locale = locale,
+                        ContentSha256 = displayed.ContentSha256,
+                        Confirmed = true,
+                    },
+                };
+                response = await _client.DirectIssueSteamTicketAsync(confirmed, cancellationToken).ConfigureAwait(false);
+            }
+
             return ToResult(response.ApplicationAnchor, response.AccessToken, response.RefreshToken, response.Claims);
         };
 

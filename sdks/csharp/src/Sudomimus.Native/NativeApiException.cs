@@ -48,6 +48,10 @@ public sealed class NativeApiException : Exception
         && (string.Equals(Reason, NativeReason.ClaimConsentRequired, StringComparison.Ordinal)
             || string.Equals(Reason, NativeReason.RequiredClaimDataMissing, StringComparison.Ordinal));
 
+    /// <summary>True when direct issue requires confirmation of the current basic terms.</summary>
+    public bool IsLegalAgreementRequired =>
+        StatusCode == HttpStatusCode.Forbidden && Reason == NativeReason.LegalAgreementRequired;
+
     public NativeApiException(HttpStatusCode statusCode, string? reason, NativeErrorBody? body)
         : base(reason is null
             ? $"Native API error {(int)statusCode}"

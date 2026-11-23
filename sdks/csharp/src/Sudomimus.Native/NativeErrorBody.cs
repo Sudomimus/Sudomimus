@@ -28,4 +28,16 @@ public sealed record NativeErrorBody
     /// </summary>
     [JsonPropertyName("errand")]
     public ErrandHandoff? Errand { get; init; }
+
+    [JsonPropertyName("requiredRevision")]
+    public long? RequiredRevision { get; init; }
+
+    [JsonPropertyName("termsUrl")]
+    public string? TermsUrl { get; init; }
+
+    [JsonPropertyName("confirmation")]
+    public string? Confirmation { get; init; }
+
+    [JsonPropertyName("agreement")]
+    public NativeLegalAgreementChallenge? Agreement { get; init; }
 }

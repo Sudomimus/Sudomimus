@@ -50,6 +50,32 @@ public class IdTokenTests
     }
 
     [Fact]
+    public void Verify_ValidatesHybridCompanionHashes()
+    {
+        var keys = TestHelpers.GenerateRsaKeyPair();
+        var iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var jwt = MintIdToken(keys.PrivateKeyPem, new
+        {
+            iss = "https://oidc.sudomimus.com",
+            sub = "subject-1",
+            aud = "client-1",
+            iat,
+            exp = iat + 3600,
+            c_hash = "q6YkQhEr3xBAZbQpN9Ntxg",
+            at_hash = "DTNOqrvYa2Ufhf5qWcRsSA",
+        });
+        var expect = new IdTokenExpectations { AuthorizationCode = "code-sample", AccessToken = "access.signed.value" };
+
+        Assert.Equal("q6YkQhEr3xBAZbQpN9Ntxg", IdToken.Verify(jwt, keys.PublicKeyPem, expect).Body.CHash);
+        Assert.Equal(TokenErrorCode.WrongCodeHash, Assert.Throws<TokenException>(() =>
+            IdToken.Verify(jwt, keys.PublicKeyPem, expect with { AuthorizationCode = "other" })).Code);
+        Assert.Equal(TokenErrorCode.WrongAccessTokenHash, Assert.Throws<TokenException>(() =>
+            IdToken.Verify(jwt, keys.PublicKeyPem, expect with { AccessToken = "other" })).Code);
+        Assert.Equal(TokenErrorCode.WrongCodeHash, Assert.Throws<TokenException>(() =>
+            IdToken.Verify(MintIdToken(keys.PrivateKeyPem), keys.PublicKeyPem, expect)).Code);
+    }
+
+    [Fact]
     public void Verify_ExpiredThrows()
     {
         var keys = TestHelpers.GenerateRsaKeyPair();

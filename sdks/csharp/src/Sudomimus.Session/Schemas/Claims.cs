@@ -61,10 +61,8 @@ public sealed record ClaimRequirementStateView
 }
 
 /// <summary>
-/// Per-claim view across the five shareable claims, carried on the
-/// <c>/refresh</c> 200 responses so the application can tell
-/// why each claim is or is not present in the minted token (the application's
-/// policy joined with the user's standing decision).
+/// Policy and consent for UserInfo disclosure, as returned by <c>/refresh</c>.
+/// Avatar animation is subordinate to avatar consent. Read profile values from UserInfo.
 /// </summary>
 public sealed record ClaimsStateView
 {
@@ -77,9 +75,9 @@ public sealed record ClaimsStateView
     [JsonPropertyName("lastName")]
     public required ClaimRequirementStateView LastName { get; init; }
 
-    [JsonPropertyName("staticAvatar")]
-    public required ClaimRequirementStateView StaticAvatar { get; init; }
+    [JsonPropertyName("avatar")]
+    public required ClaimRequirementStateView Avatar { get; init; }
 
-    [JsonPropertyName("animatedAvatar")]
-    public required ClaimRequirementStateView AnimatedAvatar { get; init; }
+    [JsonPropertyName("avatarAnimation")]
+    public required ClaimRequirementStateView AvatarAnimation { get; init; }
 }

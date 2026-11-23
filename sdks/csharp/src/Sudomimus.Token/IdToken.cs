@@ -31,11 +31,16 @@ public sealed record IdTokenBody
     [JsonPropertyName("iat")] public required long IssuedAt { get; init; }
     [JsonPropertyName("exp")] public required long ExpiresAt { get; init; }
     [JsonPropertyName("at_hash")] public string? AtHash { get; init; }
+    [JsonPropertyName("c_hash")] public string? CHash { get; init; }
     [JsonPropertyName("nonce")] public string? Nonce { get; init; }
     [JsonPropertyName("auth_time")] public long? AuthTime { get; init; }
     [JsonPropertyName("email")] public string? Email { get; init; }
     [JsonPropertyName("email_verified")] public bool? EmailVerified { get; init; }
     [JsonPropertyName("name")] public string? Name { get; init; }
+    [JsonPropertyName("given_name")] public string? GivenName { get; init; }
+    [JsonPropertyName("family_name")] public string? FamilyName { get; init; }
+    [JsonPropertyName("picture")] public string? Picture { get; init; }
+    [JsonPropertyName("picture_animated")] public string? PictureAnimated { get; init; }
     [JsonPropertyName("amr")] public IReadOnlyList<string>? Amr { get; init; }
     [JsonPropertyName("acr")] public string? Acr { get; init; }
 }
@@ -47,6 +52,10 @@ public sealed record UserInfoResponse
     [JsonPropertyName("email")] public string? Email { get; init; }
     [JsonPropertyName("email_verified")] public bool? EmailVerified { get; init; }
     [JsonPropertyName("name")] public string? Name { get; init; }
+    [JsonPropertyName("given_name")] public string? GivenName { get; init; }
+    [JsonPropertyName("family_name")] public string? FamilyName { get; init; }
+    [JsonPropertyName("picture")] public string? Picture { get; init; }
+    [JsonPropertyName("picture_animated")] public string? PictureAnimated { get; init; }
 }
 
 /// <summary>
@@ -59,6 +68,13 @@ public sealed record IdTokenExpectations
     public string? Audience { get; init; }
     public string? Issuer { get; init; }
     public string? Nonce { get; init; }
+
+    /// <summary>The authorization code returned with the ID Token.</summary>
+    public string? AuthorizationCode { get; init; }
+
+    /// <summary>The access token returned with the ID Token.</summary>
+    public string? AccessToken { get; init; }
+
     public DateTimeOffset? Now { get; init; }
 }
 
@@ -159,7 +175,7 @@ public sealed class IdToken
     /// <summary>
     /// Verify an OIDC id_token against a platform public key (resolved from the
     /// OIDC JWKS). Checks the body <c>exp</c>, the RS256 signature, and any of
-    /// the supplied audience/issuer/nonce expectations.
+    /// the supplied identity and companion token expectations.
     /// </summary>
     /// <exception cref="TokenException">Thrown on any verification failure.</exception>
     public static IdToken Verify(string jwt, string platformPublicKeyPem, IdTokenExpectations? expectations = null)
@@ -173,7 +189,7 @@ public sealed class IdToken
             throw new TokenException(TokenErrorCode.Expired, "id_token has expired.");
         }
 
-        if (!parsed.VerifySignature(platformPublicKeyPem))
+        if (parsed.Header.Algorithm != "RS256" || !parsed.VerifySignature(platformPublicKeyPem))
         {
             throw new TokenException(
                 TokenErrorCode.InvalidSignature,
@@ -193,6 +209,27 @@ public sealed class IdToken
             throw new TokenException(TokenErrorCode.WrongNonce, "id_token nonce does not match the value sent at /authorize.");
         }
 
+        if (expect.AuthorizationCode is { } code && !MatchesCompanionHash(code, parsed.Body.CHash))
+        {
+            throw new TokenException(TokenErrorCode.WrongCodeHash, "id_token c_hash does not match the authorization code.");
+        }
+
+        if (expect.AccessToken is { } accessToken && !MatchesCompanionHash(accessToken, parsed.Body.AtHash))
+        {
+            throw new TokenException(TokenErrorCode.WrongAccessTokenHash, "id_token at_hash does not match the access token.");
+        }
+
         return parsed;
+    }
+
+    private static bool MatchesCompanionHash(string value, string? claim)
+    {
+        if (value.Length == 0 || value.Any(character => character > 0x7f))
+        {
+            return false;
+        }
+
+        var digest = SHA256.HashData(Encoding.ASCII.GetBytes(value));
+        return claim == Convert.ToBase64String(digest.AsSpan(0, 16)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 }

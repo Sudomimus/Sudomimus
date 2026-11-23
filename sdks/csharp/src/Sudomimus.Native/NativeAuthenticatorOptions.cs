@@ -13,6 +13,13 @@ public sealed record NativeAuthenticatorOptions
     public required Func<Uri, CancellationToken, Task> OpenUrl { get; init; }
 
     /// <summary>
+    /// Display the complete terms in one locale and obtain affirmative confirmation.
+    /// Return that locale after confirmation, or null if the player declines.
+    /// The Steam request factory supplies a fresh ticket after confirmation.
+    /// </summary>
+    public Func<NativeLegalAgreementChallenge, CancellationToken, Task<string?>>? ConfirmSteamTerms { get; init; }
+
+    /// <summary>
     /// How often <see cref="NativeAuthenticator.AuthenticateAsync"/> polls the
     /// errand status. Default 2 seconds.
     /// </summary>

@@ -26,4 +26,12 @@ public sealed record DirectIssueSteamTicketRequest
     /// </summary>
     [JsonPropertyName("steamAppId")]
     public required long SteamAppId { get; init; }
+
+    /// <summary>
+    /// The player's affirmative confirmation of the full displayed terms.
+    /// Send it with a fresh Steam ticket.
+    /// </summary>
+    [JsonPropertyName("agreementAcceptance")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SteamAgreementAcceptance? AgreementAcceptance { get; init; }
 }

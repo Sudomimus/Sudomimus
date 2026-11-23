@@ -3,9 +3,8 @@ using System.Text.Json.Serialization;
 namespace Sudomimus.Native;
 
 /// <summary>
-/// Per-claim view across the five shareable claims, carried on every
-/// direct-issue 200 (why a claim is or is not in the minted token) and on the
-/// claim-gate 403 (what is still owed).
+/// Policy and consent for UserInfo disclosure, as returned by direct issue
+/// and claim-gate errors. Avatar animation is subordinate to avatar consent.
 /// </summary>
 public sealed record ClaimsStateView
 {
@@ -18,9 +17,9 @@ public sealed record ClaimsStateView
     [JsonPropertyName("lastName")]
     public required ClaimRequirementStateView LastName { get; init; }
 
-    [JsonPropertyName("staticAvatar")]
-    public required ClaimRequirementStateView StaticAvatar { get; init; }
+    [JsonPropertyName("avatar")]
+    public required ClaimRequirementStateView Avatar { get; init; }
 
-    [JsonPropertyName("animatedAvatar")]
-    public required ClaimRequirementStateView AnimatedAvatar { get; init; }
+    [JsonPropertyName("avatarAnimation")]
+    public required ClaimRequirementStateView AvatarAnimation { get; init; }
 }

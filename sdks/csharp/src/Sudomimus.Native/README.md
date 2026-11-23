@@ -51,12 +51,25 @@ budgets or failure circuits return `429`; unavailable admission counters
 return `503`. Both use empty bodies, so `Reason` is `null` and the caller
 should back off before retrying.
 
+## Basic Terms confirmation
+
+Set `NativeAuthenticatorOptions.ConfirmSteamTerms` to render the complete
+terms in one locale and ask the Steam player to confirm. Return the accepted
+locale after confirmation or `null` to decline. The SDK calls the request
+factory again for a fresh Steam ticket and submits `AgreementAcceptance`.
+The direct client also exposes the challenge through
+`NativeApiException.Body.Agreement` for callers that manage the UI themselves.
+
+On `LegalAgreementRevisionMismatch`, start again with a fresh ticket and
+request confirmation for the new document. On `LegalAgreementRequired` for
+AccessKey or PublicKey, show `NativeApiException.Body.TermsUrl` and ask the
+account holder to accept the terms during a browser sign-in before retrying.
+
 ## Claims on every response
 
-Every direct-issue `200` carries a `claims` view — the per-claim policy joined
-with the user's standing decision. It answers "why is `email` absent from my
-token?": `OFF` (the app never asks), `UNKNOWN` (user never decided), `DENIED`
-(declined), or granted.
+Each successful direct-issue response includes the application policy and the
+user's consent state in `claims`. Read shared profile values from Session
+UserInfo. `AvatarAnimation` is subordinate to `Avatar`.
 
 ```csharp
 ClaimsStateView claims = response.Claims;

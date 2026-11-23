@@ -74,6 +74,10 @@ for a plain .NET example with the same logical flows.
 - On success the result label shows the access-token `subject` and claim states.
 - The Steam ticket is canceled (`CancelAuthTicket`).
 
+If the player must accept Basic Terms, the Steam tab displays the full native
+document. Selecting **Accept and continue** requests a fresh ticket and sends
+the confirmation for the displayed version.
+
 ### Access Key tab
 
 - Type the anchor + your access-key identifier (UUID) + secret (64 hex

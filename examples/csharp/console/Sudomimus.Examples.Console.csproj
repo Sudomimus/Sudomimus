@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\SteamTermsText.cs" Link="SteamTermsText.cs" />
     <!-- Project references against the local SDK source. In a real
          consumer project these would be NuGet PackageReferences:
            <PackageReference Include="Sudomimus.Connect" Version="1.0.0" />

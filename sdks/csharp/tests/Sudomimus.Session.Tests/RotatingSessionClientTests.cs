@@ -205,8 +205,8 @@ public class RotatingSessionClientTests
                 "email": { "requirement": "OFF", "state": "UNKNOWN" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                 "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
             }
         }
         """;

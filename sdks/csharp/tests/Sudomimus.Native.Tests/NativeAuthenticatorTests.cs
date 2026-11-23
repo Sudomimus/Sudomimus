@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Sudomimus.Native;
 using Xunit;
 
@@ -18,8 +19,8 @@ public class NativeAuthenticatorTests
                 "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                 "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
             },
             "errand": {
                 "errandKey": "ernd_courier-route-abcdef012345-seal",
@@ -38,8 +39,8 @@ public class NativeAuthenticatorTests
                 "email": { "requirement": "REQUIRED", "state": "GRANTED" },
                 "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                 "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
             }
         }
         """;
@@ -179,6 +180,61 @@ public class NativeAuthenticatorTests
 
         Assert.Equal(ErrandKey, ex.Errand.ErrandKey);
         Assert.Single(opened);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AuthenticateSteamTicketAsync_RetriesOnlyAfterConfirmation(bool accepted)
+    {
+        using var fixture = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "native-terms.json")));
+        var challenge = fixture.RootElement.GetProperty("steamChallenge");
+        var hash = challenge.GetProperty("agreement").GetProperty("locales").GetProperty("zh-CN")
+            .GetProperty("contentSha256").GetString();
+        var handler = new FakeHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.Forbidden, challenge.GetRawText());
+        handler.Enqueue(HttpStatusCode.OK, Success200);
+        using var http = new HttpClient(handler);
+        var auth = new NativeAuthenticator(new NativeClient("https://native.example.com", http), new()
+        {
+            OpenUrl = (_, _) => throw new InvalidOperationException("Expected in-app confirmation."),
+            ConfirmSteamTerms = (agreement, _) =>
+            {
+                Assert.Single(handler.Requests);
+                var section = Assert.Single(agreement.Locales["zh-CN"].Document.Sections);
+                Assert.Equal("Reference", section.Link?.Label);
+                Assert.Equal("https://example.test/cell", Assert.Single(Assert.Single(section.Table!.Rows)).Url);
+                return Task.FromResult<string?>(accepted ? "zh-CN" : null);
+            },
+        });
+        int ticketRequests = 0;
+        var login = auth.AuthenticateSteamTicketAsync(_ => Task.FromResult(new DirectIssueSteamTicketRequest
+        {
+            ApplicationAnchor = "anchor-1",
+            SteamAppId = 480,
+            SteamTicketHex = ++ticketRequests == 1 ? "abcd" : "ef01",
+        }));
+
+        if (!accepted)
+        {
+            var refusal = await Assert.ThrowsAsync<NativeApiException>(() => login);
+            Assert.True(refusal.IsLegalAgreementRequired);
+            Assert.Single(handler.Requests);
+            Assert.Equal(1, ticketRequests);
+            return;
+        }
+
+        Assert.Equal("a-jwt", (await login).AccessToken);
+        Assert.Equal(2, handler.Requests.Count);
+        using var initial = JsonDocument.Parse(handler.Requests[0].Body!);
+        Assert.False(initial.RootElement.TryGetProperty("agreementAcceptance", out _));
+        using var retry = JsonDocument.Parse(handler.Requests[1].Body!);
+        Assert.Equal("ef01", retry.RootElement.GetProperty("steamTicketHex").GetString());
+        var acceptance = retry.RootElement.GetProperty("agreementAcceptance");
+        Assert.Equal(2, acceptance.GetProperty("revision").GetInt32());
+        Assert.Equal("zh-CN", acceptance.GetProperty("locale").GetString());
+        Assert.Equal(hash, acceptance.GetProperty("contentSha256").GetString());
+        Assert.True(acceptance.GetProperty("confirmed").GetBoolean());
     }
 
     private static DirectIssueAccessKeyRequest Req() => new()

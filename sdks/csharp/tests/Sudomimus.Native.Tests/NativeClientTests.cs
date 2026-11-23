@@ -11,6 +11,27 @@ public class NativeClientTests
     private static readonly string ValidAccessKeySecret = "acs_t_" + new string('a', 64);
 
     [Fact]
+    public async Task DirectIssueSteamTicketAsync_PreservesRequiredRevisionOnConflict()
+    {
+        var handler = new FakeHttpMessageHandler();
+        using var fixture = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "native-terms.json")));
+        handler.Enqueue(HttpStatusCode.Conflict, fixture.RootElement.GetProperty("steamConflict").GetRawText());
+        using var http = new HttpClient(handler);
+        var client = new NativeClient("https://native.example.com", http);
+
+        var exception = await Assert.ThrowsAsync<NativeApiException>(() =>
+            client.DirectIssueSteamTicketAsync(new DirectIssueSteamTicketRequest
+            {
+                ApplicationAnchor = "anchor-1",
+                SteamAppId = 480,
+                SteamTicketHex = "abcd",
+            }));
+
+        Assert.Equal(NativeReason.LegalAgreementRevisionMismatch, exception.Reason);
+        Assert.Equal(3, exception.Body?.RequiredRevision);
+    }
+
+    [Fact]
     public async Task DirectIssuePublicKeyAsync_SignsAndSendsTheExactBody()
     {
         var handler = new FakeHttpMessageHandler();
@@ -23,8 +44,8 @@ public class NativeClientTests
                     "email": { "requirement": "OFF", "state": "UNKNOWN" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                     "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);
@@ -74,8 +95,8 @@ public class NativeClientTests
                     "email": { "requirement": "REQUIRED", "state": "GRANTED" },
                     "firstName": { "requirement": "OPTIONAL", "state": "DENIED" },
                     "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);
@@ -206,8 +227,8 @@ public class NativeClientTests
                     "email": { "requirement": "OFF", "state": "UNKNOWN" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                     "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);
@@ -303,8 +324,8 @@ public class NativeClientTests
                     "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                     "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
                 },
                 "errand": {
                     "errandKey": "ernd_courier-route-abcdef012345-seal",
@@ -408,8 +429,8 @@ public class NativeClientTests
                     "email": { "requirement": "REQUIRED", "state": "UNKNOWN" },
                     "firstName": { "requirement": "OFF", "state": "UNKNOWN" },
                     "lastName": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "staticAvatar": { "requirement": "OFF", "state": "UNKNOWN" },
-                    "animatedAvatar": { "requirement": "OFF", "state": "UNKNOWN" }
+                    "avatar": { "requirement": "OFF", "state": "UNKNOWN" },
+                    "avatarAnimation": { "requirement": "OFF", "state": "UNKNOWN" }
                 }
             }
             """);

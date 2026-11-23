@@ -21,6 +21,7 @@
 // access-key.
 
 using System.Diagnostics;
+using Sudomimus.Examples;
 using Sudomimus.Native;
 using Sudomimus.Session;
 using Sudomimus.Token;
@@ -38,6 +39,7 @@ var nativeClient = new NativeClient();
 var authenticator = new NativeAuthenticator(nativeClient, new NativeAuthenticatorOptions
 {
     OpenUrl = OpenBrowser,
+    ConfirmSteamTerms = ConfirmSteamTerms,
     Progress = new Progress<ErrandProgress>(p => Console.WriteLine($"  [errand] {p.Phase}")),
 });
 
@@ -108,6 +110,15 @@ try
 catch (NativeApiException ex)
 {
     Console.Error.WriteLine($"Native API rejected the request: {(int)ex.StatusCode} {ex.Reason ?? "(no reason)"}");
+    if (ex.IsLegalAgreementRequired && ex.Body?.TermsUrl is { } termsUrl)
+    {
+        Console.Error.WriteLine($"Basic Terms: {termsUrl}");
+        Console.Error.WriteLine("Complete a browser sign-in to accept the terms, then try again.");
+    }
+    else if (ex.Reason == NativeReason.LegalAgreementRevisionMismatch)
+    {
+        Console.Error.WriteLine("The terms changed. Run the login again to review the current version.");
+    }
     return 2;
 }
 catch (ErrandPollTimeoutException)
@@ -163,9 +174,7 @@ Console.WriteLine();
 Console.WriteLine("✓ Login successful.");
 Console.WriteLine($"  subject:           {parsed.Body.Subject}");
 
-// The claims view explains why each shareable claim is or is not in the token
-// (policy joined with the user's decision) — present even when the claim itself
-// is absent from the token body above.
+// Show the current policy and consent for sharing profile information.
 PrintClaims(login.Claims);
 
 // Demonstrate refresh-token rotation. The SessionClient does not need
@@ -207,11 +216,28 @@ static void PrintClaims(Sudomimus.Native.ClaimsStateView claims)
     PrintClaim("email", claims.Email);
     PrintClaim("firstName", claims.FirstName);
     PrintClaim("lastName", claims.LastName);
-    PrintClaim("staticAvatar", claims.StaticAvatar);
-    PrintClaim("animatedAvatar", claims.AnimatedAvatar);
+    PrintClaim("avatar", claims.Avatar);
+    PrintClaim("avatarAnimation", claims.AvatarAnimation);
 
     static void PrintClaim(string name, Sudomimus.Native.ClaimRequirementStateView claim)
         => Console.WriteLine($"    {name,-16} requirement={claim.Requirement,-18} state={claim.State}");
+}
+
+static Task<string?> ConfirmSteamTerms(
+    NativeLegalAgreementChallenge challenge,
+    CancellationToken cancellationToken)
+{
+    cancellationToken.ThrowIfCancellationRequested();
+    Console.Write("Terms language (en-US / zh-CN, Enter to cancel): ");
+    var locale = Console.ReadLine()?.Trim();
+    if (locale is null || !challenge.Locales.TryGetValue(locale, out var snapshot))
+    {
+        return Task.FromResult<string?>(null);
+    }
+
+    Console.WriteLine(SteamTermsText.Render(snapshot));
+    Console.Write("Type ACCEPT to confirm these Basic Terms: ");
+    return Task.FromResult(Console.ReadLine() == "ACCEPT" ? locale : null);
 }
 
 static Task OpenBrowser(Uri uri, CancellationToken cancellationToken)

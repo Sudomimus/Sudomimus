@@ -65,8 +65,8 @@ the token):
     email            requirement=REQUIRED           state=GRANTED
     firstName        requirement=OFF                state=UNKNOWN
     lastName         requirement=OFF                state=UNKNOWN
-    staticAvatar     requirement=OFF                state=UNKNOWN
-    animatedAvatar   requirement=OFF                state=UNKNOWN
+    avatar     requirement=OFF                state=UNKNOWN
+    avatarAnimation   requirement=OFF                state=UNKNOWN
 ```
 
 It then seeds `RotatingSessionClient`, calls Session `/refresh` once, and
@@ -100,3 +100,7 @@ is reused automatically.
 | `404 ApplicationNotFound` | `applicationAnchor` doesn't match a registered app. |
 | `409 ReplayProtectionAlreadySeen` | (steam-ticket only) The ticket was redeemed inside the 24-hour replay window. Acquire a fresh ticket. |
 | `502 SteamTicketVerificationFailed` | Steam's verification endpoint was unreachable. |
+
+Steam login displays the full Basic Terms when the API requires confirmation.
+After selecting a locale, type `ACCEPT` to confirm the displayed document.
+The console then asks for a fresh Steam ticket.

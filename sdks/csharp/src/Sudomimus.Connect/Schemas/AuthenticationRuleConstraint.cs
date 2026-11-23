@@ -21,6 +21,8 @@ public static class AuthenticationMethod
     public const string DiscordOAuth = "DISCORD_OAUTH";
     public const string BattleNetOAuth = "BATTLENET_OAUTH";
     public const string XOAuth = "X_OAUTH";
+    public const string GitLabOAuth = "GITLAB_OAUTH";
+    public const string MicrosoftOAuth = "MICROSOFT_OAUTH";
     public const string EnterpriseFederationApplicationManaged = "ENTERPRISE_FEDERATION_APPLICATION_MANAGED";
     public const string EnterpriseFederationDomainManaged = "ENTERPRISE_FEDERATION_DOMAIN_MANAGED";
 }
