@@ -56,6 +56,29 @@ func TestVerifyIDToken_HappyPath(t *testing.T) {
 	}
 }
 
+func TestVerifyIDToken_HybridCompanionHashes(t *testing.T) {
+	keys := generateRSAKeyPair(t)
+	jwt := mintIDToken(t, keys.privateKey, map[string]any{"c_hash": "q6YkQhEr3xBAZbQpN9Ntxg", "at_hash": "DTNOqrvYa2Ufhf5qWcRsSA"})
+	expect := IDTokenExpectations{AuthorizationCode: "code-sample", AccessToken: "access.signed.value"}
+	token, err := VerifyIDToken(jwt, keys.publicPEM, expect)
+	if err != nil || token.Body.CHash != "q6YkQhEr3xBAZbQpN9Ntxg" {
+		t.Fatalf("verify Hybrid ID Token: %v", err)
+	}
+	for _, scenario := range []struct {
+		expect IDTokenExpectations
+		code   ErrorCode
+	}{
+		{IDTokenExpectations{AuthorizationCode: "other"}, ErrWrongCodeHash},
+		{IDTokenExpectations{AccessToken: "other"}, ErrWrongAccessTokenHash},
+	} {
+		_, err := VerifyIDToken(jwt, keys.publicPEM, scenario.expect)
+		tokenErr, ok := err.(*Error)
+		if !ok || tokenErr.Code != scenario.code {
+			t.Fatalf("wanted %s, got %v", scenario.code, err)
+		}
+	}
+}
+
 func TestVerifyIDToken_Expired(t *testing.T) {
 	keys := generateRSAKeyPair(t)
 	past := time.Now().Unix() - 10

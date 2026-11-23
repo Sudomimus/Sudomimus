@@ -23,19 +23,24 @@ type IDTokenHeader struct {
 // sector subject — identical to the access-token body Subject. The token is
 // signed by the platform key, not by an application's signing key.
 type IDTokenBody struct {
-	Issuer        string   `json:"iss"`
-	Subject       string   `json:"sub"`
-	Audience      string   `json:"aud"`
-	IssuedAt      int64    `json:"iat"`
-	ExpiresAt     int64    `json:"exp"`
-	AtHash        string   `json:"at_hash,omitempty"`
-	Nonce         string   `json:"nonce,omitempty"`
-	AuthTime      int64    `json:"auth_time,omitempty"`
-	Email         string   `json:"email,omitempty"`
-	EmailVerified bool     `json:"email_verified,omitempty"`
-	Name          string   `json:"name,omitempty"`
-	AMR           []string `json:"amr,omitempty"`
-	ACR           string   `json:"acr,omitempty"`
+	Issuer          string   `json:"iss"`
+	Subject         string   `json:"sub"`
+	Audience        string   `json:"aud"`
+	IssuedAt        int64    `json:"iat"`
+	ExpiresAt       int64    `json:"exp"`
+	CHash           string   `json:"c_hash,omitempty"`
+	AtHash          string   `json:"at_hash,omitempty"`
+	Nonce           string   `json:"nonce,omitempty"`
+	AuthTime        int64    `json:"auth_time,omitempty"`
+	Email           string   `json:"email,omitempty"`
+	EmailVerified   bool     `json:"email_verified,omitempty"`
+	Name            string   `json:"name,omitempty"`
+	GivenName       string   `json:"given_name,omitempty"`
+	FamilyName      string   `json:"family_name,omitempty"`
+	Picture         string   `json:"picture,omitempty"`
+	PictureAnimated string   `json:"picture_animated,omitempty"`
+	AMR             []string `json:"amr,omitempty"`
+	ACR             string   `json:"acr,omitempty"`
 }
 
 // IDToken is a parsed OIDC id_token.
@@ -51,10 +56,14 @@ type IDToken struct {
 // the same sector subject carried by the id_token; the other claims are
 // scope-gated by the access token presented to /userinfo.
 type UserInfo struct {
-	Subject       string `json:"sub"`
-	Email         string `json:"email,omitempty"`
-	EmailVerified bool   `json:"email_verified,omitempty"`
-	Name          string `json:"name,omitempty"`
+	Subject         string `json:"sub"`
+	Email           string `json:"email,omitempty"`
+	EmailVerified   bool   `json:"email_verified,omitempty"`
+	Name            string `json:"name,omitempty"`
+	GivenName       string `json:"given_name,omitempty"`
+	FamilyName      string `json:"family_name,omitempty"`
+	Picture         string `json:"picture,omitempty"`
+	PictureAnimated string `json:"picture_animated,omitempty"`
 }
 
 // VerifySignature returns true when the RSA-SHA256 signature matches the given
@@ -112,15 +121,17 @@ func ParseIDToken(jwt string) (*IDToken, error) {
 // IDTokenExpectations narrows id_token verification. A zero-value field is not
 // checked; a zero Now defaults to time.Now().
 type IDTokenExpectations struct {
-	Audience string
-	Issuer   string
-	Nonce    string
-	Now      time.Time
+	Audience          string
+	Issuer            string
+	Nonce             string
+	AuthorizationCode string
+	AccessToken       string
+	Now               time.Time
 }
 
 // VerifyIDToken verifies an OIDC id_token against a platform public key
 // (resolved from the OIDC JWKS). It checks the body exp, the RS256 signature,
-// and any supplied audience/issuer/nonce expectations.
+// and any supplied identity and companion token expectations.
 func VerifyIDToken(jwt, platformPublicKeyPEM string, expect IDTokenExpectations) (*IDToken, error) {
 	parsed, err := ParseIDToken(jwt)
 	if err != nil {
@@ -135,7 +146,7 @@ func VerifyIDToken(jwt, platformPublicKeyPEM string, expect IDTokenExpectations)
 		return nil, newError(ErrExpired, "id_token has expired")
 	}
 
-	if !parsed.VerifySignature(platformPublicKeyPEM) {
+	if parsed.Header.Algorithm != "RS256" || !parsed.VerifySignature(platformPublicKeyPEM) {
 		return nil, newError(ErrInvalidSignature, "id_token signature does not match the platform public key")
 	}
 
@@ -149,5 +160,22 @@ func VerifyIDToken(jwt, platformPublicKeyPEM string, expect IDTokenExpectations)
 		return nil, newError(ErrWrongNonce, "id_token nonce does not match the value sent at /authorize")
 	}
 
+	if expect.AuthorizationCode != "" && !matchesCompanionHash(expect.AuthorizationCode, parsed.Body.CHash) {
+		return nil, newError(ErrWrongCodeHash, "id_token c_hash does not match the authorization code")
+	}
+	if expect.AccessToken != "" && !matchesCompanionHash(expect.AccessToken, parsed.Body.AtHash) {
+		return nil, newError(ErrWrongAccessTokenHash, "id_token at_hash does not match the access token")
+	}
+
 	return parsed, nil
+}
+
+func matchesCompanionHash(value, claim string) bool {
+	for i := 0; i < len(value); i++ {
+		if value[i] > 0x7f {
+			return false
+		}
+	}
+	digest := sha256.Sum256([]byte(value))
+	return claim == b64url.EncodeToString(digest[:16])
 }

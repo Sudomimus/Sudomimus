@@ -6,16 +6,18 @@ import "fmt"
 type ErrorCode string
 
 const (
-	ErrInvalidJWT       ErrorCode = "INVALID_JWT"
-	ErrWrongTokenType   ErrorCode = "WRONG_TOKEN_TYPE"
-	ErrMissingAudience  ErrorCode = "MISSING_AUDIENCE"
-	ErrMissingKeyID     ErrorCode = "MISSING_KEY_ID"
-	ErrUnknownKeyID     ErrorCode = "UNKNOWN_KEY_ID"
-	ErrExpired          ErrorCode = "EXPIRED"
-	ErrInvalidSignature ErrorCode = "INVALID_SIGNATURE"
-	ErrWrongAudience    ErrorCode = "WRONG_AUDIENCE"
-	ErrWrongIssuer      ErrorCode = "WRONG_ISSUER"
-	ErrWrongNonce       ErrorCode = "WRONG_NONCE"
+	ErrInvalidJWT           ErrorCode = "INVALID_JWT"
+	ErrWrongTokenType       ErrorCode = "WRONG_TOKEN_TYPE"
+	ErrMissingAudience      ErrorCode = "MISSING_AUDIENCE"
+	ErrMissingKeyID         ErrorCode = "MISSING_KEY_ID"
+	ErrUnknownKeyID         ErrorCode = "UNKNOWN_KEY_ID"
+	ErrExpired              ErrorCode = "EXPIRED"
+	ErrInvalidSignature     ErrorCode = "INVALID_SIGNATURE"
+	ErrWrongAudience        ErrorCode = "WRONG_AUDIENCE"
+	ErrWrongIssuer          ErrorCode = "WRONG_ISSUER"
+	ErrWrongNonce           ErrorCode = "WRONG_NONCE"
+	ErrWrongCodeHash        ErrorCode = "WRONG_CODE_HASH"
+	ErrWrongAccessTokenHash ErrorCode = "WRONG_ACCESS_TOKEN_HASH"
 )
 
 // Error is returned by Parse* and Verifier methods.
