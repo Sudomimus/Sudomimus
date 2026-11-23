@@ -47,6 +47,10 @@
         "check:workflows": "node scripts/validation/workflows.ts",
         "test:tooling": "node --test scripts/test/*.test.ts",
         "validate": "pnpm version:dry-run && pnpm check:workflows && pnpm typecheck:tooling && pnpm test:tooling && pnpm lint && pnpm compile && pnpm test",
+        "organize": "pnpm sort-all && pnpm refresh-cloc && pnpm comment",
+        "cloc": "node scripts/maintenance/cloc/cloc.ts count",
+        "refresh-cloc": "node scripts/maintenance/cloc/cloc.ts refresh",
+        "comment": "node scripts/maintenance/headers/file-headers.ts",
         "typecheck:tooling": "tsc -p scripts/tsconfig.json"
     },
     "devDependencies": {

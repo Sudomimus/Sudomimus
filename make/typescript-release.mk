@@ -1,4 +1,4 @@
-TS_MAINTENANCE := depcheck update-all update-dependencies update-actions update-self iud ud sort-dependencies sort-workspace sort-all
+TS_MAINTENANCE := cloc refresh-cloc organize comment depcheck update-all update-dependencies update-actions update-self iud ud sort-dependencies sort-workspace sort-all
 .PHONY: changeset version-dry-run version-packages pack publish publish-dry-run publish-initial validate-typescript deploy-all-typescript update-dependencies-typescript $(TS_MAINTENANCE)
 export SUDOMIMUS_TS_CHANGESET_TARGET = $(TARGET)
 export SUDOMIMUS_TS_CHANGESET_BUMP = $(BUMP)

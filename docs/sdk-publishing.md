@@ -62,7 +62,8 @@ Use `--trust-only` to configure its trust after reviewing the preview.
 Action updates use the GitHub CLI to resolve stable releases to full commit
 SHAs in the two TypeScript workflows. `iud` installs, updates within existing
 constraints, deduplicates, and updates pnpm. `sort-all` normalizes dependency
-and workspace ordering. Run validation after applying maintenance updates.
+and workspace ordering. `make organize` also refreshes the cloc inventory
+and source headers. Run validation after applying maintenance updates.
 
 ## PyPI and NuGet
 
