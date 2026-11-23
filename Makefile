@@ -14,43 +14,7 @@ BUMP ?= patch
 install:
 	pnpm -C $(TS_SDK) install
 
-.PHONY: update-dependencies-typescript
-update-dependencies-typescript:
-	pnpm -C $(TS_SDK) run update-dependencies
-
-# ---------- Version bump (TypeScript) ----------
-#
-# Usage:
-#   make bump-token                     # patch bump @sudomimus/token
-#   make bump-connect BUMP=minor        # minor bump @sudomimus/connect
-#   make bump-all-typescript BUMP=major # major bump every TypeScript package
-#   make bump-all-typescript BUMP=none  # leave every version unchanged
-#
-# Reserved versions follow Sudomimus Core: uniform-digit and ascending or
-# descending staircase-digit versions are skipped with additional patch bumps.
-
-.PHONY: bump-all-typescript
-bump-all-typescript: bump-token bump-connect bump-device bump-native bump-session
-
-.PHONY: bump-token
-bump-token:
-	$(BUMP_VERSION) $(TS_SDK)/packages/token/package.json $(BUMP)
-
-.PHONY: bump-connect
-bump-connect:
-	$(BUMP_VERSION) $(TS_SDK)/packages/connect/package.json $(BUMP)
-
-.PHONY: bump-device
-bump-device:
-	$(BUMP_VERSION) $(TS_SDK)/packages/device/package.json $(BUMP)
-
-.PHONY: bump-native
-bump-native:
-	$(BUMP_VERSION) $(TS_SDK)/packages/native/package.json $(BUMP)
-
-.PHONY: bump-session
-bump-session:
-	$(BUMP_VERSION) $(TS_SDK)/packages/session/package.json $(BUMP)
+include make/typescript-release.mk
 
 # ---------- Workspace-wide (via turbo) ----------
 
@@ -192,58 +156,6 @@ coverage-py:
 		--cov=sudomimus_device \
 		--cov=sudomimus_session \
 		--cov-report=term-missing
-
-# ---------- Publish (npm) ----------
-# Publish in dependency order. Recursive make calls keep the sequence stable
-# even when the parent make process has parallel jobs enabled.
-
-.PHONY: deploy-all-typescript
-deploy-all-typescript:
-	$(MAKE) publish-token
-	$(MAKE) publish-session
-	$(MAKE) publish-connect
-	$(MAKE) publish-device
-	$(MAKE) publish-native
-
-.PHONY: publish-dry-run-token
-publish-dry-run-token:
-	pnpm -C $(TS_SDK) run publish-dry-run:token
-
-.PHONY: publish-dry-run-connect
-publish-dry-run-connect:
-	pnpm -C $(TS_SDK) run publish-dry-run:connect
-
-.PHONY: publish-dry-run-device
-publish-dry-run-device:
-	pnpm -C $(TS_SDK) run publish-dry-run:device
-
-.PHONY: publish-dry-run-native
-publish-dry-run-native:
-	pnpm -C $(TS_SDK) run publish-dry-run:native
-
-.PHONY: publish-dry-run-session
-publish-dry-run-session:
-	pnpm -C $(TS_SDK) run publish-dry-run:session
-
-.PHONY: publish-token
-publish-token:
-	pnpm -C $(TS_SDK) run publish:token
-
-.PHONY: publish-connect
-publish-connect:
-	pnpm -C $(TS_SDK) run publish:connect
-
-.PHONY: publish-device
-publish-device:
-	pnpm -C $(TS_SDK) run publish:device
-
-.PHONY: publish-native
-publish-native:
-	pnpm -C $(TS_SDK) run publish:native
-
-.PHONY: publish-session
-publish-session:
-	pnpm -C $(TS_SDK) run publish:session
 
 # ---------- Publish (PyPI) ----------
 # `make build-py` produces wheels + sdists for every Python package into

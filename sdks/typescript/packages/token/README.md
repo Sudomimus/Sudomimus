@@ -85,3 +85,5 @@ import type {
 ## License
 
 [MIT](../../../../LICENSE)
+
+[Package release history](.changeset/history/)

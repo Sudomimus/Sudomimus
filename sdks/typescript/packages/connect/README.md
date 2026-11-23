@@ -52,3 +52,5 @@ JWKS responses are cached per client instance and selected using the JWT
 
 Generated request and response types come from
 [`specs/connect.yaml`](../../../../specs/connect.yaml).
+
+[Package release history](.changeset/history/)

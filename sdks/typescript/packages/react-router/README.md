@@ -19,3 +19,5 @@ export const action = sudomimus.logoutAction;
 
 Use `sudomimus.current({ request })` in server loaders/actions. Configure a
 shared `WebAuthStore` and CSRF protection for the POST actions in production.
+
+[Package release history](.changeset/history/)

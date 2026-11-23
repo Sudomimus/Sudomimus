@@ -166,3 +166,5 @@ account holder to accept the terms during a browser sign-in before retrying.
 
 Use `NativeApiError.body.agreement` for the typed challenge and
 `SteamAgreementAcceptance` for the retry data.
+
+[Package release history](.changeset/history/)

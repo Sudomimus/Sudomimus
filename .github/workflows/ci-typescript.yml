@@ -1,59 +1,49 @@
 name: TypeScript SDKs
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - "sdks/typescript/**"
-      - "sdks/fixtures/**"
-      - "examples/typescript/**"
-      - "specs"
-      - ".github/workflows/ci-typescript.yml"
+  workflow_call:
+  workflow_dispatch:
   pull_request:
     paths:
       - "sdks/typescript/**"
       - "sdks/fixtures/**"
       - "examples/typescript/**"
       - "specs"
+      - "scripts/operation/reserved-version.cjs"
+      - "make/typescript-release.mk"
       - ".github/workflows/ci-typescript.yml"
+      - ".github/workflows/publish-typescript.yml"
 
-defaults:
-  run:
-    working-directory: sdks/typescript
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: ${{ matrix.os }} / Node ${{ matrix.node }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        node: ["22", "24"]
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: sdks/typescript
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           submodules: recursive
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          node-version: ${{ matrix.node }}
+          package_json_file: sdks/typescript/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: sdks/typescript/.nvmrc
           cache: pnpm
           cache-dependency-path: sdks/typescript/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - name: Regenerate types from specs
-        run: pnpm generate
-      - name: Verify generated types are committed
+      - run: pnpm generate
+      - name: Check generated sources against the OpenAPI contracts
         run: |
-          if ! git diff --quiet -- packages; then
-            echo "Generated types differ from committed output. Run 'pnpm generate' and commit the result." >&2
-            git diff -- packages
-            exit 1
-          fi
-      - run: pnpm lint
-      - run: pnpm compile
-      - run: pnpm test
+          git diff --exit-code -- ':(glob)packages/*/src/_generated/**'
+          test -z "$(git ls-files --others --exclude-standard -- ':(glob)packages/*/src/_generated/**')"
+      - run: pnpm validate
       - name: Check Node examples
         working-directory: examples/typescript/node
         run: |

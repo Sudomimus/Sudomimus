@@ -66,3 +66,5 @@ returning `UNKNOWN_KEY_ID`.
 
 Generated request and response types come from
 [`specs/session.yaml`](../../../../specs/session.yaml).
+
+[Package release history](.changeset/history/)

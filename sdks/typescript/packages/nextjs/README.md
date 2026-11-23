@@ -24,3 +24,5 @@ Call `current(request)` in server route handlers, or use
 Component, to get the subject and current access token. Never pass the returned
 tokens to a Client Component. Use a shared, durable `WebAuthStore` in production.
 The POST handlers check the `Origin` header against the callback origin.
+
+[Package release history](.changeset/history/)

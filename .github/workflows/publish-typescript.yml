@@ -1,55 +1,63 @@
 name: Publish TypeScript SDKs
 
 on:
+  workflow_dispatch:
   push:
     branches: [master]
     paths:
-      - "sdks/typescript/packages/*/package.json"
-
-concurrency:
-  group: publish-typescript
-  cancel-in-progress: false
+      - "sdks/typescript/**"
+      - "sdks/fixtures/**"
+      - "examples/typescript/**"
+      - "specs"
+      - "scripts/operation/reserved-version.cjs"
+      - "make/typescript-release.mk"
+      - ".github/workflows/ci-typescript.yml"
+      - ".github/workflows/publish-typescript.yml"
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  publish:
+  validate:
+    uses: ./.github/workflows/ci-typescript.yml
+  release:
     runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.select.outputs.publish }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
-          fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "11.18.0"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          registry-url: https://registry.npmjs.org
-          cache: pnpm
-          cache-dependency-path: sdks/typescript/pnpm-lock.yaml
-      - run: npm install --global npm@^11.5.1
-      - run: pnpm -C sdks/typescript install --frozen-lockfile
-      - run: pnpm -C sdks/typescript generate
-      - name: Verify generated types are committed
-        run: git diff --exit-code -- sdks/typescript/packages
-      - run: pnpm -C sdks/typescript lint
-      - run: pnpm -C sdks/typescript compile
-      - run: pnpm -C sdks/typescript test
-      - name: Publish changed packages in dependency order
+          fetch-depth: 0
+      - id: select
         env:
           BEFORE_SHA: ${{ github.event.before }}
-        run: |
-          changed="$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- sdks/typescript/packages)"
-          for package in token session connect device native web nextjs nuxt react-router; do
-            manifest="sdks/typescript/packages/$package/package.json"
-            if grep -Fxq "$manifest" <<< "$changed"; then
-              package_dist="$(mktemp -d)"
-              pnpm -C "sdks/typescript/packages/$package" pack --pack-destination "$package_dist"
-              npm publish "$package_dist"/*.tgz --access=public
-            fi
-          done
+        run: bash sdks/typescript/scripts/release/select-publish.sh
+  publish:
+    needs: [validate, release]
+    if: github.ref == 'refs/heads/master' && needs.validate.result == 'success' && needs.release.outputs.publish == 'true'
+    concurrency:
+      group: publish-typescript
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: sdks/typescript
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: sdks/typescript/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: sdks/typescript/.nvmrc
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release:publish

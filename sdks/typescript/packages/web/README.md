@@ -36,3 +36,5 @@ Serve a sign-in page there with a form that POSTs to `start`. When refresh
 requires Basic Terms, `current` returns `undefined` and marks the saved
 session as requiring reauthentication. Its refresh token stays in the
 server-side store so `logout` can still revoke the session.
+
+[Package release history](.changeset/history/)

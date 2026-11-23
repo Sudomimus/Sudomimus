@@ -8,6 +8,13 @@
 - Applicable instructions: Discover root and nearer `AGENTS.md` files; also follow `CONTRIBUTING.md`.
 - Validation command: Not configured as one full-repository command; per-language commands are documented in `Makefile` and `.github/workflows/`.
 
+## TypeScript SDK versioning
+
+The release workspace is `sdks/typescript`. From the repository root,
+`make version-dry-run ARGS=--verbose` previews changesets and dependency-driven
+versions without writing. Package release histories use UTC quarters under
+each package's `.changeset/history/`. See the [release contract](../docs/sdk-publishing.md).
+
 ## Documentation and terminology
 
 - Documentation index: `docs/README.md` is the repository overview and links to language-specific guides; see `docs/` and each SDK README for additional guidance.

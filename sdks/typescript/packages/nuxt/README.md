@@ -20,3 +20,5 @@ export default defineEventHandler((event) => sudomimus.logout(event));
 
 Use `sudomimus.current(event)` in server handlers only. Configure a shared
 `WebAuthStore` and CSRF protection for the POST routes in production.
+
+[Package release history](.changeset/history/)

@@ -77,3 +77,5 @@ const session = new SessionClient();
 const rotating = new RotatingSessionClient(session, store);
 const accessToken = await rotating.refresh();
 ```
+
+[Package release history](.changeset/history/)

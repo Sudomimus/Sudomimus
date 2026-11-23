@@ -27,7 +27,7 @@ These packages use the ordinary Connect callback and Session APIs. They are not 
 
 - [pnpm](https://pnpm.io) workspaces
 - [Turborepo](https://turborepo.com) task pipeline
-- TypeScript 5.x, ESM output
+- TypeScript 6.x, ESM output
 - ESLint flat config
 - Jest with `ts-jest`
 - [`openapi-typescript`](https://openapi-ts.dev) for generating models from the OpenAPI specs in `../../specs/`
@@ -36,7 +36,8 @@ These packages use the ordinary Connect callback and Session APIs. They are not 
 
 ```bash
 cd sdks/typescript
-pnpm install
+nvm use
+pnpm install --frozen-lockfile
 pnpm generate     # regenerate packages/*/src/_generated/schema.ts from the specs
 pnpm compile      # tsc per package, emits dist/
 pnpm lint
@@ -45,3 +46,5 @@ pnpm coverage     # jest --coverage per package
 ```
 
 Generated files live in `packages/*/src/_generated/` and are checked in. After editing a spec, run `pnpm generate` and commit the regenerated files.
+
+See [SDK publishing](../../docs/sdk-publishing.md) for package changesets, quarterly histories, maintenance, and the Node 26 CI workflow.

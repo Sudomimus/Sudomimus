@@ -19,8 +19,8 @@
         "lint": "eslint src",
         "test": "jest",
         "release": "pnpm lint && pnpm test && pnpm compile",
-        "release:dry-run": "pnpm release && pnpm pack --pack-destination /tmp && pnpm publish --dry-run --no-git-checks --access=public",
-        "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
+        "release:dry-run": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/web pnpm -C ../.. release:dry-run",
+        "release:publish": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/web pnpm -C ../.. release:publish"
     },
     "dependencies": { "@sudomimus/connect": "workspace:*", "@sudomimus/session": "workspace:*" },
     "devDependencies": { "@types/jest": "catalog:", "@types/node": "catalog:", "typescript": "catalog:", "eslint": "catalog:", "jest": "catalog:", "ts-jest": "catalog:" }

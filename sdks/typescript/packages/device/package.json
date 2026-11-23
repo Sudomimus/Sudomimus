@@ -32,8 +32,8 @@
         "test": "jest",
         "coverage": "jest --coverage",
         "release": "pnpm generate && pnpm lint && pnpm test && pnpm compile",
-        "release:dry-run": "pnpm release && pnpm pack --pack-destination /tmp && pnpm publish --dry-run --no-git-checks --access=public",
-        "release:publish": "pnpm release && pnpm publish --no-git-checks --access=public"
+        "release:dry-run": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/device pnpm -C ../.. release:dry-run",
+        "release:publish": "SUDOMIMUS_TS_PUBLISH_TARGET=@sudomimus/device pnpm -C ../.. release:publish"
     },
     "dependencies": {
         "@sudomimus/session": "workspace:*"

@@ -17,6 +17,11 @@
 - Use the relevant `Makefile` targets and `.github/workflows/ci-*.yml` for validation. There is no single full-repository validation command.
 - When changing an SDK interface, check its direct consumers and relevant examples.
 
+For TypeScript SDK changes, follow [SDK publishing](docs/sdk-publishing.md).
+Use the workspace Node 26 pin. Record changes to published behavior in a
+TypeScript changeset and preview direct and dependency-driven releases before
+handoff. Tooling-only changes can be verified with an empty release plan.
+
 ## Git commits and pushes
 
 - Do not commit changes unless the user explicitly authorizes a commit.
