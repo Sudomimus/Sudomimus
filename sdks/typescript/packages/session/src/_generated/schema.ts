@@ -160,6 +160,10 @@ export interface paths {
          *     Any genuine signed version whose `sid`, `aud`, `jti`, and
          *     `rotationVersion` bind to that session may authorize the revocation;
          *     accepting an older genuine version here does not make it refreshable.
+         *     An unexpired genuine historical credential retains this authority after
+         *     OIDC scope narrowing removes `offline_access` and closes refresh
+         *     capability. Logout revokes that access-only session without restoring
+         *     refresh capability.
          *     No client-auth JWT is required. The operation is idempotent.
          */
         post: operations["logout"];
@@ -236,8 +240,9 @@ export interface components {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
-            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
+            /** @description Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission. */
+            avatarAnimation: components["schemas"]["ClaimRequirementStateView"];
         };
         RefreshRequest: {
             /** @description Signed refresh credential carrying stable payload `sid`, exact version `jti`, and `rotationVersion`; it contains no user identifier. */
@@ -269,13 +274,13 @@ export interface components {
             email_verified?: boolean;
             name?: string;
             given_name?: string;
-            /** @description The approved surname. Empty when the account legitimately has no surname. */
+            /** @description The approved structured surname. Empty when an approved structured first name is known and the account has no surname. A complete display name alone does not establish this claim. */
             family_name?: string;
             /** Format: uri */
             picture?: string;
             /**
              * Format: uri
-             * @description Sudomimus private claim for the sector-scoped animated avatar URL.
+             * @description Sector-scoped avatar animation URL when requested. Uses the same source as picture. Account animation requires both avatar grants; otherwise returns the account static URL. Virtual animation needs no account consent.
              */
             picture_animated?: string;
         };
@@ -489,6 +494,8 @@ export interface operations {
              *     - `ApplicationNotActive` — the application is unavailable.
              *     - `ClaimConsentRequired` or `RequiredClaimDataMissing` — current
              *       claim requirements are not satisfied.
+             *     - `LegalAgreementRequired` — the account must accept the current
+             *       basic terms through a new browser sign-in before refresh.
              *     - `EmailDomainBlocked`, `EmailDomainRequiresSso`, or
              *       `SsoAuthorityConflict` — email-domain policy prevents issuance.
              */
@@ -596,6 +603,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BearerError"];
+                };
+            };
+            /** @description Unexpected identity or avatar dependency failure. The token is not classified as invalid, and private dependency details are withheld. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };

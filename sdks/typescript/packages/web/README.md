@@ -28,3 +28,11 @@ Implement `WebAuthStore` on a shared database or Redis for production;
 same session across all instances. Set its session TTL no longer than the
 underlying Sudomimus refresh-session lifetime. `current` returns credentials for
 server use only; never serialize its result into a client component or page.
+
+When redemption requires Basic Terms or current claim consent, or the
+Inquiry's identity authority is stale, the callback clears the pending cookie
+and redirects to `reauthenticationUrl`. It defaults to `afterLogoutUrl`.
+Serve a sign-in page there with a form that POSTs to `start`. When refresh
+requires Basic Terms, `current` returns `undefined` and marks the saved
+session as requiring reauthentication. Its refresh token stays in the
+server-side store so `logout` can still revoke the session.

@@ -191,16 +191,17 @@ export interface components {
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the five shareable claims — why a claim is
-         *     or is not present in the minted token (policy OFF, never asked,
-         *     declined, or granted).
+         * @description Policy and consent view for UserInfo disclosure (policy OFF, never asked,
+         *     declined, or granted). Avatar animation is subordinate to avatar
+         *     consent. Profile values are not carried in tokens.
          */
         ClaimsStateView: {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
-            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
+            /** @description Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission. */
+            avatarAnimation: components["schemas"]["ClaimRequirementStateView"];
         };
         RedeemResponse: {
             claims: components["schemas"]["ClaimsStateView"];
@@ -299,7 +300,7 @@ export interface components {
             /** @description Localized application display name. */
             applicationName: string;
         };
-        AuthenticationRuleConstraint: components["schemas"]["AuthenticationRuleConstraintPasskeyUsernameless"] | components["schemas"]["AuthenticationRuleConstraintPasskeyReasoned"] | components["schemas"]["AuthenticationRuleConstraintEmailVerification"] | components["schemas"]["AuthenticationRuleConstraintSteamTicket"] | components["schemas"]["AuthenticationRuleConstraintSteamOpenId"] | components["schemas"]["AuthenticationRuleConstraintAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAgentAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAutomationAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAgentPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAutomationPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintGoogleOAuth"] | components["schemas"]["AuthenticationRuleConstraintGitHubOAuth"] | components["schemas"]["AuthenticationRuleConstraintDiscordOAuth"] | components["schemas"]["AuthenticationRuleConstraintBattleNetOAuth"] | components["schemas"]["AuthenticationRuleConstraintXOAuth"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationApplicationManaged"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationDomainManaged"];
+        AuthenticationRuleConstraint: components["schemas"]["AuthenticationRuleConstraintPasskeyUsernameless"] | components["schemas"]["AuthenticationRuleConstraintPasskeyReasoned"] | components["schemas"]["AuthenticationRuleConstraintEmailVerification"] | components["schemas"]["AuthenticationRuleConstraintSteamTicket"] | components["schemas"]["AuthenticationRuleConstraintSteamOpenId"] | components["schemas"]["AuthenticationRuleConstraintAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAgentAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAutomationAccessKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAgentPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintAutomationPublicKeyDirect"] | components["schemas"]["AuthenticationRuleConstraintGoogleOAuth"] | components["schemas"]["AuthenticationRuleConstraintGitHubOAuth"] | components["schemas"]["AuthenticationRuleConstraintDiscordOAuth"] | components["schemas"]["AuthenticationRuleConstraintBattleNetOAuth"] | components["schemas"]["AuthenticationRuleConstraintXOAuth"] | components["schemas"]["AuthenticationRuleConstraintGitLabOAuth"] | components["schemas"]["AuthenticationRuleConstraintMicrosoftOAuth"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationApplicationManaged"] | components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationDomainManaged"];
         AuthenticationRuleConstraintCommon: {
             /** @description Per-constraint override for access token lifetime. Resolved at realize time. */
             accessTokenTtlSeconds?: number;
@@ -482,6 +483,28 @@ export interface components {
              */
             method: "X_OAUTH";
         };
+        AuthenticationRuleConstraintMicrosoftOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "MICROSOFT_OAUTH";
+            payload: components["schemas"]["AuthenticationRuleMicrosoftOAuthPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "MICROSOFT_OAUTH";
+        };
+        AuthenticationRuleConstraintGitLabOAuth: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
+            /** @enum {string} */
+            method: "GITLAB_OAUTH";
+            payload: components["schemas"]["AuthenticationRuleGitLabOAuthPayload"];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            method: "GITLAB_OAUTH";
+        };
         AuthenticationRuleConstraintEnterpriseFederationApplicationManaged: components["schemas"]["AuthenticationRuleConstraintCommon"] & {
             /** @enum {string} */
             method: "ENTERPRISE_FEDERATION_APPLICATION_MANAGED";
@@ -582,6 +605,10 @@ export interface components {
          *     Layer-2 EMAIL rules fail closed against an X-only account.
          */
         AuthenticationRuleXOAuthPayload: Record<string, never>;
+        /** @description Public Microsoft personal and work or school accounts. Empty payload. Microsoft email claims do not establish mailbox ownership. */
+        AuthenticationRuleMicrosoftOAuthPayload: Record<string, never>;
+        /** @description Public GitLab.com accounts. Empty payload. Email ownership requires a verified email claim from GitLab.com. */
+        AuthenticationRuleGitLabOAuthPayload: Record<string, never>;
         /**
          * @description Application-managed enterprise federation. `connectorAnchor` names an
          *     enabled FederationConnector owned by the application's organization.
@@ -927,6 +954,8 @@ export interface operations {
              *     - `AccountDeleted` — the realizing account has been erased.
              *     - `ClaimConsentRequired` — interactive login is required to
              *       establish the current claim grant.
+             *     - `LegalAgreementRequired` — the account must complete current
+             *       basic terms confirmation in a new browser Inquiry.
              *     - `RequiredClaimDataMissing` — a REQUIRED claim cannot currently
              *       be disclosed. An approved account without a surname is not
              *       missing data and discloses an empty surname.

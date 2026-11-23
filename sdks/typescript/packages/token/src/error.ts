@@ -15,7 +15,9 @@ export type TokenErrorCode =
     | "INVALID_SIGNATURE"
     | "WRONG_AUDIENCE"
     | "WRONG_ISSUER"
-    | "WRONG_NONCE";
+    | "WRONG_NONCE"
+    | "WRONG_CODE_HASH"
+    | "WRONG_ACCESS_TOKEN_HASH";
 
 export class TokenError extends Error {
 

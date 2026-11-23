@@ -95,7 +95,10 @@ export class DeviceAuthenticator {
         options: DevicePollOptions = {},
     ): Promise<DeviceAuthorizationResult> {
 
-        const authorization: DeviceAuthorizeResponse = await this._client.deviceAuthorize(request);
+        this._throwIfAborted(options.signal);
+        const authorization = await this._client.deviceAuthorize(request, options.signal);
+        const startedAt = this._now();
+        this._throwIfAborted(options.signal);
 
         if (typeof options.onAuthorize === "function") {
 
@@ -104,12 +107,13 @@ export class DeviceAuthenticator {
 
         const openUrl: DeviceOpenUrl | undefined = options.openUrl ?? this._openUrl;
 
+        this._throwIfAborted(options.signal);
         if (typeof openUrl === "function") {
 
             await openUrl(authorization.verificationUriComplete, authorization);
         }
 
-        const tokens: DeviceTokenResponse = await this.pollForToken(authorization, options);
+        const tokens = await this._pollForToken(authorization, options, startedAt);
 
         return { authorization, tokens };
     }
@@ -124,36 +128,51 @@ export class DeviceAuthenticator {
         options: DevicePollOptions = {},
     ): Promise<DeviceTokenResponse> {
 
-        const deadline: number = this._deadline(authorization, options.pollTimeoutSeconds);
-        let intervalSeconds: number = Math.max(1, authorization.interval);
+        return this._pollForToken(authorization, options, this._now());
+    }
+
+    private async _pollForToken(
+        authorization: DeviceAuthorizeResponse,
+        options: DevicePollOptions,
+        startedAt: number,
+    ): Promise<DeviceTokenResponse> {
+
+        const lifetime = Math.min(
+            authorization.expiresIn,
+            options.pollTimeoutSeconds ?? authorization.expiresIn,
+        );
+        const deadline = startedAt + lifetime * 1000;
+        let intervalSeconds = authorization.interval;
+        let nextPollAt = startedAt + intervalSeconds * 1000;
         let attempt = 0;
 
         while (true) {
 
             this._throwIfAborted(options.signal);
+            const waitMilliseconds = Math.min(nextPollAt, deadline) - this._now();
+            if (waitMilliseconds > 0) {
 
-            if (this._now() > deadline) {
+                await this._sleep(waitMilliseconds, options.signal);
+            }
+
+            this._throwIfAborted(options.signal);
+            if (this._now() >= deadline) {
 
                 throw new DevicePollTimeoutError(authorization);
             }
 
             attempt += 1;
-
+            let tokens: DeviceTokenResponse;
             try {
 
-                const tokens: DeviceTokenResponse = await this._client.deviceToken({
+                tokens = await this._client.deviceToken({
                     deviceCode: authorization.deviceCode,
-                });
-                await this._persist(tokens, options.store);
-                return tokens;
+                }, options.signal);
             } catch (error) {
 
-                if (!(error instanceof DeviceTokenApiError)) {
-
-                    throw error;
-                }
-
-                if (error.error !== "authorization_pending" && error.error !== "slow_down") {
+                this._throwIfAborted(options.signal);
+                if (!(error instanceof DeviceTokenApiError)
+                    || (error.error !== "authorization_pending" && error.error !== "slow_down")) {
 
                     throw error;
                 }
@@ -161,10 +180,13 @@ export class DeviceAuthenticator {
                 if (error.error === "slow_down") {
 
                     intervalSeconds = typeof error.interval === "number"
-                        ? Math.max(1, error.interval)
+                        && Number.isInteger(error.interval)
+                        && error.interval > 0
+                        ? error.interval
                         : intervalSeconds + 5;
                 }
 
+                nextPollAt = this._now() + intervalSeconds * 1000;
                 if (typeof options.onPoll === "function") {
 
                     await options.onPoll({
@@ -174,13 +196,13 @@ export class DeviceAuthenticator {
                         nextIntervalSeconds: intervalSeconds,
                     });
                 }
-
-                const sleepMilliseconds: number = Math.min(
-                    intervalSeconds * 1000,
-                    Math.max(0, deadline - this._now()),
-                );
-                await this._sleep(sleepMilliseconds, options.signal);
+                continue;
             }
+
+            this._throwIfAborted(options.signal);
+            await this._persist(tokens, options.store);
+
+            return tokens;
         }
     }
 
@@ -216,22 +238,6 @@ export class DeviceAuthenticator {
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
         });
-    }
-
-    private _deadline(
-        authorization: DeviceAuthorizeResponse,
-        pollTimeoutSeconds: number | undefined,
-    ): number {
-
-        const expiresAt: number = this._now() + Math.max(1, authorization.expiresIn) * 1000;
-
-        if (typeof pollTimeoutSeconds !== "number") {
-
-            return expiresAt;
-        }
-
-        const timeoutAt: number = this._now() + Math.max(0, pollTimeoutSeconds) * 1000;
-        return Math.min(expiresAt, timeoutAt);
     }
 
     private _requireStore(method: string): TokenStore {

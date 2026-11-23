@@ -5,8 +5,15 @@
  * @description Client.test
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { NativeApiError, NativeClient, PRODUCTION_BASE_URL } from "../../src";
-import type { DirectIssueAccessKeyResponse, DirectIssueSteamTicketResponse } from "../../src";
+import type { DirectIssueAccessKeyResponse, DirectIssueSteamTicketResponse, NativeErrorBody } from "../../src";
+
+const terms = JSON.parse(readFileSync(
+    join(__dirname, "../../../../../fixtures/native-terms.json"),
+    "utf8",
+)) as Record<string, NativeErrorBody>;
 
 const VALID_ACCESS_KEY_IDENTIFIER = "acs_k_01890c5e-1234-4abc-9def-0123456789ab";
 const VALID_ACCESS_KEY_SECRET = `acs_t_${"a".repeat(64)}`;
@@ -74,8 +81,8 @@ describe("NativeClient", () => {
                     email: { requirement: "OFF", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
-                    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
-                    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                    avatar: { requirement: "OFF", state: "UNKNOWN" },
+                    avatarAnimation: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -106,6 +113,41 @@ describe("NativeClient", () => {
         });
     });
 
+    it("submits Steam terms acceptance and retains the required revision on conflict", async () => {
+
+        const fetchMock = makeFetch([
+            { ok: false, status: 403, body: terms.steamChallenge },
+            { ok: false, status: 409, body: terms.steamConflict },
+        ]);
+        const client = new NativeClient({ fetch: fetchMock as unknown as typeof globalThis.fetch });
+        const request = { applicationAnchor: "anchor-1", steamTicketHex: "abcd", steamAppId: 480 };
+
+        await expect(client.directIssueSteamTicket(request)).rejects.toMatchObject({
+            status: 403,
+            reason: "LegalAgreementRequired",
+            body: terms.steamChallenge,
+        });
+        const challenge = terms.steamChallenge.agreement!;
+        const agreementAcceptance = {
+            revision: challenge.requiredRevision,
+            locale: "en-US",
+            contentSha256: challenge.locales["en-US"].contentSha256,
+            confirmed: true,
+        } as const;
+
+        await expect(client.directIssueSteamTicket({
+            ...request,
+            steamTicketHex: "ef01",
+            agreementAcceptance,
+        })).rejects.toMatchObject({
+            status: 409,
+            reason: "LegalAgreementRevisionMismatch",
+            body: terms.steamConflict,
+        });
+        expect(JSON.parse(fetchMock.mock.calls[1][1].body as string).agreementAcceptance)
+            .toEqual(agreementAcceptance);
+    });
+
     describe("directIssueAccessKey", () => {
 
         it("POSTs /direct-issue/access-key with the JSON body and returns the response", async () => {
@@ -118,8 +160,8 @@ describe("NativeClient", () => {
                     email: { requirement: "OFF", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
-                    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
-                    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                    avatar: { requirement: "OFF", state: "UNKNOWN" },
+                    avatarAnimation: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -210,8 +252,8 @@ describe("NativeClient", () => {
                     email: { requirement: "REQUIRED", state: "UNKNOWN" },
                     firstName: { requirement: "OFF", state: "UNKNOWN" },
                     lastName: { requirement: "OFF", state: "UNKNOWN" },
-                    staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
-                    animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                    avatar: { requirement: "OFF", state: "UNKNOWN" },
+                    avatarAnimation: { requirement: "OFF", state: "UNKNOWN" },
                 },
             };
             const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
@@ -267,8 +309,8 @@ describe("NativeClient", () => {
                         email: { requirement: "REQUIRED", state: "UNKNOWN" },
                         firstName: { requirement: "OFF", state: "UNKNOWN" },
                         lastName: { requirement: "OFF", state: "UNKNOWN" },
-                        staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
-                        animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                        avatar: { requirement: "OFF", state: "UNKNOWN" },
+                        avatarAnimation: { requirement: "OFF", state: "UNKNOWN" },
                     },
                     errand: {
                         errandKey: "ernd_courier-route-abcdef012345-seal",

@@ -91,7 +91,9 @@ The Native service returns `{ "reason": "<code>" }` for known failures. All acce
 
 ## Claims & errand recovery
 
-Every direct-issue response carries a `claims` view — the per-claim policy joined with the user's standing decision — so you can tell why a claim is or isn't in the minted token (`OFF` / `UNKNOWN` / `DENIED` / granted):
+A successful direct-issue response includes the current application policy
+and the user's consent state in `claims`. Read shared profile values from
+Session UserInfo.
 
 ```typescript
 const tokens = await client.directIssueAccessKey({ /* ... */ });
@@ -148,3 +150,19 @@ import type {
 ## License
 
 [MIT](../../../../LICENSE)
+
+## Basic Terms confirmation
+
+If Steam direct issue returns `403 LegalAgreementRequired`, use `agreement`
+from the error body. Render the complete `document` from one locale, including
+its table and links, and obtain explicit confirmation. Request a fresh Steam
+ticket and send `agreementAcceptance` with the displayed `requiredRevision`,
+the selected `locale`, its `contentSha256`, and `confirmed: true`.
+
+A `409 LegalAgreementRevisionMismatch` carries the current `requiredRevision`.
+Start a fresh attempt to retrieve the current challenge and ask the player to
+confirm that version. For AccessKey or PublicKey, display `termsUrl` and ask the
+account holder to accept the terms during a browser sign-in before retrying.
+
+Use `NativeApiError.body.agreement` for the typed challenge and
+`SteamAgreementAcceptance` for the retry data.

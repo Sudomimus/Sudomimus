@@ -6,6 +6,7 @@
  */
 
 import { JWTToken } from "@sudoo/jwt";
+import { createHash } from "node:crypto";
 import { TokenError } from "./error.js";
 
 export type IdTokenHeader = {
@@ -37,11 +38,16 @@ export type IdTokenBody = {
     readonly iat: number;
     readonly exp: number;
     readonly at_hash?: string;
+    readonly c_hash?: string;
     readonly nonce?: string;
     readonly auth_time?: number;
     readonly email?: string;
     readonly email_verified?: boolean;
     readonly name?: string;
+    readonly given_name?: string;
+    readonly family_name?: string;
+    readonly picture?: string;
+    readonly picture_animated?: string;
     readonly amr?: ReadonlyArray<string>;
     readonly acr?: string;
 };
@@ -59,6 +65,10 @@ export type UserInfoResponse = {
     readonly email?: string;
     readonly email_verified?: boolean;
     readonly name?: string;
+    readonly given_name?: string;
+    readonly family_name?: string;
+    readonly picture?: string;
+    readonly picture_animated?: string;
 };
 
 export type VerifyIdTokenExpectations = {
@@ -72,6 +82,12 @@ export type VerifyIdTokenExpectations = {
     /** When set, the id_token `nonce` must equal the value sent at `/authorize`. */
     readonly nonce?: string;
 
+    /** Code from the same authorization response as the ID Token. */
+    readonly authorizationCode?: string;
+
+    /** Access token returned alongside the ID Token. */
+    readonly accessToken?: string;
+
     /** Clock used for the `exp` check. Defaults to `new Date()`. */
     readonly now?: Date;
 };
@@ -84,7 +100,7 @@ export const parseIdToken = (jwt: string): IdToken | null => {
 /**
  * Verify a Sudomimus OIDC `id_token` against a platform public key (resolved
  * from the OIDC JWKS). Checks the RS256 signature, body `exp`, and any of the
- * supplied audience / issuer / nonce expectations. Returns the parsed token or
+ * supplied identity and companion token expectations. Returns the parsed token or
  * throws a {@link TokenError}.
  */
 export const verifyIdToken = (
@@ -107,7 +123,7 @@ export const verifyIdToken = (
         throw new TokenError("EXPIRED", "id_token has expired.");
     }
 
-    if (!parsed.verifySignature(platformPublicKeyPem)) {
+    if (parsed.header.alg !== "RS256" || !parsed.verifySignature(platformPublicKeyPem)) {
 
         throw new TokenError(
             "INVALID_SIGNATURE",
@@ -130,5 +146,28 @@ export const verifyIdToken = (
         throw new TokenError("WRONG_NONCE", "id_token `nonce` does not match the value sent at /authorize.");
     }
 
+    if (expectations.authorizationCode !== undefined
+        && !matchesCompanionHash(expectations.authorizationCode, parsed.body.c_hash)) {
+
+        throw new TokenError("WRONG_CODE_HASH", "id_token c_hash does not match the authorization code.");
+    }
+
+    if (expectations.accessToken !== undefined
+        && !matchesCompanionHash(expectations.accessToken, parsed.body.at_hash)) {
+
+        throw new TokenError("WRONG_ACCESS_TOKEN_HASH", "id_token at_hash does not match the access token.");
+    }
+
     return parsed;
 };
+
+function matchesCompanionHash(value: string, claim: string | undefined): boolean {
+
+    if (value.length === 0 || Buffer.byteLength(value, "utf8") !== value.length) {
+
+        return false;
+    }
+
+    const hash = createHash("sha256").update(value, "ascii").digest().subarray(0, 16);
+    return claim === hash.toString("base64url");
+}

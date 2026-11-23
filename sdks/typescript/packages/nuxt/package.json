@@ -1,7 +1,12 @@
 {
     "name": "@sudomimus/nuxt",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Sudomimus Connect integration for Nuxt server routes",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Sudomimus/Sudomimus.git",
+        "directory": "sdks/typescript/packages/nuxt"
+    },
     "license": "MIT", "type": "module", "main": "dist/index.js", "types": "dist/index.d.ts",
     "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
     "files": ["dist", "README.md", "LICENSE"], "publishConfig": { "access": "public" },

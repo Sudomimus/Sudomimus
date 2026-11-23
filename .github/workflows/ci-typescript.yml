@@ -5,12 +5,14 @@ on:
     branches: [master]
     paths:
       - "sdks/typescript/**"
+      - "sdks/fixtures/**"
       - "examples/typescript/**"
       - "specs"
       - ".github/workflows/ci-typescript.yml"
   pull_request:
     paths:
       - "sdks/typescript/**"
+      - "sdks/fixtures/**"
       - "examples/typescript/**"
       - "specs"
       - ".github/workflows/ci-typescript.yml"

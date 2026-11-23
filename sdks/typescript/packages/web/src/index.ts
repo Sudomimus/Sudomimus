@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ConnectClient, RETURN_METHOD } from "@sudomimus/connect";
+import { ConnectApiError, ConnectClient, RETURN_METHOD, type RedeemResponse } from "@sudomimus/connect";
 import { SessionApiError, SessionClient } from "@sudomimus/session";
 export { MemoryWebAuthStore } from "./memory-store.js";
 
@@ -13,6 +13,7 @@ export interface WebSession {
     accessToken: string;
     refreshToken: string;
     accessExpiresAt: number;
+    reauthenticationRequired?: true;
 }
 
 /** Implement with a shared, durable store in multi-instance deployments. */
@@ -33,6 +34,7 @@ export interface WebAuthOptions {
     session: SessionClient;
     store: WebAuthStore;
     viaUrl?: string;
+    reauthenticationUrl?: string;
     pendingTtlSeconds?: number;
     sessionTtlSeconds?: number;
 }
@@ -53,6 +55,16 @@ function redirect(url: string, setCookie?: string): Response {
     const headers = new Headers({ Location: url, "Cache-Control": "no-store" });
     if (setCookie) headers.append("Set-Cookie", setCookie);
     return new Response(null, { status: 303, headers });
+}
+
+function requiresBasicTerms(error: ConnectApiError | SessionApiError): boolean {
+    return error.status === 403 && error.reason === "LegalAgreementRequired";
+}
+
+function requiresNewInquiry(error: ConnectApiError): boolean {
+    return requiresBasicTerms(error)
+        || (error.status === 403 && error.reason === "ClaimConsentRequired")
+        || (error.status === 409 && error.reason === "AuthorizationArtifactStale");
 }
 
 export class ConnectWeb {
@@ -89,7 +101,18 @@ export class ConnectWeb {
         if (!state || !exposureKey || !confirmationKey) return new Response("Invalid login callback", { status: 400 });
         const pending = await this.options.store.takePending(state, exposureKey);
         if (!pending) return new Response("Login expired or already used", { status: 400 });
-        const issued = await this.options.connect.redeem({ exposureKey, hiddenKey: pending.hiddenKey, confirmationKey });
+        let issued: RedeemResponse;
+        try {
+            issued = await this.options.connect.redeem({ exposureKey, hiddenKey: pending.hiddenKey, confirmationKey });
+        } catch (error) {
+            if (error instanceof ConnectApiError && requiresNewInquiry(error)) {
+                return redirect(
+                    this.options.reauthenticationUrl ?? this.options.afterLogoutUrl,
+                    cookie(PENDING_COOKIE, "", this.secure, 0),
+                );
+            }
+            throw error;
+        }
         const verified = await this.options.session.verifyAccessToken(issued.accessToken);
         const sessionId = randomUUID();
         await this.options.store.putSession(sessionId, {
@@ -107,7 +130,7 @@ export class ConnectWeb {
         const id = readCookie(request, SESSION_COOKIE);
         if (!id) return undefined;
         return this.options.store.withSession(id, async (current) => {
-            if (!current) return { value: undefined, result: undefined };
+            if (!current || current.reauthenticationRequired) return { value: current, result: undefined };
             if (current.accessExpiresAt > Date.now() + 30000) return { value: current, result: current };
             try {
                 const rotated = await this.options.session.refresh({ refreshToken: current.refreshToken });
@@ -121,8 +144,16 @@ export class ConnectWeb {
                 };
                 return { value, result: value };
             } catch (error) {
-                if (error instanceof SessionApiError && error.status === 401) {
-                    return { value: undefined, result: undefined };
+                if (error instanceof SessionApiError) {
+                    if (error.status === 401) {
+                        return { value: undefined, result: undefined };
+                    }
+                    if (requiresBasicTerms(error)) {
+                        return {
+                            value: { ...current, accessToken: "", reauthenticationRequired: true },
+                            result: undefined,
+                        };
+                    }
                 }
                 throw error;
             }

@@ -37,8 +37,8 @@ const tokenResponse = (): DeviceTokenResponse => ({
         email: { requirement: "OFF", state: "UNKNOWN" },
         firstName: { requirement: "OPTIONAL", state: "GRANTED" },
         lastName: { requirement: "OPTIONAL", state: "DENIED" },
-        staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
-        animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
+        avatar: { requirement: "OFF", state: "UNKNOWN" },
+        avatarAnimation: { requirement: "OFF", state: "UNKNOWN" },
     },
 });
 
@@ -61,12 +61,14 @@ describe("DeviceAuthenticator", () => {
         ]);
         const store = new InMemoryTokenStore();
         const openUrl = jest.fn();
-        const sleep = jest.fn(async () => undefined);
+        let now = 0;
+        const sleep = jest.fn(async (ms: number) => { now += ms; });
         const progress = jest.fn();
         const authenticator = new DeviceAuthenticator(newClient(fetchMock), {
             store,
             openUrl,
             sleep,
+            now: () => now,
         });
 
         const result = await authenticator.authorizeAndPoll(
@@ -82,7 +84,8 @@ describe("DeviceAuthenticator", () => {
             error: "authorization_pending",
             nextIntervalSeconds: 5,
         });
-        expect(sleep).toHaveBeenCalledWith(5000, undefined);
+        expect(sleep.mock.calls).toEqual([[5000, undefined], [5000, undefined]]);
+        expect(sleep.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[1]);
         expect(await store.load()).toEqual({
             accessToken: "access.jwt",
             refreshToken: "refresh.jwt",
@@ -114,12 +117,13 @@ describe("DeviceAuthenticator", () => {
             { ok: false, status: 400, body: { error: "slow_down", interval: 9 } },
             { ok: true, status: 200, body: tokens },
         ]);
-        const sleep = jest.fn(async () => undefined);
-        const authenticator = new DeviceAuthenticator(newClient(fetchMock), { sleep });
+        let now = 0;
+        const sleep = jest.fn(async (ms: number) => { now += ms; });
+        const authenticator = new DeviceAuthenticator(newClient(fetchMock), { sleep, now: () => now });
 
         await authenticator.pollForToken(authorization);
 
-        expect(sleep).toHaveBeenCalledWith(9000, undefined);
+        expect(sleep.mock.calls).toEqual([[2000, undefined], [9000, undefined]]);
     });
 
     it("surfaces terminal token errors", async () => {
@@ -154,6 +158,38 @@ describe("DeviceAuthenticator", () => {
         await expect(authenticator.pollForToken(authorization))
             .rejects
             .toBeInstanceOf(DevicePollTimeoutError);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("counts time spent displaying the user code against authorization expiry", async () => {
+
+        let now = 0;
+        const fetchMock = makeFetch([
+            { ok: true, status: 200, body: authorizationResponse({ expiresIn: 2 }) },
+        ]);
+        const authenticator = new DeviceAuthenticator(newClient(fetchMock), { now: () => now });
+
+        await expect(authenticator.authorizeAndPoll({ applicationAnchor: "my-app" }, {
+            onAuthorize: () => { now = 2000; },
+        })).rejects.toBeInstanceOf(DevicePollTimeoutError);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("passes cancellation to fetch and discards an exchange that finishes after cancellation", async () => {
+
+        const controller = new AbortController();
+        const store = new InMemoryTokenStore();
+        const fetchMock = jest.fn(async (_url: string, options: RequestInit) => {
+
+            expect(options.signal).toBe(controller.signal);
+            controller.abort();
+            return Response.json(tokenResponse());
+        });
+        const authenticator = new DeviceAuthenticator(newClient(fetchMock), { store, sleep: async () => undefined });
+
+        await expect(authenticator.pollForToken(authorizationResponse(), { signal: controller.signal }))
+            .rejects.toThrow("was aborted");
+        expect(await store.load()).toBeNull();
     });
 
     it("reads tokens from its configured store", async () => {

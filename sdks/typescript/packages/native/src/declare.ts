@@ -21,14 +21,17 @@ export type ClaimRequirementStateView = components["schemas"]["ClaimRequirementS
 export type ErrandHandoff = components["schemas"]["ErrandHandoff"];
 export type ErrandStatusResponse = components["schemas"]["ErrandStatusResponse"];
 export type DirectIssueDeniedError = components["schemas"]["DirectIssueDeniedError"];
+export type DirectIssueSteamTicketConflictError = components["schemas"]["DirectIssueSteamTicketConflictError"];
+export type SteamAgreementAcceptance = NonNullable<DirectIssueSteamTicketRequest["agreementAcceptance"]>;
+export type NativeLegalAgreementChallenge = components["schemas"]["NativeLegalAgreementChallenge"];
+export type NativeLegalAgreementDocument = components["schemas"]["NativeLegalAgreementDocumentV1"];
+export type NativeLegalAgreementLocale = components["schemas"]["NativeLegalAgreementLocale"];
 export type CreateErrandRequest = components["schemas"]["CreateErrandRequest"];
 export type CreateErrandResponse = components["schemas"]["CreateErrandResponse"];
 
 /**
- * Error body for a failed direct-issue. Claim-gate 403s
- * (`ClaimConsentRequired` / `RequiredClaimDataMissing`) additionally carry the
- * `claims` view and the `errand` browser handoff; every other failure carries
- * only `reason`.
+ * Claim-gate refusals carry claims and an errand. Basic terms errors carry
+ * the Steam agreement, a browser terms URL, or the current required revision.
  */
 export type NativeErrorBody = components["schemas"]["DirectIssueDeniedError"];
 

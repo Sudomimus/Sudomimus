@@ -25,6 +25,8 @@ export type InfoRequest = components["schemas"]["InfoRequest"];
 export type InfoResponse = components["schemas"]["InfoResponse"];
 
 export type AuthenticationRuleConstraint = components["schemas"]["AuthenticationRuleConstraint"];
+export type AuthenticationRuleConstraintGitLabOAuth = components["schemas"]["AuthenticationRuleConstraintGitLabOAuth"];
+export type AuthenticationRuleConstraintMicrosoftOAuth = components["schemas"]["AuthenticationRuleConstraintMicrosoftOAuth"];
 export type AuthenticationRuleConstraintEnterpriseFederationApplicationManaged = components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationApplicationManaged"];
 export type AuthenticationRuleConstraintEnterpriseFederationDomainManaged = components["schemas"]["AuthenticationRuleConstraintEnterpriseFederationDomainManaged"];
 export type AuthenticationRulePasskeyUsernamelessPayload = components["schemas"]["AuthenticationRulePasskeyUsernamelessPayload"];
@@ -73,6 +75,8 @@ export const AUTHENTICATION_METHOD = {
     DISCORD_OAUTH: "DISCORD_OAUTH",
     BATTLENET_OAUTH: "BATTLENET_OAUTH",
     X_OAUTH: "X_OAUTH",
+    GITLAB_OAUTH: "GITLAB_OAUTH",
+    MICROSOFT_OAUTH: "MICROSOFT_OAUTH",
     ENTERPRISE_FEDERATION_APPLICATION_MANAGED: "ENTERPRISE_FEDERATION_APPLICATION_MANAGED",
     ENTERPRISE_FEDERATION_DOMAIN_MANAGED: "ENTERPRISE_FEDERATION_DOMAIN_MANAGED",
 } as const;

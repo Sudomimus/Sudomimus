@@ -16,7 +16,14 @@ import type {
     DeviceTokenResponse,
     HealthResponse,
 } from "../../src";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { makeFetch } from "../helpers/fetch";
+
+const urls = JSON.parse(readFileSync(
+    join(__dirname, "../../../../../fixtures/device-verification-urls.json"),
+    "utf8",
+)) as { accepted: string[]; rejected: string[] };
 
 const authorizationResponse = (): DeviceAuthorizeResponse => ({
     applicationAnchor: "my-app",
@@ -36,8 +43,8 @@ const tokenResponse = (): DeviceTokenResponse => ({
         email: { requirement: "OFF", state: "UNKNOWN" },
         firstName: { requirement: "OPTIONAL", state: "GRANTED" },
         lastName: { requirement: "OPTIONAL", state: "DENIED" },
-        staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
-        animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
+        avatar: { requirement: "OFF", state: "UNKNOWN" },
+        avatarAnimation: { requirement: "OFF", state: "UNKNOWN" },
     },
 });
 
@@ -97,6 +104,46 @@ describe("DeviceClient", () => {
             applicationAnchor: "my-app",
         });
     });
+
+    it.each(urls.rejected)("rejects both verification URL fields for %s", async (url) => {
+
+        for (const field of ["verificationUri", "verificationUriComplete"] as const) {
+
+            const fetchMock = makeFetch([
+                { ok: true, status: 200, body: { ...authorizationResponse(), [field]: url } },
+            ]);
+            const client = new DeviceClient({ fetch: fetchMock as unknown as typeof globalThis.fetch });
+            await expect(client.deviceAuthorize({ applicationAnchor: "my-app" }))
+                .rejects.toThrow("Invalid device authorization response.");
+        }
+    });
+
+    it.each(urls.accepted)("accepts the allowed verification URL %s", async (url) => {
+
+        const expected = {
+            ...authorizationResponse(),
+            verificationUri: url,
+            verificationUriComplete: url + "?user_code=ABCD-1234",
+        };
+        const fetchMock = makeFetch([{ ok: true, status: 200, body: expected }]);
+        const client = new DeviceClient({ fetch: fetchMock as unknown as typeof globalThis.fetch });
+
+        await expect(client.deviceAuthorize({ applicationAnchor: "my-app" })).resolves.toEqual(expected);
+    });
+
+    it.each([{ userCode: "ABCD-I234" }, { interval: 0 }, { expiresIn: 0 }])(
+        "rejects invalid device authorization fields %j",
+        async (patch) => {
+
+            const fetchMock = makeFetch([
+                { ok: true, status: 200, body: { ...authorizationResponse(), ...patch } },
+            ]);
+            const client = new DeviceClient({ fetch: fetchMock as unknown as typeof globalThis.fetch });
+
+            await expect(client.deviceAuthorize({ applicationAnchor: "my-app" }))
+                .rejects.toThrow("Invalid device authorization response.");
+        },
+    );
 
     it("POSTs /device-token", async () => {
 

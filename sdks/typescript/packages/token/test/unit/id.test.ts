@@ -82,6 +82,23 @@ describe("verifyIdToken", () => {
         expect(verified.body.sub).toBe("subject-1");
     });
 
+    it("verifies Hybrid companion hashes", () => {
+
+        const keys = generateRsaKeyPair();
+        const jwt = mintIdToken(keys.privateKey, {
+            c_hash: "q6YkQhEr3xBAZbQpN9Ntxg",
+            at_hash: "DTNOqrvYa2Ufhf5qWcRsSA",
+        });
+        const expectations = { authorizationCode: "code-sample", accessToken: "access.signed.value" };
+        expect(verifyIdToken(jwt, keys.publicKey, expectations).body.c_hash).toBe("q6YkQhEr3xBAZbQpN9Ntxg");
+        expect(() => verifyIdToken(jwt, keys.publicKey, { ...expectations, authorizationCode: "other" }))
+            .toThrow("id_token c_hash does not match");
+        expect(() => verifyIdToken(jwt, keys.publicKey, { ...expectations, accessToken: "other" }))
+            .toThrow("id_token at_hash does not match");
+        expect(() => verifyIdToken(mintIdToken(keys.privateKey), keys.publicKey, expectations))
+            .toThrow("id_token c_hash does not match");
+    });
+
     it("throws EXPIRED when exp is in the past", () => {
 
         const { privateKey, publicKey } = generateRsaKeyPair();

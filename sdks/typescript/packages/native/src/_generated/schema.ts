@@ -103,7 +103,11 @@ export interface paths {
          *     and submits them with the application anchor and Steam App ID. The
          *     ticket must satisfy the application's configured rules and is
          *     single-use for this exchange. Verify the returned tokens through the
-         *     application's Session JWKS.
+         *     application's Session JWKS. If the account has not accepted the current
+         *     basic terms, the response includes the exact bilingual text and hashes.
+         *     Render one locale in the native client and obtain a separate affirmative
+         *     confirmation. Acquire a fresh Steam ticket and retry with
+         *     `agreementAcceptance` bound to the displayed revision, locale, and hash.
          */
         post: operations["directIssueSteamTicket"];
         delete?: never;
@@ -228,6 +232,20 @@ export interface components {
              *     different value fails verification.
              */
             steamAppId: number;
+            /**
+             * @description Present only after the native client displayed the complete
+             *     versioned basic terms and received an affirmative confirmation.
+             *     A prior `LegalAgreementRequired` response supplies the text and
+             *     digest. Use a new Steam ticket for this retry.
+             */
+            agreementAcceptance?: {
+                revision: number;
+                /** @enum {string} */
+                locale: "en-US" | "zh-CN";
+                contentSha256: string;
+                /** @constant */
+                confirmed: true;
+            };
         };
         DirectIssueSteamTicketResponse: {
             claims: components["schemas"]["ClaimsStateView"];
@@ -264,16 +282,17 @@ export interface components {
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the five shareable claims, carried on both
-         *     the 200 (why is a claim absent from the minted token) and the
-         *     claim-gate 403 (what is still owed).
+         * @description Policy and consent view for UserInfo disclosure, carried on both
+         *     the 200 response and claim-gate 403 (what is still owed). Avatar
+         *     animation is subordinate and never blocks admission.
          */
         ClaimsStateView: {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
-            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
+            /** @description Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission. */
+            avatarAnimation: components["schemas"]["ClaimRequirementStateView"];
         };
         /**
          * @description The browser side-trip that unblocks a claim-gated direct-issue:
@@ -295,13 +314,68 @@ export interface components {
         /**
          * @description 403 body. For the claim-gate reasons (`ClaimConsentRequired`,
          *     `RequiredClaimDataMissing`) the `claims` view and the `errand`
-         *     handoff are present; for every other reason only `reason` is set.
+         *     handoff are present. For `LegalAgreementRequired`, `agreement` contains
+         *     the complete versioned basic terms for Steam native presentation, or
+         *     `termsUrl` identifies the version to accept during browser sign-in for
+         *     provisioned AccessKey and PublicKey credentials.
          */
         DirectIssueDeniedError: {
             /** @description Stable machine-readable reason code. */
             reason: string;
+            requiredRevision?: number;
+            /** Format: uri */
+            termsUrl?: string;
+            confirmation?: string;
             claims?: components["schemas"]["ClaimsStateView"];
             errand?: components["schemas"]["ErrandHandoff"];
+            agreement?: components["schemas"]["NativeLegalAgreementChallenge"];
+        };
+        DirectIssueSteamTicketConflictError: {
+            /** @description Stable machine-readable reason code. */
+            reason: string;
+            /** @description Current basic terms revision when the submitted acceptance does not match it. */
+            requiredRevision?: number;
+        };
+        NativeLegalAgreementChallenge: {
+            /** @constant */
+            documentType: "BASIC_TERMS";
+            requiredRevision: number;
+            requiredAcceptanceEpoch: number;
+            locales: {
+                "en-US": components["schemas"]["NativeLegalAgreementLocale"];
+                "zh-CN": components["schemas"]["NativeLegalAgreementLocale"];
+            };
+        };
+        NativeLegalAgreementLocale: {
+            contentSha256: string;
+            /** Format: uri */
+            versionUrl: string;
+            document: components["schemas"]["NativeLegalAgreementDocumentV1"];
+        };
+        NativeLegalAgreementDocumentV1: {
+            /** @constant */
+            schemaVersion: 1;
+            title: string;
+            sections: {
+                heading: string;
+                paragraphs: string[];
+                /** @description Render the complete reference table and its footer alongside the section paragraphs. */
+                table?: {
+                    caption: string;
+                    columns: string[];
+                    rows: {
+                        text: string;
+                        /** Format: uri */
+                        url?: string;
+                    }[][];
+                    footer: string;
+                };
+                link?: {
+                    label: string;
+                    /** Format: uri */
+                    url: string;
+                };
+            }[];
         };
         CreateErrandRequest: {
             /**
@@ -432,6 +506,8 @@ export interface operations {
              *       `SsoAuthorityConflict` — email-domain policy prevents issuance.
              *     - `ClaimConsentRequired` or `RequiredClaimDataMissing` — browser
              *       interaction is required before direct issuance can continue.
+             *     - `LegalAgreementRequired` — the account must accept the current
+             *       basic terms during a browser sign-in before credential issuance.
              *
              *     Claim-gate responses also include `claims` and an `errand` browser
              *     handoff. Open `errand.url`, wait or poll its status, then retry this
@@ -550,6 +626,7 @@ export interface operations {
              * @description Application rule, Account lifecycle, email-domain policy, or claim
              *     requirements refused issuance. Claim-gate responses use the same
              *     `claims` and `errand` handoff as AccessKey issuance.
+             *     `LegalAgreementRequired` supplies the current basic terms URL.
              */
             403: {
                 headers: {
@@ -667,6 +744,8 @@ export interface operations {
              *       `SsoAuthorityConflict` — email-domain policy prevents issuance.
              *     - `ClaimConsentRequired` or `RequiredClaimDataMissing` — browser
              *       interaction is required before direct issuance can continue.
+             *     - `LegalAgreementRequired` — the native client must display and
+             *       confirm the exact basic terms before retrying.
              *
              *     Claim-gate responses also include `claims` and an `errand` browser
              *     handoff. Open `errand.url`, wait or poll its status, then acquire a
@@ -698,15 +777,19 @@ export interface operations {
              *       or is being processed.
              *     - `AuthorizationArtifactStale` — identity authority changed during
              *       the attempt.
+             *     - `LegalAgreementRevisionMismatch` — the submitted terms revision,
+             *       locale, or hash no longer matches the server's current text.
              *
-             *     Acquire a fresh ticket before retrying either condition.
+             *     Use a fresh Steam ticket for each retry. After a
+             *     `LegalAgreementRevisionMismatch`, obtain the current agreement
+             *     challenge and confirm the new text before sending an acceptance.
              */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["DirectIssueSteamTicketConflictError"];
                 };
             };
             /**

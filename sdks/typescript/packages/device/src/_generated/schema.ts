@@ -107,12 +107,12 @@ export interface components {
             userCode: components["schemas"]["UserCode"];
             /**
              * Format: uri
-             * @description Browser page where the user enters or confirms `userCode`.
+             * @description Absolute HTTPS browser URL without credentials or surrounding whitespace. HTTP is permitted only for local development on localhost, 127.0.0.1, or [::1]. Clients must reject control characters before display or launch. The user enters or confirms `userCode` on this page.
              */
             verificationUri: string;
             /**
              * Format: uri
-             * @description Browser URL pre-filled with `userCode`.
+             * @description Browser URL pre-filled with `userCode`. The same scheme, host, credential, whitespace, and control-character constraints as verificationUri apply.
              */
             verificationUriComplete: string;
             /** @description Session lifetime in seconds. Default production value is 600. */
@@ -171,15 +171,16 @@ export interface components {
             state: "UNKNOWN" | "GRANTED" | "DENIED";
         };
         /**
-         * @description Per-claim view across the five shareable claims - why a claim is or is
-         *     not present in the minted token.
+         * @description Live policy and consent view for UserInfo disclosure. Avatar animation is
+         *     subordinate to account-avatar consent; profile values are not in tokens.
          */
         ClaimsStateView: {
             email: components["schemas"]["ClaimRequirementStateView"];
             firstName: components["schemas"]["ClaimRequirementStateView"];
             lastName: components["schemas"]["ClaimRequirementStateView"];
-            staticAvatar: components["schemas"]["ClaimRequirementStateView"];
-            animatedAvatar: components["schemas"]["ClaimRequirementStateView"];
+            avatar: components["schemas"]["ClaimRequirementStateView"];
+            /** @description Derived animation request (OFF, OPTIONAL, or SYNTHETIC_ONLY) and subordinate account-animation consent. Animation never blocks admission. */
+            avatarAnimation: components["schemas"]["ClaimRequirementStateView"];
         };
         /**
          * @description Error response body for failures outside the device polling state
@@ -345,6 +346,8 @@ export interface operations {
              *     - `slow_down` - the client is polling too quickly. Use the returned
              *       `interval` value for subsequent polls.
              *     - `access_denied` - the user or current policy denied issuance.
+             *       A preexisting approval is also refused when the account lacks
+             *       the current basic terms receipt. Start a new browser approval.
              *     - `expired_token` - the device authorization session expired.
              *     - `invalid_request` - the request body is missing, malformed, or
              *       structurally invalid; or the `deviceCode` is unknown or has

@@ -1,0 +1,19 @@
+{
+  "accepted": [
+    "https://example.test/device",
+    "http://localhost:3000/device",
+    "http://127.0.0.1:3000/device",
+    "http://[::1]:3000/device"
+  ],
+  "rejected": [
+    " https://example.test/device",
+    "https://example.test/device ",
+    "http://example.test/device",
+    "https://user@example.test/device",
+    "https://@example.test/device",
+    "ftp://example.test/device",
+    "https://example.test/de\u0085vice",
+    "https://example.test/de\\vice",
+    "http://127.1:3000/device"
+  ]
+}

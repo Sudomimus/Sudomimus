@@ -1,8 +1,13 @@
 {
     "name": "@sudomimus/web",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Server-side Sudomimus Connect web login and session core",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Sudomimus/Sudomimus.git",
+        "directory": "sdks/typescript/packages/web"
+    },
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

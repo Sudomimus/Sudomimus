@@ -1,0 +1,95 @@
+{
+  "steamChallenge": {
+    "reason": "LegalAgreementRequired",
+    "agreement": {
+      "documentType": "BASIC_TERMS",
+      "requiredRevision": 2,
+      "requiredAcceptanceEpoch": 1,
+      "locales": {
+        "en-US": {
+          "contentSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versionUrl": "https://example.test/terms/2/en-US",
+          "document": {
+            "schemaVersion": 1,
+            "title": "Basic Terms",
+            "sections": [
+              {
+                "heading": "Terms",
+                "paragraphs": [
+                  "Read these terms."
+                ],
+                "link": {
+                  "label": "Reference",
+                  "url": "https://example.test/reference"
+                },
+                "table": {
+                  "caption": "Table",
+                  "columns": [
+                    "Reference"
+                  ],
+                  "rows": [
+                    [
+                      {
+                        "text": "Cell",
+                        "url": "https://example.test/cell"
+                      }
+                    ]
+                  ],
+                  "footer": "Footer"
+                }
+              }
+            ]
+          }
+        },
+        "zh-CN": {
+          "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "versionUrl": "https://example.test/terms/2/zh-CN",
+          "document": {
+            "schemaVersion": 1,
+            "title": "Basic Terms",
+            "sections": [
+              {
+                "heading": "Terms",
+                "paragraphs": [
+                  "Read these terms."
+                ],
+                "link": {
+                  "label": "Reference",
+                  "url": "https://example.test/reference"
+                },
+                "table": {
+                  "caption": "Table",
+                  "columns": [
+                    "Reference"
+                  ],
+                  "rows": [
+                    [
+                      {
+                        "text": "Cell",
+                        "url": "https://example.test/cell"
+                      }
+                    ]
+                  ],
+                  "footer": "Footer"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "steamConflict": {
+    "reason": "LegalAgreementRevisionMismatch",
+    "requiredRevision": 3
+  },
+  "credentialConflict": {
+    "reason": "AuthorizationArtifactStale"
+  },
+  "browserRequired": {
+    "reason": "LegalAgreementRequired",
+    "requiredRevision": 2,
+    "termsUrl": "https://example.test/terms/2/en-US",
+    "confirmation": "Complete a browser sign-in to accept the terms."
+  }
+}

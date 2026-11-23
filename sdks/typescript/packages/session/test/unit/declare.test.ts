@@ -18,8 +18,8 @@ describe("Session schema-derived types", () => {
                 email: { requirement: "OFF", state: "UNKNOWN" },
                 firstName: { requirement: "OPTIONAL", state: "GRANTED" },
                 lastName: { requirement: "REQUIRED", state: "DENIED" },
-                staticAvatar: { requirement: "OFF", state: "UNKNOWN" },
-                animatedAvatar: { requirement: "OFF", state: "UNKNOWN" },
+                avatar: { requirement: "OFF", state: "UNKNOWN" },
+                avatarAnimation: { requirement: "OFF", state: "UNKNOWN" },
             },
         };
 
