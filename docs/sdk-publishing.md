@@ -34,5 +34,10 @@ Update fixed inter-package dependency versions in the same change as their
 dependencies. Update `sdks/python/uv.lock` after changing Python package
 metadata; the publish workflow requires the lockfile to be current.
 
+Pack a dependency and its workspace consumers together when their published
+manifests pin exact versions. Verify that the Next.js, Nuxt, and React Router
+tarballs reference the new `@sudomimus/web` package. Check the generated Python
+wheel dependencies against the updated lockfile.
+
 Go keeps its test workflow but has no publish workflow here. Java currently has
 local Maven publishing only.

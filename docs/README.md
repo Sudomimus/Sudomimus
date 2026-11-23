@@ -8,22 +8,22 @@ This repository hosts client SDKs for the public Sudomimus APIs, organized by la
 
 | Language | Package | Purpose | Status |
 | --- | --- | --- | --- |
-| TypeScript | [`@sudomimus/connect`](sdks/typescript/packages/connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
-| TypeScript | [`@sudomimus/device`](sdks/typescript/packages/device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | stable |
-| TypeScript | [`@sudomimus/token`](sdks/typescript/packages/token) | Parse and verify Account / Workload access and refresh JWTs | stable |
-| TypeScript | [`@sudomimus/native`](sdks/typescript/packages/native) | Direct-issue (Steam / access key / public key) | stable |
-| TypeScript | [`@sudomimus/session`](sdks/typescript/packages/session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
-| Python | [`sudomimus-connect`](sdks/python/packages/sudomimus-connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
-| Python | [`sudomimus-device`](sdks/python/packages/sudomimus-device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | stable |
-| Python | [`sudomimus-token`](sdks/python/packages/sudomimus-token) | Parse and verify Sudomimus access / refresh JWTs | stable |
-| Python | [`sudomimus-native`](sdks/python/packages/sudomimus-native) | Direct-issue (Steam ticket / access key) | stable |
-| Python | [`sudomimus-session`](sdks/python/packages/sudomimus-session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
-| C# / .NET | [`Sudomimus.Connect`](sdks/csharp/src/Sudomimus.Connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
-| C# / .NET | [`Sudomimus.Token`](sdks/csharp/src/Sudomimus.Token) | Parse and verify Sudomimus access / refresh JWTs | stable |
-| C# / .NET | [`Sudomimus.Native`](sdks/csharp/src/Sudomimus.Native) | Direct-issue (Steam ticket / access key) | stable |
-| C# / .NET | [`Sudomimus.Session`](sdks/csharp/src/Sudomimus.Session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
-| Go | [`github.com/sudomimus/sudomimus-go/token`](sdks/go/token) | Parse and verify Sudomimus access / refresh JWTs | stable |
-| Java | [`com.sudomimus:sudomimus-token`](sdks/java/token) | Parse and verify Sudomimus access / refresh JWTs | stable |
+| TypeScript | [`@sudomimus/connect`](../sdks/typescript/packages/connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
+| TypeScript | [`@sudomimus/device`](../sdks/typescript/packages/device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | stable |
+| TypeScript | [`@sudomimus/token`](../sdks/typescript/packages/token) | Parse and verify Account / Workload access and refresh JWTs | stable |
+| TypeScript | [`@sudomimus/native`](../sdks/typescript/packages/native) | Direct-issue (Steam / access key / public key) | stable |
+| TypeScript | [`@sudomimus/session`](../sdks/typescript/packages/session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
+| Python | [`sudomimus-connect`](../sdks/python/packages/sudomimus-connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
+| Python | [`sudomimus-device`](../sdks/python/packages/sudomimus-device) | Device authorization for public clients (DeviceAuthorize / DeviceToken) | stable |
+| Python | [`sudomimus-token`](../sdks/python/packages/sudomimus-token) | Parse and verify Sudomimus access / refresh JWTs | stable |
+| Python | [`sudomimus-native`](../sdks/python/packages/sudomimus-native) | Direct-issue (Steam ticket / access key) | stable |
+| Python | [`sudomimus-session`](../sdks/python/packages/sudomimus-session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
+| C# / .NET | [`Sudomimus.Connect`](../sdks/csharp/src/Sudomimus.Connect) | Inquiry lifecycle (Establish / StatusPoll / Redeem / Info) | stable |
+| C# / .NET | [`Sudomimus.Token`](../sdks/csharp/src/Sudomimus.Token) | Parse and verify Sudomimus access / refresh JWTs | stable |
+| C# / .NET | [`Sudomimus.Native`](../sdks/csharp/src/Sudomimus.Native) | Direct-issue (Steam ticket / access key) | stable |
+| C# / .NET | [`Sudomimus.Session`](../sdks/csharp/src/Sudomimus.Session) | Session lifecycle (Refresh / Introspect / Logout / RevokeAll) | stable |
+| Go | [`github.com/sudomimus/sudomimus-go/token`](../sdks/go/token) | Parse and verify Sudomimus access / refresh JWTs | stable |
+| Java | [`com.sudomimus:sudomimus-token`](../sdks/java/token) | Parse and verify Sudomimus access / refresh JWTs | stable |
 
 ## Framework integrations
 
@@ -32,12 +32,12 @@ web frameworks. They sit above the API SDKs and do not use OIDC.
 
 | Framework | Package | Status |
 | --- | --- | --- |
-| Next.js App Router | [`@sudomimus/nextjs`](sdks/typescript/packages/nextjs) | stable |
-| React Router Framework Mode | [`@sudomimus/react-router`](sdks/typescript/packages/react-router) | stable |
-| Nuxt Node/Nitro | [`@sudomimus/nuxt`](sdks/typescript/packages/nuxt) | stable |
-| Django | [`sudomimus-django`](sdks/python/packages/sudomimus-django) | stable |
+| Next.js App Router | [`@sudomimus/nextjs`](../sdks/typescript/packages/nextjs) | stable |
+| React Router Framework Mode | [`@sudomimus/react-router`](../sdks/typescript/packages/react-router) | stable |
+| Nuxt Node/Nitro | [`@sudomimus/nuxt`](../sdks/typescript/packages/nuxt) | stable |
+| Django | [`sudomimus-django`](../sdks/python/packages/sudomimus-django) | stable |
 
-The TypeScript integrations share [`@sudomimus/web`](sdks/typescript/packages/web)
+The TypeScript integrations share [`@sudomimus/web`](../sdks/typescript/packages/web)
 for login state, session rotation, and the durable storage contract.
 
 ## Repository layout
@@ -52,11 +52,11 @@ sdks/java/               Java SDKs (Gradle Kotlin DSL multi-module, JDK 17)
 examples/                Runnable usage examples (see examples/README.md)
 ```
 
-See [`sdks/typescript/README.md`](sdks/typescript/README.md), [`sdks/python/README.md`](sdks/python/README.md), [`sdks/go/README.md`](sdks/go/README.md), [`sdks/java/README.md`](sdks/java/README.md), and the per-project READMEs under [`sdks/csharp/src/`](sdks/csharp/src) for language-specific development instructions. The repo-root [`Makefile`](Makefile) exposes consistent `compile-*`, `test-*`, `coverage-*`, and `pack-*` targets across all languages.
+See [`sdks/typescript/README.md`](../sdks/typescript/README.md), [`sdks/python/README.md`](../sdks/python/README.md), [`sdks/go/README.md`](../sdks/go/README.md), [`sdks/java/README.md`](../sdks/java/README.md), and the per-project READMEs under [`sdks/csharp/src/`](../sdks/csharp/src) for language-specific development instructions. The repo-root [`Makefile`](../Makefile) exposes consistent `compile-*`, `test-*`, `coverage-*`, and `pack-*` targets across all languages.
 
 ## API schemas
 
-Public API contracts live in [`specs/`](specs) as hand-maintained OpenAPI 3.1 documents. Each SDK generates strongly typed request, response, and error models from the corresponding spec; client logic (HTTP, authentication, retries) is written by hand.
+Public API contracts live in [`specs/`](../specs) as hand-maintained OpenAPI 3.1 documents. Each SDK generates strongly typed request, response, and error models from the corresponding spec; client logic (HTTP, authentication, retries) is written by hand.
 
 `specs/` is a git submodule tracking [`sudomimus/sudomimus-spec`](https://github.com/sudomimus/sudomimus-spec), shared with the internal platform repository. Clone with submodules so the spec files are present:
 
@@ -66,10 +66,33 @@ git clone --recurse-submodules https://github.com/sudomimus/sudomimus.git
 git submodule update --init --recursive
 ```
 
+## Update to API contract 5.0
+
+Connect, Session, Device, and Native use `claims.avatar` and
+`claims.avatarAnimation` in token issuance responses. Update consumers that
+read `staticAvatar` or `animatedAvatar`. The animation state describes a
+subordinate disclosure preference and does not block admission. Use Session
+`/userinfo` for profile values and `/claim-state` for live policy and consent.
+Those endpoints use `picture` and `picture_animated`.
+
+Handle `LegalAgreementRequired` by starting a new browser sign-in when
+Connect redemption or Session refresh requires Basic Terms. Native Steam
+clients present the complete versioned document inside the client. The Native
+package guides describe the separate browser step for AccessKey and PublicKey.
+
+## OpenID Connect token helpers
+
+Use the Token SDK to verify an ID Token against the provider RSA public key.
+Pass the expected issuer, audience, and nonce for the pending sign-in. For a
+Hybrid authorization response, pass the returned code and access token when
+present to check the signed `c_hash` and `at_hash`. The helper requires a match
+for each supplied value. Use an OIDC relying-party library for discovery,
+authorization response state, and signed UserInfo.
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](../LICENSE)
