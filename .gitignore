@@ -1,4 +1,5 @@
 # Node / pnpm
+/sdks/typescript/.codegraph/
 node_modules/
 .pnpm-store/
 .pnp.*

@@ -48,3 +48,17 @@ pnpm coverage     # jest --coverage per package
 Generated files live in `packages/*/src/_generated/` and are checked in. After editing a spec, run `pnpm generate` and commit the regenerated files.
 
 See [SDK publishing](../../docs/sdk-publishing.md) for package changesets, quarterly histories, maintenance, and the Node 26 CI workflow.
+
+## Find callers across packages
+
+From `sdks/typescript`, initialize the local CodeGraph index once per checkout.
+The first invocation downloads the pinned CLI through pnpm.
+
+```sh
+pnpm codegraph init --yes
+pnpm codegraph callers 'ConnectWeb.callback'
+```
+
+Run `pnpm codegraph sync` after source changes. Use a qualified method name to
+find its callers and test references across workspace packages. Check the
+[repository examples](../../examples/README.md) separately when changing a public interface.

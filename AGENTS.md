@@ -16,6 +16,7 @@
 - Preserve unrelated work in the checkout. Do not modify the `specs/` submodule or the separate core monorepo unless the user explicitly includes them in the task.
 - Use the relevant `Makefile` targets and `.github/workflows/ci-*.yml` for validation. There is no single full-repository validation command.
 - When changing an SDK interface, check its direct consumers and relevant examples.
+  For TypeScript interfaces, use the [CodeGraph caller lookup](sdks/typescript/README.md#find-callers-across-packages) to locate consumers in the workspace. Check repository examples separately.
 
 For TypeScript SDK changes, follow [SDK publishing](docs/sdk-publishing.md).
 Use the workspace Node 26 pin. Record changes to published behavior in a
