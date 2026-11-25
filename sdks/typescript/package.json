@@ -1,7 +1,7 @@
 {
     "name": "@sudomimus/sdks-typescript",
     "private": true,
-    "packageManager": "pnpm@12.21.0",
+    "packageManager": "pnpm@12.22.0",
     "scripts": {
         "codegraph": "pnpm dlx @colbymchenry/codegraph@1.6.2",
         "iud": "node scripts/maintenance/dependencies/maintenance.ts iud",
