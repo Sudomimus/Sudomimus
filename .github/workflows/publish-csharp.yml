@@ -8,6 +8,7 @@ on:
 
 concurrency:
   group: publish-csharp
+  queue: max
   cancel-in-progress: false
 
 permissions:

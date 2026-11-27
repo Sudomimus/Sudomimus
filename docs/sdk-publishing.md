@@ -68,8 +68,10 @@ and source headers. Run validation after applying maintenance updates.
 ## PyPI and NuGet
 
 A push to `master` that changes a Python `pyproject.toml` or C# project
-manifest triggers its existing workflow. It tests the SDK and publishes
-changed packages in dependency order. Review version fields before pushing.
+manifest triggers its release workflow. Each language runs one release at a time
+and can keep up to 100 runs waiting. Each run tests the SDK and publishes the
+packages changed by that push in dependency order. Review version fields before
+pushing.
 
 Before the first PyPI and NuGet runs, add these GitHub Actions repository secrets:
 
