@@ -1,4 +1,4 @@
-// Sudomimus Connect — .NET console example.
+// Sudomimus Native — .NET console example.
 //
 // Interactive CLI that demonstrates the full Native API login flow via
 // either of the two direct-issue methods:
@@ -207,9 +207,8 @@ Console.WriteLine("✓ Session revoked, store cleared.");
 
 return 0;
 
-// Fully qualified: both Sudomimus.Native and Sudomimus.Connect define a
-// ClaimsStateView (each mirrors its own service's wire surface), and this file
-// imports both. The direct-issue result carries the Native one.
+// The Native and Session SDKs both define claim view types.
+// The direct-issue result uses the Native types.
 static void PrintClaims(Sudomimus.Native.ClaimsStateView claims)
 {
     Console.WriteLine("  claims:");

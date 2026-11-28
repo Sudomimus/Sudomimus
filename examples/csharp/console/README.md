@@ -1,4 +1,4 @@
-# Sudomimus Connect — C# console example
+# Sudomimus Native — C# console example
 
 Plain .NET 8 console app that drives the Sudomimus Native login flow using
 the [`Sudomimus.Native`](../../../sdks/csharp/src/Sudomimus.Native) and
